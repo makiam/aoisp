@@ -1,0 +1,6 @@
+To compile the Implicit plugin using ant, unpack this archive in ArtOfIllusion folder.
+
+Open a terminal and cd into ArtOfIllusion/Implicit. The following commands will:
+-ant: build the Implicit plugin in AoI Plugins directory
+-ant docs: generate the Implicit API documentation
+-ant clean: clean the build and docs directories
