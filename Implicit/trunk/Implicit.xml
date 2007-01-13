@@ -1,0 +1,17 @@
+<?xml version="1.0" standalone="yes"?>
+<script>
+  <name>Implicit</name>
+  <author>Francois Guillet</author>
+  <version>0.1</version>
+  <beta>5</beta>
+  <date>2006/12/03</date>
+  <description>
+A plugin which provides implicit objects that take advantage of AoI implicit rendering feature.
+  </description>
+  <history>
+     <log version="0.1" author="Francois Guillet" date="Dec 02, 2006">
+Preview release
+     </log>
+  </history>
+</script>
+
