@@ -724,8 +724,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
         BMenu textureMenu = PMTranslate.menu("texture");
         menubar.add( textureMenu );
         textureMenuItem = new BMenuItem[6];
-        textureMenu.add( textureMenuItem[0] = PMTranslate.menuItem( "findSeams", this, "doFindSeams" ) );
-        textureMenu.add( textureMenuItem[1] = PMTranslate.menuItem( "markSelAsSeams", this, "doMarkSelAsSeams" ) );
+        textureMenu.add( textureMenuItem[0] = PMTranslate.menuItem( "unfoldMesh", this, "doUnfoldMesh" ) );
+        //textureMenu.add( textureMenuItem[1] = PMTranslate.menuItem( "markSelAsSeams", this, "doMarkSelAsSeams" ) );
     }
 
     private void createPrefsMenu()
@@ -1140,7 +1140,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
                 vertexMenu.setEnabled( true );
                 edgeMenu.setEnabled( false );
                 faceMenu.setEnabled( false );
-                ( (BMenuItem) textureMenuItem[1]).setEnabled(false);
                 break;
             case EDGE_MODE:
                 vertexMenu.setEnabled( false );
@@ -1150,7 +1149,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
                 extrudeItem[0].setShortcut(null);
                 extrudeRegionItem[0].setShortcut(null);
                 faceMenu.setEnabled( false );
-                ( (BMenuItem) textureMenuItem[1]).setEnabled(true);
                 break;
             case FACE_MODE:
                 vertexMenu.setEnabled( false );
@@ -1160,7 +1158,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
                 extrudeRegionItem[0].setShortcut(groupNormalShortcut);
                 extrudeEdgeItem[0].setShortcut(null);
                 extrudeEdgeRegionItem[0].setShortcut(null);
-                ( (BMenuItem) textureMenuItem[1]).setEnabled(false);
                 break;
         }
         PolyMesh mesh = (PolyMesh) objInfo.object;
@@ -4348,6 +4345,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
         ((PolyMesh)objInfo.object ).setSeams(null);
         objectChanged();
         updateImage();
+    }
+    
+    private void doUnfoldMesh()
+    {
+    	MeshUnfolder unfolder = new MeshUnfolder(((PolyMesh)objInfo.object ).convertToTriangleMesh(0), this);
+    	unfolder.unfold();
+    	//unfolder.unfold2();
     }
 
 
