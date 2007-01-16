@@ -3838,6 +3838,22 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
             if ( edges[e[i]].face != -1 )
                 deletedFaces[edges[e[i]].face] = true;
         }
+        boolean del1;
+        boolean del2;
+        for ( int i = 0; i < edges.length / 2; ++i )
+        {
+            del1 = ( edges[i].face == -1 );
+            if ( !del1 )
+                del1 = deletedFaces[edges[i].face];
+            del2 = ( edges[edges[i].hedge].face == -1 );
+            if ( !del2 )
+                del2 = deletedFaces[edges[edges[i].hedge].face];
+            if ( del1 && del2 )
+            {
+                deletedEdges[i] = true;
+                deletedEdges[edges[i].hedge] = true;
+            }
+        }
         deletion( deletedVertices, deletedEdges, deletedFaces, false );
     }
 
@@ -12141,7 +12157,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         	if (seams[i])
                 count++;
         }
-        //System.out.println( "seams count:" + count);
         newVertices = new Wvertex[vertices.length + 2*count];
         newEdges = new Wedge[edges.length+ 2*count];
         newFaces = new Wface[faces.length];
@@ -12182,6 +12197,10 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         						{
         							nextSeam = index;
         							seamsCopy[index] = false;
+        							seamsCopy[i] = false;
+        							e1 = i;
+        	        					e2 = nextSeam;
+        	        					//System.out.println("ouverture #0a " + i + ":" + index);
         						}
         						else if (index >= newEdges.length/2 )
         						{
@@ -12189,19 +12208,16 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         							{
         								nextSeam = index;
         								seamsCopy[newEdges[index].hedge] = false;
+        								seamsCopy[i] = false;
+        								e1 = i;
+        		        					e2 = nextSeam;
+        		        					//System.out.println("ouverture #0b " + i + ":" + newEdges[index].hedge);
         							}
         						}
         					}
         					index = newEdges[newEdges[index].hedge].next;
         				}
-        				if (nextSeam != -1)
-        				{
-        					//we've found the next seam
-        					seamsCopy[i] = false;
-        					e1 = i;
-        					e2 = nextSeam;
-        				}
-        				else
+        				if (nextSeam == -1)
         				{
         					//maybe on the other side ?
         					index = newEdges[newEdges[i].hedge].next;
@@ -12213,30 +12229,31 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         							if (index < edges.length/2 && seamsCopy[index])
         							{
         								nextSeam = index;
+        								seamsCopy[i] = false;
         								seamsCopy[index] = false;
+        								e1 = newEdges[i].hedge;
+        	        						e2 = nextSeam;
+        	        						//System.out.println("ouverture #0c " + i + ":" + index);
         							}
         							else if (index >= newEdges.length/2 )
         							{
         								if (newEdges[index].hedge < edges.length/2 && seamsCopy[newEdges[index].hedge])
         								{
         									nextSeam = index;
+        									seamsCopy[i] = false;
         									seamsCopy[newEdges[index].hedge] = false;
+        									e1 = newEdges[i].hedge;
+        		        						e2 = nextSeam;
+        		        						//System.out.println("ouverture #0d " + i + ":" + newEdges[index].hedge);
         								}                    			    
         							}
         						}
         						index = newEdges[newEdges[index].hedge].next;
         					}
-        					if (nextSeam != -1)
-        					{
-        						//we've found the next seam
-        						seamsCopy[i] = false;
-        						e1 = newEdges[i].hedge;
-        						e2 = nextSeam;
-        					}
         				}
         				if (e1 != -1 && e2 != -1)
         				{
-        					//we've found to contiguous seamsCopy
+        					//we've found two contiguous seamsCopy
         					v1 = newEdges[newEdges[e1].hedge].vertex;
         					v2 = newEdges[e1].vertex;
         					v3 = newEdges[e2].vertex;
@@ -12273,7 +12290,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         					}
         					++vertCount;
         					edgeCount += 2;
-        					//System.out.println("ouverture #0");
+        					//System.out.println("ouverture #1 " + i);
         				}
         			}
         			else if ( (bv1 != -1 && bv2 == -1) || (bv1 == -1 && bv2 != -1) )
@@ -12307,6 +12324,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         				newEdges[bv1].next = edgeCount;
         				newEdges[bv1].vertex = vertCount;
         				newEdges[phe].next = nhe;
+        				//dumpNewMesh(newVertices, newEdges, newFaces);
         				index = newEdges[newEdges[nhe].next].hedge;
         				while (index != bv1)
         				{
@@ -12316,7 +12334,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         				++edgeCount;
         				++vertCount;
         				seamsCopy[i] = false;
-        				//System.out.println("ouverture #1");
+        				//System.out.println("ouverture #2 " + i);
         			}
         			else if (bv1 != -1 && bv2 != -1)
         			{
@@ -12337,7 +12355,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         				vertTable.add(new Integer(v1));
         				vertTable.add(new Integer(v2));
         				newVertices[v1].edge = e;
-        				newVertices[v2].edge = nhe;
+        				newVertices[v2].edge = he;
         				newEdges[he].face = -1;
         				newEdges[he].next = newEdges[bv1].next;
         				newEdges[bv1].next = edgeCount;
@@ -12361,7 +12379,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
         				++edgeCount;
         				vertCount += 2;
         				seamsCopy[i] = false;
-        				//System.out.println("ouverture #3");
+        				//System.out.println("ouverture #3 " + i);
         			}
         		}
         	}
@@ -12795,7 +12813,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
      */
     public String checkMesh()
     {
-        boolean repairTwoEdgeFaces = false;
+	
+	boolean repairTwoEdgeFaces = false;
         String s = "";
 
         s += "Mesh consisting of:\n";

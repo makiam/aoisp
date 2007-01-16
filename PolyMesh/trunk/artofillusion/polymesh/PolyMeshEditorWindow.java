@@ -4294,7 +4294,31 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
      */
     private void doCheckMesh()
     {
-        new CheckMeshDialog();
+        //dumps selection
+	PolyMesh mesh = ((PolyMesh)objInfo.object );
+	String name = "";
+	switch(selectMode) {
+	case POINT_MODE:
+	    System.out.println("Selected Vertices:");
+	    name = "vertex ";
+	    break;
+	case EDGE_MODE:
+	    System.out.println("Selected Edges:");
+	    name = "edge ";
+	    break;
+	case FACE_MODE:
+	    System.out.println("Selected Faces:");
+	    name = "face ";
+	    break;
+	}
+	for (int i=0; i < selected.length; i++) {
+	    if (selected[i]) {
+		System.out.println(name + i + " selected.");
+	    }
+	}
+	    
+
+	new CheckMeshDialog();
     }
 
     private void tolerantModeChanged()

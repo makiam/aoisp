@@ -3,12 +3,13 @@
 <project name="PolyMesh" default="dist" basedir=".">
 
   <!-- set global properties for this build -->
+  <property name="aoilocation" value="../../" />
   <property name="src" value="." />
   <property name="build" value="build" />
   <property name="docs" value="docs" />
-  <property name="dist" value="../Plugins" />
-  <property name="aoijar" value="../ArtOfIllusion.jar" />
-
+  <property name="dist" value="${aoilocation}/Plugins" />
+  <property name="aoijar" value="${aoilocation}/ArtOfIllusion.jar" />
+  <property name="mtjjar" value="mtj.jar" />
 
   <target name="init">
     <!-- Create the time stamp -->
@@ -21,7 +22,7 @@
 
   <target name="compile" depends="init">
     <!-- Compile the java code from ${src} into ${build} -->
-    <javac source="1.4" target="1.4" srcdir="${src}" destdir="${build}" classpath="${aoijar}" debug="on" extdirs="" />
+    <javac source="1.5" target="1.5" srcdir="${src}" destdir="${build}" classpath="${aoijar}:${mtjjar}" debug="on" extdirs="" />
   </target>
 
   <target name="dist" depends="compile">
