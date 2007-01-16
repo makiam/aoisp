@@ -4,13 +4,14 @@
 	<name>PolyMesh</name>
 	<author>Francois Guillet</author>
 	<version>1.55</version>
-    <date>2006/12/23</date>
-    <beta>4</beta>
+    <date>2007/12/16</date>
+    <beta>5</beta>
     <description>
 A plugin which provides a polygonal mesh for AoI.
     </description>
     <history>
-        <log version="1.55" date="23 december 2006" author="Francois Guillet">
+        <log version="1.55b5" date="16 january 2007" author="Francois Guillet">
+	     Remove Edge bug corrected.					
 	     Seams preview.
 	     Extrude several edge regions bug corrected.
 	     Scale mesh bug corrected.

@@ -722,7 +722,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements EditingWin
         BMenuItem item;
 
         BMenu textureMenu = PMTranslate.menu("texture");
-        menubar.add( textureMenu );
+        //menubar.add( textureMenu );
         textureMenuItem = new BMenuItem[6];
         textureMenu.add( textureMenuItem[0] = PMTranslate.menuItem( "unfoldMesh", this, "doUnfoldMesh" ) );
         //textureMenu.add( textureMenuItem[1] = PMTranslate.menuItem( "markSelAsSeams", this, "doMarkSelAsSeams" ) );
