@@ -7403,19 +7403,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
                 }
             }
         }
-        /*for ( int i = 0; i < faces.length; ++i )
-        {
-            if ( selected[i] )
-            {
-                System.out.println( "i: " + i );
-                if (sclFace[i] != null)
-                {
-                    for (int j = 0; j < sclFace[i].size(); ++j)
-                       System.out.println( (Integer) sclFace[i].elementAt(j) );
-
-                }
-             }
-        }*/
         int vl = vertices.length;
         for ( int i = 0; i < vl; ++i )
         {
@@ -7529,16 +7516,16 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh
                     count = 0;
                     while ( isFaceSelected( selected, edges[edges[next].hedge].face ) )
                     {
-
-                        n = edges[fc[j]].next;
-                        if ( n >= edges.length / 2 )
-                            n += newEdges.length / 2 - edges.length / 2;
+                        if ( next >= edges.length / 2 )
+                            n = next + newEdges.length / 2 - edges.length / 2;
+                        else
+                            n = next;
                         if ( !changed )
                         {
                             newEdges[newEdgeCount + 2 * j + 1 + newEdges.length / 2].next = n;
-                            //System.out.println( "changed next " + ( 2 * j + 1 + newEdges.length / 2 ) + " to " + n );
                             changed = true;
                         }
+                        
                         newEdges[newEdges[n].hedge].vertex = newVertCount + j;
                         prev = next;
                         if ( prev >= edges.length / 2 )
