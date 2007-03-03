@@ -638,7 +638,7 @@ extends SSMRManipulator
 
     public void doValueWidgetCallback()
     {
-        double value = valueWidget.getValue();
+	double value = valueWidget.getValue();
         if ( handle == X_MOVE || handle == Y_MOVE || handle == Z_MOVE)
             moveDragged(value);
         else if ( handle == X_SCALE || handle == Y_SCALE || handle == Z_SCALE)
@@ -1013,6 +1013,27 @@ extends SSMRManipulator
                 if (boxes[i].contains(p))
                     handle = i;
             }
+            RotationHandle[] rotHandles = null;
+            switch (viewMode)
+            {
+                case XYZ_MODE :
+                    rotHandles = xyzRotHandles;
+                    break;
+                case UV_MODE :
+                    rotHandles = uvRotationHandle;
+                    break;
+                case SPECIFIC_MODE :
+                    rotHandles = specificRotHandles;
+                    break;
+            }
+            for (int i = 0; i < rotHandles.length; i++)
+            {
+                if ( (rotSegment = rotHandles[i].findClickTarget(p, view.getCamera())) != -1)
+                {
+                    currentRotationHandle = rotHandles[i];
+                    handle = ROTATE;
+                }
+            }
             if (e.getButton() == MouseEvent.BUTTON2 && handle != CENTER && e.isControlDown())
             {
                 if (valueWidget != null)
@@ -1204,7 +1225,7 @@ extends SSMRManipulator
             dispatchEvent(new ManipulatorCompletedEvent(this, view ) );
         else if (handle == X_MOVE || handle == Y_MOVE || handle == Z_MOVE)
             dispatchEvent(new ManipulatorCompletedEvent(this, view ) );
-        else
+        else if (handle == ROTATE)
             dispatchEvent(new ManipulatorCompletedEvent(this, view ) );
         handle = -1;
     }

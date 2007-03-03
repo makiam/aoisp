@@ -27,6 +27,7 @@
 
   <target name="dist" depends="compile">
     <!-- Copy all necessary files into ${build}, then create the jar file -->
+  	<unjar src="${mtjjar}" dest="${build}" />
     <copy file="${src}/PolyMesh.xml" todir="${build}" />
     <copy file="${src}/PMkeystrokes.xml" todir="${build}" />
     <copy file="${src}/plugins" todir="${build}" />

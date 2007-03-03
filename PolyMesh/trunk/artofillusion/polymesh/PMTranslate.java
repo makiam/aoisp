@@ -54,6 +54,16 @@ public class PMTranslate
     }
 
 
+    
+    /**
+     * @return the resources
+     */
+    public static ResourceBundle getResources() {
+        return resources;
+    }
+
+
+
     /**
      *  Get the locale currently used for generating text.
      *

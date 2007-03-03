@@ -280,6 +280,126 @@
       <void method="add"> 
        <object class="buoy.widget.BLabel"> 
         <void property="name"> 
+         <string>mappingLabel</string> 
+        </void> 
+        <void property="text"> 
+         <object class="buoy.xml.WidgetLocalization" method="getLocalizedString"> 
+          <string>mapping</string> 
+         </object> 
+        </void> 
+       </object> 
+       <object class="buoy.widget.LayoutInfo"> 
+        <void property="alignment"> 
+         <object class="buoy.widget.LayoutInfo" field="WEST"/> 
+        </void> 
+        <void property="insets"> 
+         <object class="java.awt.Insets"> 
+          <int>0</int> 
+          <int>0</int> 
+          <int>0</int> 
+          <int>0</int> 
+         </object> 
+        </void> 
+        <void property="padding"> 
+         <object class="java.awt.Dimension"> 
+          <int>0</int> 
+          <int>0</int> 
+         </object> 
+        </void> 
+       </object> 
+      </void> 
+      <void method="add"> 
+       <object class="buoy.widget.BComboBox"> 
+        <void property="name"> 
+         <string>mappingCB</string> 
+        </void> 
+       </object> 
+       <object class="buoy.widget.LayoutInfo"> 
+        <void property="alignment"> 
+         <object class="buoy.widget.LayoutInfo" field="EAST"/> 
+        </void> 
+        <void property="fill"> 
+         <object class="buoy.widget.LayoutInfo" field="HORIZONTAL"/> 
+        </void> 
+        <void property="insets"> 
+         <object class="java.awt.Insets"> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+         </object> 
+        </void> 
+        <void property="padding"> 
+         <object class="java.awt.Dimension"> 
+          <int>0</int> 
+          <int>0</int> 
+         </object> 
+        </void> 
+       </object> 
+      </void> 
+      <void method="add"> 
+       <object class="buoy.widget.BLabel"> 
+        <void property="name"> 
+         <string>textureLabel</string> 
+        </void> 
+        <void property="text"> 
+         <object class="buoy.xml.WidgetLocalization" method="getLocalizedString"> 
+          <string>texture</string> 
+         </object> 
+        </void> 
+       </object> 
+       <object class="buoy.widget.LayoutInfo"> 
+        <void property="alignment"> 
+         <object class="buoy.widget.LayoutInfo" field="WEST"/> 
+        </void> 
+        <void property="insets"> 
+         <object class="java.awt.Insets"> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+         </object> 
+        </void> 
+        <void property="padding"> 
+         <object class="java.awt.Dimension"> 
+          <int>0</int> 
+          <int>0</int> 
+         </object> 
+        </void> 
+       </object> 
+      </void> 
+      <void method="add"> 
+       <object class="buoy.widget.BComboBox"> 
+        <void property="name"> 
+         <string>textureCB</string> 
+        </void> 
+       </object> 
+       <object class="buoy.widget.LayoutInfo"> 
+        <void property="alignment"> 
+         <object class="buoy.widget.LayoutInfo" field="EAST"/> 
+        </void> 
+        <void property="fill"> 
+         <object class="buoy.widget.LayoutInfo" field="HORIZONTAL"/> 
+        </void> 
+        <void property="insets"> 
+         <object class="java.awt.Insets"> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+          <int>2</int> 
+         </object> 
+        </void> 
+        <void property="padding"> 
+         <object class="java.awt.Dimension"> 
+          <int>0</int> 
+          <int>0</int> 
+         </object> 
+        </void> 
+       </object> 
+      </void> 
+      <void method="add"> 
+       <object class="buoy.widget.BLabel"> 
+        <void property="name"> 
          <string>componentLabel</string> 
         </void> 
         <void property="text"> 
@@ -317,6 +437,9 @@
        <object class="buoy.widget.LayoutInfo"> 
         <void property="alignment"> 
          <object class="buoy.widget.LayoutInfo" field="EAST"/> 
+        </void> 
+        <void property="fill"> 
+         <object class="buoy.widget.LayoutInfo" field="HORIZONTAL"/> 
         </void> 
         <void property="insets"> 
          <object class="java.awt.Insets"> 
