@@ -7,6 +7,7 @@ import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
+import java.awt.image.BufferedImage;
 
 import javax.swing.ImageIcon;
 
@@ -15,6 +16,7 @@ import artofillusion.math.Mat4;
 import artofillusion.math.Vec2;
 import artofillusion.math.Vec3;
 import artofillusion.polymesh.Manipulator.ManipulatorPrepareChangingEvent;
+import artofillusion.polymesh.UVMappingData.UVMeshMapping;
 import buoy.event.MouseScrolledEvent;
 import buoy.event.WidgetMouseEvent;
 
@@ -31,6 +33,8 @@ public class UVMappingManipulator {
     private boolean[] originalSelection;
 
     private Point[] originalPositions;
+    
+    private Vec2[][] originalVertices;
 
     private Point center;
 
@@ -41,6 +45,8 @@ public class UVMappingManipulator {
     private static Image centerhandle;
 
     private static Image uvHandleImages[] = new Image[3];
+    
+    //private static Image uvHandleImages[] = new Image[3];
 
     private Rectangle[] boxes = new Rectangle[6];
 
@@ -74,9 +80,13 @@ public class UVMappingManipulator {
     
     private boolean liveUpdate = true;
 
-	private boolean draggingHandle;
+    private boolean draggingHandle;
 	
-	private int anchor;
+    private int anchor;
+    
+    private boolean globalScaling;
+    
+    private boolean globalMoving;
 
     public final static short U_MOVE = 0;
 
@@ -126,13 +136,14 @@ public class UVMappingManipulator {
 	    centerhandle = new ImageIcon(getClass().getResource(
 		    "/artofillusion/polymesh/Icons/centerhandle.gif"))
 		    .getImage();
+	    
 	}
-	anchor = 1;
+	anchor = -1;
     }
 
     public void mousePressed(WidgetMouseEvent ev) {
 	click = ev.getPoint();
-	if ((ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) != 0 &&
+	if (ev.isControlDown() &&
 			boxes[CENTER_HANDLE].x <= click.x + 3
 			&& boxes[CENTER_HANDLE].width + 6 >= click.x - boxes[CENTER_HANDLE].x
 			&& boxes[CENTER_HANDLE].y <= click.y + 3
@@ -149,8 +160,7 @@ public class UVMappingManipulator {
 		    && click.y > v[i].y - 3 && click.y < v[i].y + 3) {
 		hit = true;
 		if (selected[i]) {
-		    if ((ev.getModifiers() & WidgetMouseEvent.SHIFT_MASK) == 0
-			    && (ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) == 0) {
+		    if (!ev.isShiftDown() && !ev.isControlDown()) {
 			dragging = true;
 			handle = CENTER_HANDLE;	
 		    }
@@ -162,13 +172,12 @@ public class UVMappingManipulator {
 	    for (int i = 0; i < v.length; i++) {
 		if (click.x > v[i].x - 3 && click.x < v[i].x + 3
 			&& click.y > v[i].y - 3 && click.y < v[i].y + 3) {
-		    if ((ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) == 0) {
+		    if (!ev.isControlDown()) {
 			selected[i] = true;
 		    } else {
 			selected[i] = !selected[i];
 		    }
-		} else if ((ev.getModifiers() & WidgetMouseEvent.SHIFT_MASK) == 0
-			&& (ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) == 0) {
+		} else if (!ev.isControlDown() && !ev.isShiftDown()) {
 		    selected[i] = false;
 		}
 	    }
@@ -214,17 +223,45 @@ public class UVMappingManipulator {
 	    if (ev.getButton() == 3) {
 		if (ev.isControlDown()) {
 		    scaling = true;
-		    originalScale = canvas.getScale();
-		    canvas.disableImageDisplay();
+		    if (!ev.isShiftDown()) {
+			originalScale = canvas.getScale();
+			canvas.disableImageDisplay();
+			globalScaling = false;
+		    } else {
+			Vec2[][] verts = canvas.getMapping().v;
+			originalVertices = new Vec2[verts.length][];
+			for (int i = 0; i < verts.length; i++) {
+			    originalVertices[i] = new Vec2[verts[i].length];
+			    for (int j = 0; j < verts[i].length; j++) {
+				originalVertices[i][j] = new Vec2(verts[i][j]);
+			    }
+			}
+			center = null;
+			globalScaling = true;
+		    }
 		} else {
-		    canvas.disableImageDisplay();
-		    originalOrigin = canvas.getOrigin();
-		    originalScale = canvas.getScale();
 		    moving = true;
+		    originalScale = canvas.getScale();
+		    if (!ev.isShiftDown()) {
+			canvas.disableImageDisplay();
+			originalOrigin = canvas.getOrigin();
+			globalMoving = false;
+		    }
+		    else {
+			Vec2[][] verts = canvas.getMapping().v;
+			originalVertices = new Vec2[verts.length][];
+			for (int i = 0; i < verts.length; i++) {
+			    originalVertices[i] = new Vec2[verts[i].length];
+			    for (int j = 0; j < verts[i].length; j++) {
+				originalVertices[i][j] = new Vec2(verts[i][j]);
+			    }
+			}
+			center = null;
+			globalMoving = true;
+		    }
 		}
 	    } else {
-		if ((ev.getModifiers() & WidgetMouseEvent.SHIFT_MASK) == 0
-			    && (ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) == 0) {
+		if (!ev.isShiftDown() && !ev.isControlDown()) {
 			for (int i = 0; i < selected.length; i++) {
 			    selected[i] = false;
 			}
@@ -303,7 +340,7 @@ public class UVMappingManipulator {
 		dx = currentPt.x - click.x;
 		dy = currentPt.y - click.y;
 		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]) {
+		    if (selected[i]  && !canvas.isPinned(i) ) {
 			v[i].x = originalPositions[i].x + dx;
 			v[i].y = originalPositions[i].y + dy;
 		    }
@@ -317,7 +354,7 @@ public class UVMappingManipulator {
 	    case U_HANDLE:
 		dx = currentPt.x - click.x;
 		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]) {
+		    if (selected[i]  && !canvas.isPinned(i)) {
 			v[i].x = originalPositions[i].x + dx;
 		    }
 		}
@@ -330,7 +367,7 @@ public class UVMappingManipulator {
 	    case V_HANDLE:
 		dy = currentPt.y - click.y;
 		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]) {
+		    if (selected[i] && !canvas.isPinned(i)) {
 			v[i].y = originalPositions[i].y + dy;
 		    }
 		}
@@ -361,7 +398,7 @@ public class UVMappingManipulator {
 		    scaley /= base.y * base.y;
 		} else
 		    scaley = 1;
-		if ((ev.getModifiers() & ActionEvent.CTRL_MASK) != 0) {
+		if (!ev.isControlDown()) {
 		    axisLength = (int) Math.round(originalAxisLength * scale);
 		    if (axisLength <= 5) {
 			axisLength = 5;
@@ -395,7 +432,7 @@ public class UVMappingManipulator {
 		    double x;
 		    double y;
 		    for (int i = 0; i < v.length; i++) {
-			if (selected[i]) {
+			if (selected[i]  && !canvas.isPinned(i)) {
 			    x = scalex * (originalPositions[i].x - center.x);
 			    y = scaley * (originalPositions[i].y - center.y);
 			    v[i].x = (int) Math.round(x + center.x);
@@ -428,7 +465,7 @@ public class UVMappingManipulator {
 		double x;
 		double y;
 		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]) {
+		    if (selected[i]  && !canvas.isPinned(i)) {
 			x = cs * (originalPositions[i].x - center.x) + sn
 				* (originalPositions[i].y - center.y);
 			y = -sn * (originalPositions[i].x - center.x) + cs
@@ -453,8 +490,7 @@ public class UVMappingManipulator {
 		    } else {
 			selected[i] = !originalSelection[i];
 		    }
-		} else if ((ev.getModifiers() & WidgetMouseEvent.SHIFT_MASK) == 0
-			&& (ev.getModifiers() & WidgetMouseEvent.CTRL_MASK) == 0) {
+		} else if (!ev.isShiftDown() && !ev.isControlDown()) {
 		    selected[i] = false;
 		} else {
 		    selected[i] = originalSelection[i];
@@ -468,14 +504,42 @@ public class UVMappingManipulator {
 	    dy = currentPt.y - click.y;
 	    if (dy < -499)
 		dy = -499;
-	    canvas.setScale(originalScale * (1.0 + dy * 0.002));
-	    canvas.repaint();
-	    //canvas.updateTextureCoords();
+	    double scale = 1.0 + dy * 0.002;
+	    if (!globalScaling) {
+		    canvas.setScale(originalScale * scale);
+		    canvas.repaint();
+		    //canvas.updateTextureCoords();
+		} else {
+		    Vec2[][] verts = canvas.getMapping().v;
+		    Vec2 origin = canvas.getOrigin();
+		    for (int i = 0; i < verts.length; i++) {
+			for (int j = 0; j < verts[i].length; j++) {
+			    verts[i][j].x = (originalVertices[i][j].x - origin.x) * scale + origin.x;
+			    verts[i][j].y = (originalVertices[i][j].y - origin.y) * scale + origin.y;
+			}
+		    }
+		    canvas.refreshVerticesPoints();
+		    canvas.repaint();
+		}
 	} else if (moving) {
-	    canvas.setOrigin(originalOrigin.x - (currentPt.x - click.x)
-		    / originalScale, originalOrigin.y + (currentPt.y - click.y)
-		    / originalScale);
-	    canvas.repaint();
+	    if (!globalMoving) {
+		canvas.setOrigin(originalOrigin.x - (currentPt.x - click.x)
+			/ originalScale, originalOrigin.y + (currentPt.y - click.y)
+			/ originalScale);
+		canvas.repaint();
+	    } else {
+		double deltax = (currentPt.x - click.x) / originalScale;
+		double deltay = (currentPt.y - click.y) / originalScale;
+		Vec2[][] verts = canvas.getMapping().v;
+		for (int i = 0; i < verts.length; i++) {
+		    for (int j = 0; j < verts[i].length; j++) {
+			verts[i][j].x = originalVertices[i][j].x + deltax;
+			verts[i][j].y = originalVertices[i][j].y - deltay;
+		    }
+		}
+		canvas.refreshVerticesPoints();
+		canvas.repaint();
+	    }
 	    //canvas.updateTextureCoords();
 	} else if (draggingHandle) {
 		center.x = originalCenter.x + currentPt.x -click.x;
@@ -535,6 +599,7 @@ public class UVMappingManipulator {
 	draggingHandle = false;
 	boolean[] selected = canvas.getSelection();
 	if (scaling || moving) {
+	    computeCenter();
 	    scaling = moving = false;
 	    canvas.enableImageDisplay();
 	    canvas.updatePreview();
@@ -582,18 +647,12 @@ public class UVMappingManipulator {
 	g.drawLine(center.x + dx, center.y + dy, center.x + dx, center.y
 		- axisLength + dy);
 
-	g.drawImage(centerhandle, boxes[0].x + dx, boxes[0].y + dy,
-		Color.white, null);
-	g.drawImage(uvHandleImages[0], boxes[1].x + dx, boxes[1].y + dy,
-		Color.white, null);
-	g.drawImage(uvHandleImages[1], boxes[2].x + dx, boxes[2].y + dy,
-		Color.white, null);
-	g.drawImage(uvHandleImages[2], boxes[3].x + dx, boxes[3].y + dy,
-		Color.white, null);
-	g.drawImage(uvHandleImages[1], boxes[4].x + dx, boxes[4].y + dy,
-		Color.white, null);
-	g.drawImage(uvHandleImages[1], boxes[5].x + dx, boxes[5].y + dy,
-		Color.white, null);
+	g.drawImage(centerhandle, boxes[0].x + dx, boxes[0].y + dy, canvas.getComponent());
+	g.drawImage(uvHandleImages[0], boxes[1].x + dx, boxes[1].y + dy, canvas.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[2].x + dx, boxes[2].y + dy, canvas.getComponent());
+	g.drawImage(uvHandleImages[2], boxes[3].x + dx, boxes[3].y + dy, canvas.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[4].x + dx, boxes[4].y + dy, canvas.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[5].x + dx, boxes[5].y + dy, canvas.getComponent());
 
 	if (dragging) {
 	    rotationHandle.setCenter(new Point(center.x + dx, center.y + dy));
@@ -614,15 +673,13 @@ public class UVMappingManipulator {
 		sdx = (int) Math.round(axisLength * scalex);
 		g.drawLine(center.x, center.y, center.x + sdx, center.y);
 		g.drawImage(ghostscale, center.x + sdx + 2 * IMAGE_MARGIN
-			+ HANDLE_SIZE, center.y - HANDLE_SIZE / 2, Color.white,
-			null);
+			+ HANDLE_SIZE, center.y - HANDLE_SIZE / 2, canvas.getComponent());
 		break;
 	    case VS_HANDLE:
 		sdy = (int) Math.round(axisLength * scaley);
 		g.drawLine(center.x, center.y, center.x, center.y - sdy);
 		g.drawImage(ghostscale, center.x - HANDLE_SIZE / 2, center.y
-			- sdy - 2 * IMAGE_MARGIN - 2 * HANDLE_SIZE,
-			Color.white, null);
+			- sdy - 2 * IMAGE_MARGIN - 2 * HANDLE_SIZE, canvas.getComponent());
 		break;
 	    case UVS_HANDLE:
 		sdx = (int) Math.round(axisLength * scalex);
@@ -647,7 +704,7 @@ public class UVMappingManipulator {
 			* sy + (1 - Math.abs(sx)) * HANDLE_SIZE / 2);
 		g.drawLine(center.x, center.y, center.x + sdx, center.y - sdy);
 		g.drawImage(ghostscale, center.x + sdx + deltax, center.y - sdy
-			- deltay, Color.white, null);
+			- deltay, canvas.getComponent());
 		break;
 
 	    }

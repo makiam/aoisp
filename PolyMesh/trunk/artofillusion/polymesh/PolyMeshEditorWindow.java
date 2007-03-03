@@ -1031,7 +1031,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	BMenu textureMenu = PMTranslate.menu("texture");
 	menubar.add(textureMenu);
-	textureMenuItem = new BMenuItem[6];
+	textureMenuItem = new BMenuItem[2];
 	textureMenu.add(textureMenuItem[0] = PMTranslate.menuItem("unfoldMesh",
 		this, "doUnfoldMesh"));
 	textureMenu.add(textureMenuItem[1] = PMTranslate.menuItem(
