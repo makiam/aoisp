@@ -19,28 +19,28 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Stroke;
-import java.util.ArrayList;
 
-import artofillusion.MaterialPreviewer;
 import artofillusion.TextureParameter;
 import artofillusion.math.BoundingBox;
 import artofillusion.math.Vec2;
+import artofillusion.math.Vec3;
 import artofillusion.object.FacetedMesh;
 import artofillusion.object.Mesh;
 import artofillusion.object.MeshVertex;
+import artofillusion.object.TriangleMesh;
+import artofillusion.polymesh.UVMappingData.UVMeshMapping;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedEdge;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedFace;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedVertex;
 import artofillusion.texture.Texture;
 import artofillusion.texture.Texture2D;
-import artofillusion.texture.TextureMapping;
 import artofillusion.texture.UVMapping;
 import buoy.event.RepaintEvent;
 import buoy.widget.BScrollPane;
 import buoy.widget.CustomWidget;
 
 /**
- * This canvas displays several meshes over a bitmap image. The goal is to
+ * This canvas displays several mesh pieces over a bitmap image. The goal is to
  * define UV mapping of meshes as the location of the mesh vertices over the
  * background image. Editing tools allow to move, rotate, resize meshes.
  * 
@@ -49,37 +49,283 @@ import buoy.widget.CustomWidget;
  */
 public class UVMappingCanvas extends CustomWidget {
 
-    private Dimension size;
+    /**
+     * Undo/Redo command for whole set of mesh pieces vertices change
+     * 
+     */
+    public class MappingPositionsCommand implements Command {
 
-    private Dimension oldSize;
+	private Vec2[][] oldPos;
 
-    private UnfoldedMesh[] meshes;
+	private Vec2[][] newPos;
 
-    private static int MARGIN = 10; // margin around meshes
+	private double oldUmin, oldUmax, oldVmin, oldVmax;
 
-    private final static Color unselectedColor = new Color(0, 180, 0);
+	private double newUmin, newUmax, newVmin, newVmax;
 
-    private final static Color selectedColor = Color.red;
+	public MappingPositionsCommand() {
+	    oldPos = newPos = null;
+	}
 
-    private final static Color selectedPinnedColor = new Color(0, 162, 255);
+	public MappingPositionsCommand(Vec2[][] oldPos, Vec2[][] newPos) {
+	    super();
+	    this.oldPos = oldPos;
+	    this.newPos = newPos;
+	}
+
+	public void setOldRange(double oldUmin, double oldUmax, double oldVmin,
+		double oldVmax) {
+	    this.oldUmin = oldUmin;
+	    this.oldUmax = oldUmax;
+	    this.oldVmin = oldVmin;
+	    this.oldVmax = oldVmax;
+	}
+
+	public void setNewRange(double newUmin, double newUmax, double newVmin,
+		double newVmax) {
+	    this.newUmin = newUmin;
+	    this.newUmax = newUmax;
+	    this.newVmin = newVmin;
+	    this.newVmax = newVmax;
+	}
+
+	/**
+	 * @return the newPos
+	 */
+	public Vec2[][] getNewPos() {
+	    return newPos;
+	}
+
+	/**
+	 * @param newPos the newPos to set
+	 */
+	public void setNewPos(Vec2[][] newPos) {
+	    this.newPos = new Vec2[newPos.length][];
+	    for (int i = 0; i < newPos.length; i++) {
+		this.newPos[i] = new Vec2[newPos[i].length];
+		for (int j = 0; j < newPos[i].length; j++) {
+		    this.newPos[i][j] = new Vec2(newPos[i][j]);
+		}
+	    }
+	}
+
+	/**
+	 * @return the oldPos
+	 */
+	public Vec2[][] getOldPos() {
+	    return oldPos;
+	}
+
+	/**
+	 * @param oldPos the oldPos to set
+	 */
+	public void setOldPos(Vec2[][] oldPos) {
+	    this.oldPos = new Vec2[oldPos.length][];
+	    for (int i = 0; i < oldPos.length; i++) {
+		this.oldPos[i] = new Vec2[oldPos[i].length];
+		for (int j = 0; j < oldPos[i].length; j++) {
+		    this.oldPos[i][j] = new Vec2(oldPos[i][j]);
+		}
+	    }
+	}
+
+	public void execute() {
+	    redo();
+	}
+
+	public void redo() {
+	    for (int i = 0; i < mapping.v.length; i++) {
+		for (int j = 0; j < mapping.v[i].length; j++) {
+		    mapping.v[i][j] = new Vec2(newPos[i][j]);
+		}
+	    }
+	    setRange(newUmin, newUmax, newVmin, newVmax);
+	    manipulator.selectionUpdated();
+	    repaint();
+	}
+
+	public void undo() {
+	    for (int i = 0; i < mapping.v.length; i++) {
+		for (int j = 0; j < mapping.v[i].length; j++) {
+		    mapping.v[i][j] = new Vec2(oldPos[i][j]);
+		}
+	    }
+	    setRange(oldUmin, oldUmax, oldVmin, oldVmax);
+	    manipulator.selectionUpdated();
+	    repaint();
+	}
+
+    }
+
+    /**
+     * Undo/Redo command for pinning vertices
+     * 
+     */
+    public class PinCommand implements Command {
+
+	public int[] selection;
+
+	public PinCommand(int[] selection) {
+	    super();
+	    this.selection = selection;
+	}
+
+	public void execute() {
+	    redo();
+	}
+
+	public void redo() {
+	    for (int i = 0; i < selection.length; i++) {
+		mappingData.meshes[currentPiece].vertices[verticesTable[selection[i]]].pinned = !mappingData.meshes[currentPiece].vertices[verticesTable[selection[i]]].pinned;
+	    }
+	    repaint();
+	}
+
+	public void undo() {
+	    redo();
+	}
+
+    }
+
+    /**
+     * Undo/Redo command for selected vertices
+     * 
+     */
+    public class SelectionCommand implements Command {
+
+	private int[] selection;
+
+	public SelectionCommand(int[] selection) {
+	    super();
+	    this.selection = selection;
+	}
+
+	public void execute() {
+	    redo();
+	}
+
+	public void redo() {
+	    for (int i = 0; i < selection.length; i++) {
+		selected[selection[i]] = !selected[selection[i]];
+	    }
+	    manipulator.selectionUpdated();
+	    repaint();
+	}
+
+	public void undo() {
+	    redo();
+	}
+
+    }
+
+    /**
+     * Undo/Redo command for dragged vertices
+     * 
+     * @author Francois Guillet
+     *
+     */
+    public class DragMappingVerticesCommand implements Command {
+
+	private int[] vertIndices;
+
+	private Vec2[] undoPositions;
+
+	private Vec2[] redoPositions;
+
+	private UVMeshMapping mapping;
+
+	private int piece;
+
+	/**
+	 * Creates a DragMappingVerticesCommand
+	 * 
+	 * @param vertIndexes The indexes of vertices to move
+	 * @param undoPositions The original positions
+	 * @param redoPositions The positions to move to
+	 */
+
+	public DragMappingVerticesCommand(int[] vertIndexes,
+		Vec2[] undoPositions, Vec2[] redoPositions,
+		UVMeshMapping mapping, int piece) {
+	    super();
+	    this.vertIndices = vertIndexes;
+	    this.undoPositions = undoPositions;
+	    this.redoPositions = redoPositions;
+	    this.mapping = mapping;
+	    this.piece = piece;
+	}
+
+	public void execute() {
+	    redo();
+
+	}
+
+	public void redo() {
+	    Vec2[] v = mapping.v[piece];
+	    for (int i = 0; i < vertIndices.length; i++) {
+		v[vertIndices[i]] = new Vec2(redoPositions[i]);
+	    }
+	    refreshVerticesPoints();
+	    manipulator.selectionUpdated();
+	    repaint();
+	}
+
+	public void undo() {
+	    Vec2[] v = mapping.v[piece];
+	    for (int i = 0; i < vertIndices.length; i++) {
+		v[vertIndices[i]] = new Vec2(undoPositions[i]);
+	    }
+	    refreshVerticesPoints();
+	    manipulator.selectionUpdated();
+	    repaint();
+	}
+    }
+
+    public class Range {
+	public double umin;
+
+	public double umax;
+
+	public double vmin;
+
+	public double vmax;
+    }
+
+    private Dimension size; // widget size
+
+    private Dimension oldSize; // old widget size
+
+    // used to track size change
+
+    private UnfoldedMesh[] meshes; // the mesh pieces to display
 
     private boolean[] selected;
+
+    private int[] selectionDistance;
 
     private int currentPiece; // only one piece can be selected for edition
 
     private UVMappingEditorDialog parent;
 
-    private Point[] verticesPoints;
+    private Point[] verticesPoints; // vertices locations
+
+    // only vertices with an id != -1 are displayed
 
     private int selectedPiece;
 
-    private UVMappingData.UVMeshMapping mapping;
+    private UVMappingData.UVMeshMapping mapping; // current mapping
 
     private Rectangle dragBoxRect;
 
     private UVMappingManipulator manipulator;
 
-    private int[] verticesTable;
+    private int[] verticesTable; // table to find mesh vertex index from
+
+    // displayed vertex index
+    
+    private int[] invVerticesTable; // table to find displayed vertex index from
+
+    // mesh vertex index
 
     private UVMappingData mappingData;
 
@@ -115,6 +361,10 @@ public class UVMappingCanvas extends CustomWidget {
 
     private final static Dimension maxSize = new Dimension(5000, 5000);
 
+    private final static Color unselectedColor = new Color(0, 180, 0);
+
+    private final static Color selectedColor = Color.red;
+
     private final static Color pinnedColor = new Color(182, 0, 185);
 
     private final static Color pinnedSelectedColor = new Color(255, 142, 255);
@@ -130,7 +380,7 @@ public class UVMappingCanvas extends CustomWidget {
 	this.mapping = mappingData.mappings.get(0);
 	setBackground(Color.white);
 	size = new Dimension(512, 512);
-	oldSize = new Dimension(512, 512);
+	oldSize = new Dimension(0, 0);
 	origin = new Vec2();
 	this.mappingData = mappingData;
 	meshes = mappingData.getMeshes();
@@ -158,25 +408,26 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the current mesh mapping
-         */
+     * @return the current mesh mapping
+     */
     public UVMappingData.UVMeshMapping getMapping() {
 	return mapping;
     }
 
     /**
-         * @param mapping
-         *                The mapping to set
-         */
+     * @param mapping
+     *                The mapping to set
+     */
     public void setMapping(UVMappingData.UVMeshMapping mapping) {
+	clearSelection();
 	this.mapping = mapping;
 	resetMeshLayout();
 	update();
     }
 
     /**
-         * @return the current texture mapping
-         */
+     * @return the current texture mapping
+     */
     public UVMapping getTexMapping() {
 	return texMapping;
     }
@@ -191,18 +442,18 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the current texture
-         */
+     * @return the current texture
+     */
     public Texture getTexture() {
 	return texture;
     }
 
     /**
-         * @param texture
-         *                The texture to set
-         * @param texMapping
-         *                the texture mapping to set
-         */
+     * @param texture
+     *                The texture to set
+     * @param texMapping
+     *                the texture mapping to set
+     */
     public void setTexture(Texture texture, UVMapping texMapping) {
 	this.texture = texture;
 	this.texMapping = texMapping;
@@ -210,10 +461,14 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /*
-         * (non-Javadoc)
-         * 
-         * @see buoy.widget.Widget#getPreferredSize()
-         */
+     * (non-Javadoc)
+     * 
+     * @see buoy.widget.Widget#getPreferredSize()
+     */
+    /**
+     * The widget dimension adapts itself to the current size except if it's
+     * too small
+     */
     @Override
     public Dimension getPreferredSize() {
 	Dimension viewSize = ((BScrollPane) getParent()).getComponent()
@@ -234,35 +489,40 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /*
-         * (non-Javadoc)
-         * 
-         * @see buoy.widget.Widget#getMinimumSize()
-         */
+     * (non-Javadoc)
+     * 
+     * @see buoy.widget.Widget#getMinimumSize()
+     */
     @Override
     public Dimension getMinimumSize() {
 	return minSize;
     }
 
     /*
-         * (non-Javadoc)
-         * 
-         * @see buoy.widget.Widget#getMaximumSize()
-         */
+     * (non-Javadoc)
+     * 
+     * @see buoy.widget.Widget#getMaximumSize()
+     */
     @Override
     public Dimension getMaximumSize() {
 	return maxSize;
     }
 
-    /**
-         * Draws the mesh pieces
-         * 
-         */
     @SuppressWarnings("unused")
     private void doRepaint(RepaintEvent evt) {
 	Graphics2D g = evt.getGraphics();
 	doPaint(g, false);
     }
 
+    /**
+     * Draws the mesh pieces, either in the current canvas or for export
+     * purposes
+     * 
+     * @param g
+     *                The graphics to draw on
+     * @param export
+     *                True if it's for export purposes
+     */
     private void doPaint(Graphics2D g, boolean export) {
 	if (meshes == null)
 	    return;
@@ -334,13 +594,22 @@ public class UVMappingCanvas extends CustomWidget {
 	}
     }
 
+    /**
+     * Computes default range from mesh sizes
+     * 
+     */
     public void resetMeshLayout() {
 	vmin = umin = Double.MAX_VALUE;
 	vmax = umax = -Double.MAX_VALUE;
 	Vec2[] v;
+	UnfoldedVertex[] vert;
 	for (int i = 0; i < meshes.length; i++) {
 	    v = mapping.v[i];
+	    vert = meshes[i].vertices;
 	    for (int j = 0; j < v.length; j++) {
+		if (vert[j].id == -1) {
+		    continue;
+		}
 		if (v[j].x < umin) {
 		    umin = v[j].x;
 		} else if (v[j].x > umax) {
@@ -353,13 +622,27 @@ public class UVMappingCanvas extends CustomWidget {
 		}
 	    }
 	}
-	umin -= 0.1 * Math.abs(umin);
-	vmin -= 0.1 * Math.abs(vmin);
-	umax += 0.1 * Math.abs(umax);
-	vmax += 0.1 * Math.abs(vmax);
+	double deltau = umax - umin;
+	double deltav = vmax - vmin;
+	umin -= 0.05 * deltau;
+	vmin -= 0.05 * deltav;
+	umax += 0.05 * deltau;
+	vmax += 0.05 * deltav;
 	setRange(umin, umax, vmin, vmax);
     }
 
+    /**
+     * Sets the displayed UV range
+     * 
+     * @param umin
+     *                Low U limit
+     * @param umax
+     *                High U limit
+     * @param vmin
+     *                Low V Limit
+     * @param vmax
+     *                Hich V Limit
+     */
     public void setRange(double umin, double umax, double vmin, double vmax) {
 	this.umin = umin;
 	this.umax = umax;
@@ -371,15 +654,38 @@ public class UVMappingCanvas extends CustomWidget {
 	    scale = scaley;
 	origin.x = (umax + umin) / 2;
 	origin.y = (vmax + vmin) / 2;
-	vmax = origin.y + (size.height ) / (2 * scale);
-	vmin = origin.y - (size.height ) / (2 * scale);
-	umax = origin.x + (size.width ) / (2 * scale);
-	umin = origin.x - (size.width ) / (2 * scale);
+	this.vmax = origin.y + (size.height ) / (2 * scale);
+	this.vmin = origin.y - (size.height ) / (2 * scale);
+	this.umax = origin.x + (size.width ) / (2 * scale);
+	this.umin = origin.x - (size.width ) / (2 * scale);
 	createImage();
 	refreshVerticesPoints();
-	parent.displayUVMinMax(umin, umax, vmin, vmax);
+	parent.displayUVMinMax(this.umin, this.umax, this.vmin, this.vmax);
     }
 
+    @SuppressWarnings("unused")
+    //for debugging purposes
+    private void dumpParams() {
+	System.out.println("setRange size : " + size);
+	System.out.println("scale : " + scale);
+	System.out.println(umin + " " + umax + " " + vmin + " " + vmax);
+	System.out.println(origin.x + " " + origin.y);
+    }
+
+    public Range getRange() {
+	Range range = new Range();
+	range.umin = umin;
+	range.umax = umax;
+	range.vmin = vmin;
+	range.vmax = vmax;
+	return range;
+    }
+
+    /**
+     * Recomputes mesh vertices positions whenever origin or scaling has
+     * changed
+     * 
+     */
     public void refreshVerticesPoints() {
 	UnfoldedVertex[] vert = meshes[selectedPiece].vertices;
 	Vec2[] v = mapping.v[selectedPiece];
@@ -390,16 +696,24 @@ public class UVMappingCanvas extends CustomWidget {
 	}
 	verticesPoints = new Point[count];
 	verticesTable = new int[count];
+	invVerticesTable = new int[v.length];
 	count = 0;
 	for (int j = 0; j < v.length; j++) {
-	    if (vert[j].id == -1)
+	    if (vert[j].id == -1) {
+		invVerticesTable[j] = -1;
 		continue;
+	    }
 	    verticesPoints[count] = VertexToLayout(v[j]);
 	    verticesTable[count] = j;
+	    invVerticesTable[j] = count;
 	    count++;
 	}
     }
 
+    /**
+     * This method updates the preview when the selection has been changed
+     * 
+     */
     public void updatePreview() {
 	Mesh mesh = (Mesh) preview.getObject().object;
 	MeshVertex[] vert = mesh.getVertices();
@@ -416,8 +730,8 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the vertex selection
-         */
+     * @return the vertex selection
+     */
     public boolean[] getSelection() {
 	return selected;
     }
@@ -427,40 +741,98 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @param selected
-         *                Sets the selected vertices
-         */
+     *                Sets the selected vertices
+     *
+     * @param selected
+     */
     public void setSelection(boolean[] selected, boolean render) {
 
 	if (selected.length == verticesPoints.length) {
+	    int[] selChange = checkSelectionChange(this.selected, selected);
+	    if (selChange != null) {
+		parent.addUndoCommand(new SelectionCommand(selChange));
+	    }
 	    this.selected = selected;
 	    if (render) {
 		updatePreview();
 	    } else {
 		preview.clearVertexSelection();
 	    }
+	    if (parent.tensionOn()) {
+		findSelectionDistance();
+	    }
 	    repaint();
 	}
     }
 
+    /**
+     * Computes the difference vetween to vertex selections
+     * @param sel1
+     * @param sel2
+     * @return An array describing the selection differences
+     */
+    public int[] checkSelectionChange(boolean[] sel1, boolean[] sel2) {
+	if (sel1.length != sel2.length) {
+	    return null;
+	}
+	int count = 0;
+	for (int i = 0; i < sel1.length; i++) {
+	    if (sel1[i] != sel2[i]) {
+		count++;
+	    }
+	}
+	if (count != 0) {
+	    int[] selChange = new int[count];
+	    count = 0;
+	    for (int i = 0; i < sel1.length; i++) {
+		if (sel1[i] != sel2[i]) {
+		    selChange[count] = i;
+		    count++;
+		}
+	    }
+	    return selChange;
+
+	} else {
+	    return null;
+	}
+    }
+
     public void clearSelection() {
+	int count = 0;
 	for (int i = 0; i < selected.length; i++) {
-	    selected[i] = false;
+	    if (selected[i]) {
+		count++;
+	    }
+	}
+	int[] selChange = null;
+	if (count > 0) {
+	    selChange = new int[count];
+	    count = 0;
+	    for (int i = 0; i < selected.length; i++) {
+		if (selected[i]) {
+		    selChange[count] = i;
+		    selected[i] = false;
+		    count++;
+		}
+	    }
+	    parent.addUndoCommand(new SelectionCommand(selChange));
 	}
 	preview.clearVertexSelection();
     }
 
     /**
-         * @return the selected piece
-         */
+     * @return the selected piece index
+     */
     public int getSelectedPiece() {
 	return selectedPiece;
     }
 
     /**
-         * @param selectedPiece
-         *                the piece currently selected
-         */
+     * Sets the piece selected for edition
+     * 
+     * @param selectedPiece
+     *                the piece currently selected
+     */
     public void setSelectedPiece(int selectedPiece) {
 	this.selectedPiece = selectedPiece;
 	refreshVerticesPoints();
@@ -469,44 +841,43 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the vertices 2D points on canvas (only for displayed
-         *         vertices)
-         */
+     * @return the vertices 2D points on canvas (only for displayed
+     *         vertices)
+     */
     public Point[] getVerticesPoints() {
 	return verticesPoints;
     }
 
     /**
-         * Sets the current drag box and repaints the mesh. Set the drag box to
-         * null in order to stop the drag box display.
-         * 
-         * @param dragBoxRect
-         *                The drag box to display
-         */
+     * Sets the current drag box and repaints the mesh. Set the drag box to
+     * null in order to stop the drag box display.
+     * 
+     * @param dragBoxRect
+     *                The drag box to display
+     */
     public void setDragBox(Rectangle dragBoxRect) {
 	this.dragBoxRect = dragBoxRect;
 	repaint();
     }
 
     /**
-         * Sets the manipulator that manipulates mesh pieces
-         * 
-         * @param manipulator
-         */
+     * Sets the manipulator that manipulates mesh pieces
+     * 
+     * @param manipulator
+     */
     public void setManipulator(UVMappingManipulator manipulator) {
 	this.manipulator = manipulator;
     }
 
     /**
-         * Sets the positions of vertices relative to view window (not to UV
-         * values). If mask is not null, change is applied only for points for
-         * which mask is true.
-         * 
-         * @param newPos
-         * @param mask
-         */
+     * Sets the positions of vertices relative to view window (not to UV
+     * values). If mask is not null, change is applied only for points for
+     * which mask is true.
+     * 
+     * @param newPos
+     * @param mask
+     */
     public void setPositions(Point[] newPos, boolean[] mask) {
-	UnfoldedVertex[] vert = meshes[selectedPiece].vertices;
 	Vec2[] v = mapping.v[selectedPiece];
 	for (int i = 0; i < newPos.length; i++) {
 	    if (mask == null || mask[i]) {
@@ -517,11 +888,11 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * This function returns the rectangle that encloses the mesh, taking
-         * into accout mesh origin, orientation and scale
-         * 
-         * @return mesh bounds
-         */
+     * This function returns the rectangle that encloses the mesh, taking
+     * into accout mesh origin, orientation and scale
+     * 
+     * @return mesh bounds
+     */
     public BoundingBox getBounds(UnfoldedMesh mesh) {
 	int xmin, xmax, ymin, ymax;
 	xmax = ymax = Integer.MIN_VALUE;
@@ -543,6 +914,12 @@ public class UVMappingCanvas extends CustomWidget {
 	return b;
     }
 
+    /**
+     * Computes the position of a vertex on the layout
+     * 
+     * @param r The vertex position
+     * @return The position on the layout
+     */
     public Point VertexToLayout(Vec2 r) {
 	Point p = new Point();
 	p.x = (int) Math.round((r.x - origin.x) * scale);
@@ -553,16 +930,23 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * Computes the position of a vertex given its position on the layout
-         * 
-         * @param p
-         *                The new vertex position
-         * @param index
-         *                The vertex index
-         */
+     * Computes the position of a vertex given its position on the layout
+     * 
+     * @param p
+     *                The new vertex position
+     * @param index
+     *                The vertex index
+     */
     public void LayoutToVertex(Vec2 v, Point p) {
 	v.x = (p.x - size.width / 2) / scale + origin.x;
 	v.y = (size.height / 2 - p.y) / scale + origin.y;
+    }
+
+    public Vec2 LayoutToVertex(Point p) {
+	Vec2 v = new Vec2();
+	v.x = (p.x - size.width / 2) / scale + origin.x;
+	v.y = (size.height / 2 - p.y) / scale + origin.y;
+	return v;
     }
 
     public void setComponent(int component) {
@@ -601,16 +985,31 @@ public class UVMappingCanvas extends CustomWidget {
 	setCursor(Cursor.getDefaultCursor());
     }
 
+    /**
+     * Sets the texture resolution
+     * 
+     * @param sampling
+     */
     public void setSampling(int sampling) {
 	mappingData.sampling = sampling;
 	createImage();
 	repaint();
     }
 
+    /**
+     * Returns the current texture resolution
+     * 
+     * @return Sampling
+     */
     public int getSampling() {
 	return mappingData.sampling;
     }
 
+    /**
+     * Scales the selected piece
+     * 
+     * @param sc
+     */
     public void scale(double sc) {
 	umin = sc * (umin - origin.x) + origin.x;
 	umax = sc * (umax - origin.x) + origin.x;
@@ -623,11 +1022,19 @@ public class UVMappingCanvas extends CustomWidget {
 	parent.displayUVMinMax(umin, umax, vmin, vmax);
     }
 
+    /**
+     * Disables texture display in order to speed up operations
+     *
+     */
     public void disableImageDisplay() {
 	disableImageDisplay = true;
 	textureImage = null;
     }
 
+    /**
+     * Enables image display 
+     *
+     */
     public void enableImageDisplay() {
 	disableImageDisplay = false;
 	createImage();
@@ -635,16 +1042,16 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the scale
-         */
+     * @return the scale
+     */
     public double getScale() {
 	return scale;
     }
 
     /**
-         * @param scale
-         *                the scale to set
-         */
+     * @param scale
+     *                the scale to set
+     */
     public void setScale(double sc) {
 	double f = scale / sc;
 	umin = f * (umin - origin.x) + origin.x;
@@ -658,6 +1065,11 @@ public class UVMappingCanvas extends CustomWidget {
 	parent.displayUVMinMax(umin, umax, vmin, vmax);
     }
 
+    /**
+     * Displaces displayed uv range
+     * @param du Shift along U
+     * @param dv Shift along V
+     */
     public void moveOrigin(double du, double dv) {
 	umin += du;
 	umax += du;
@@ -672,28 +1084,31 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     /**
-         * @return the origin
-         */
+     * @return the origin
+     */
     public Vec2 getOrigin() {
 	return new Vec2(origin);
     }
 
     /**
-         * @param origin
-         *                the origin to set
-         */
+     * @param origin
+     *                the origin to set
+     */
     public void setOrigin(Vec2 origin) {
 	setOrigin(origin.x, origin.y);
     }
 
     /**
-         * @param origin
-         *                the origin to set
-         */
+     * @param origin
+     *                the origin to set
+     */
     public void setOrigin(double u, double v) {
 	moveOrigin(u - origin.x, v - origin.y);
     }
 
+    /**
+     * Sets texture coordinate indices for later use
+     */
     public void initializeTexCoordsIndex() {
 	FacetedMesh mesh = (FacetedMesh) preview.getObject().object;
 	int[][] texCoordIndex = new int[mesh.getFaceCount()][];
@@ -719,13 +1134,10 @@ public class UVMappingCanvas extends CustomWidget {
 	    count += v.length;
 	}
 	count = 0;
-	// System.out.println("nb de faces " +
-	// ((PolyMesh)preview.getObject().object).getFaces().length);
 	for (int i = 0; i < meshes.length; i++) {
 	    f = meshes[i].getFaces();
 	    v = meshes[i].getVertices();
 	    for (int j = 0; j < f.length; j++) {
-		// System.out.println("face " + j + " " + f[j].id);
 		if (f[j].id >= 0 && f[j].id < texCoordIndex.length) {
 		    for (int k = 0; k < texCoordIndex[f[j].id].length; k++) {
 			if (f[j].v1 >= 0
@@ -745,14 +1157,15 @@ public class UVMappingCanvas extends CustomWidget {
 			}
 		    }
 		}
-		// else {
-		// System.out.println("rejetée " + j + " " + f[j].id);
-		// }
 	    }
 	    count += v.length;
 	}
     }
 
+    /**
+     * Updates texture coordinates to reflect the mapping
+     *
+     */
     public void updateTextureCoords() {
 
 	if (texture == null)
@@ -783,6 +1196,12 @@ public class UVMappingCanvas extends CustomWidget {
 	return meshes;
     }
 
+    /**
+     * Offscreen drawing for exporting images
+     * @param g The graphics to draw onto
+     * @param width Width of the image to draw
+     * @param height Height of the image to draw
+     */
     public void drawOnto(Graphics2D g, int width, int height) {
 	g.setColor(Color.white);
 	g.fillRect(0, 0, width, height);
@@ -824,15 +1243,131 @@ public class UVMappingCanvas extends CustomWidget {
     }
 
     public void pinSelection(boolean state) {
+	int count = 0;
 	for (int i = 0; i < verticesPoints.length; i++) {
-	    if (selected[i]) {
-		mappingData.meshes[currentPiece].vertices[verticesTable[i]].pinned = state;
+	    if (selected[i]
+		    && mappingData.meshes[currentPiece].vertices[verticesTable[i]].pinned != state) {
+		count++;
 	    }
 	}
-	repaint();
+	if (count != 0) {
+	    int[] pinChange = new int[count];
+	    count = 0;
+	    for (int i = 0; i < verticesPoints.length; i++) {
+		if (selected[i]
+			&& mappingData.meshes[currentPiece].vertices[verticesTable[i]].pinned != state) {
+		    mappingData.meshes[currentPiece].vertices[verticesTable[i]].pinned = state;
+		    pinChange[count] = i;
+		    count++;
+		}
+	    }
+	    parent.addUndoCommand(new PinCommand(pinChange));
+	    repaint();
+	}
     }
-    
+
     public boolean isPinned(int i) {
 	return mappingData.meshes[currentPiece].vertices[verticesTable[i]].pinned;
+    }
+
+    /**
+     * Given the index of a displayed vertex, returns the index of this
+     * vertex with respect to the unfolded piece of mesh.
+     * 
+     * This comes form the fact that not all vertices are displayed
+     * when the original mesh is not a triangle mesh
+     * @param index The index of the displayed vertex
+     * @return The index within the unfolded mesh
+     */
+    public int getTrueIndex(int index) {
+	return verticesTable[index];
+    }
+
+    public UVMappingEditorDialog getParentDialog() {
+	return parent;
+    }
+
+    /** Calculate the distance (in edges) between each vertex and the nearest selected vertex. */
+    //from triangle mesh editor
+    public void findSelectionDistance() {
+	int i, j;
+	UnfoldedMesh mesh = meshes[selectedPiece];
+	int dist[] = new int[mesh.getVertices().length];
+	UnfoldedEdge e[] = mesh.getEdges();
+
+	int maxDistance = parent.getMaxTensionDistance();
+	// First, set each distance to 0 or -1, depending on whether that vertex is part of the
+	// current selection.
+
+	for (i = 0; i < selected.length; i++)
+	    dist[verticesTable[i]] = selected[i] ? 0 : -1;
+	// Now extend this outward up to maxDistance.
+	for (i = 0; i < maxDistance; i++)
+	    for (j = 0; j < e.length; j++) {
+		if (e[j].hidden)
+		    continue;
+		if (dist[e[j].v1] == -1 && dist[e[j].v2] == i)
+		    dist[e[j].v1] = i + 1;
+		else if (dist[e[j].v2] == -1 && dist[e[j].v1] == i)
+		    dist[e[j].v2] = i + 1;
+	    }
+	selectionDistance = new int[selected.length];
+	for (i = 0; i < selected.length; i++) {
+	    selectionDistance[i] = dist[verticesTable[i]];
+	}
+    }
+    
+    /** Given a list of deltas which will be added to the selected vertices, calculate the
+    corresponding deltas for the unselected vertices according to the mesh tension. */
+
+    public void adjustDeltas(Vec2 delta[])
+    {
+	int dist[] = getSelectionDistance();
+	int count[] = new int [delta.length];
+	UnfoldedMesh mesh = meshes[selectedPiece];
+	UnfoldedEdge edge[] = mesh.getEdges();
+	int maxDistance = parent.getMaxTensionDistance();
+	double tension = parent.getTensionValue();
+	double scale[] = new double [maxDistance+1];
+
+	for (int i = 0; i < delta.length; i++)
+	    if (dist[i] != 0)
+		delta[i].set(0.0, 0.0);
+	int v1, v2;
+	for (int i = 0; i < maxDistance; i++)
+	{
+	    for (int j = 0; j < count.length; j++)
+		count[j] = 0;
+	    for (int j = 0; j < edge.length; j++)
+	    {
+		v1 = invVerticesTable[edge[j].v1];
+		v2 = invVerticesTable[edge[j].v2];
+		if (v1 == -1 || v2 == -1) {
+		    continue;
+		}
+		if (dist[v1] == i && dist[v2] == i+1)
+		{
+		    count[v2]++;
+		    delta[v2].add(delta[v1]);
+		}
+		else if (dist[v2] == i && dist[v1] == i+1)
+		{
+		    count[v1]++;
+		    delta[v1].add(delta[v2]);
+		}
+	    }
+	    for (int j = 0; j < count.length; j++)
+		if (count[j] > 1)
+		    delta[j].scale(1.0/count[j]);
+	}
+	for (int i = 0; i < scale.length; i++)
+	    scale[i] = Math.pow((maxDistance-i+1.0)/(maxDistance+1.0), tension);
+	for (int i = 0; i < delta.length; i++)
+	    if (dist[i] > 0)
+		delta[i].scale(scale[dist[i]]);
+    }
+    
+    public int[] getSelectionDistance() {
+	return selectionDistance;
     }
 }

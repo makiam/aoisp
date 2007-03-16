@@ -1175,6 +1175,7 @@ public class PolyMeshViewer extends MeshViewer
         if ( controller.getSelectionMode() == MeshEditController.POINT_MODE )
         {
             //System.out.println( screenVert.length + " / " + invVertTable.length);
+            //Vec3[] normals = polymesh.getNormals();
             int loop = screenVert.length;
             boolean found = false;
             for ( i = 0; i < loop; i++ )

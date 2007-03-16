@@ -1,3 +1,13 @@
+/*
+ *  Copyright (C) 2007 by Francois Guillet
+ *  This program is free software; you can redistribute it and/or modify it under the
+ *  terms of the GNU General Public License as published by the Free Software
+ *  Foundation; either version 2 of the License, or (at your option) any later version.
+ *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
+ *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ *  PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ */
+
 package artofillusion.polymesh;
 
 import java.awt.Color;
@@ -6,20 +16,28 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Rectangle;
-import java.awt.event.ActionEvent;
-import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 import javax.swing.ImageIcon;
 
-import artofillusion.math.CoordinateSystem;
 import artofillusion.math.Mat4;
 import artofillusion.math.Vec2;
 import artofillusion.math.Vec3;
-import artofillusion.polymesh.Manipulator.ManipulatorPrepareChangingEvent;
-import artofillusion.polymesh.UVMappingData.UVMeshMapping;
+import artofillusion.object.TriangleMesh;
+import artofillusion.object.TriangleMesh.Edge;
+import artofillusion.object.TriangleMesh.Face;
+import artofillusion.polymesh.UVMappingCanvas.Range;
+import artofillusion.polymesh.UVMappingCanvas.SelectionCommand;
+import artofillusion.polymesh.UnfoldedMesh.UnfoldedEdge;
 import buoy.event.MouseScrolledEvent;
 import buoy.event.WidgetMouseEvent;
 
+/**
+ * Manipulator used to manipulate mesh pieces
+ * 
+ * @author Francois Guillet
+ *
+ */
 public class UVMappingManipulator {
 
     protected UVMappingCanvas canvas;
@@ -33,8 +51,10 @@ public class UVMappingManipulator {
     private boolean[] originalSelection;
 
     private Point[] originalPositions;
-    
+
     private Vec2[][] originalVertices;
+    
+    private Vec2[] deltas;
 
     private Point center;
 
@@ -45,8 +65,6 @@ public class UVMappingManipulator {
     private static Image centerhandle;
 
     private static Image uvHandleImages[] = new Image[3];
-    
-    //private static Image uvHandleImages[] = new Image[3];
 
     private Rectangle[] boxes = new Rectangle[6];
 
@@ -75,18 +93,30 @@ public class UVMappingManipulator {
     private double originalScale;
 
     private Vec2 originalOrigin;
-    
-    private int numSel;
-    
+
+    private int numSel; //used to keep track if more than one vertex is selected
+
+    //manipulator is displayed only if numSel >= 2
+
     private boolean liveUpdate = true;
 
     private boolean draggingHandle;
-	
-    private int anchor;
-    
-    private boolean globalScaling;
-    
-    private boolean globalMoving;
+
+    private int anchor; //index of the anchor vertex, when set using
+
+    //ctrl drag center handle
+
+    private boolean globalScaling; //true if the user moves all pieces at once
+
+    //(shift right drag)
+
+    private boolean globalMoving;//true if the user scales all pieces at once
+
+    //(ctrl right drag)
+
+    private boolean[] curSelection;
+
+    private ArrayList<Integer> selection;
 
     public final static short U_MOVE = 0;
 
@@ -120,6 +150,7 @@ public class UVMappingManipulator {
 	this.canvas = canvas;
 	canvas.setManipulator(this);
 	this.window = window;
+	selection = new ArrayList();
 	for (int i = 0; i < 6; i++) {
 	    boxes[i] = new Rectangle(0, 0, HANDLE_SIZE / 2, HANDLE_SIZE / 2);
 	}
@@ -136,24 +167,27 @@ public class UVMappingManipulator {
 	    centerhandle = new ImageIcon(getClass().getResource(
 		    "/artofillusion/polymesh/Icons/centerhandle.gif"))
 		    .getImage();
-	    
+
 	}
 	anchor = -1;
     }
 
     public void mousePressed(WidgetMouseEvent ev) {
-	click = ev.getPoint();
-	if (ev.isControlDown() &&
-			boxes[CENTER_HANDLE].x <= click.x + 3
-			&& boxes[CENTER_HANDLE].width + 6 >= click.x - boxes[CENTER_HANDLE].x
-			&& boxes[CENTER_HANDLE].y <= click.y + 3
-			&& boxes[CENTER_HANDLE].height + 6 >= click.y - boxes[CENTER_HANDLE].y) {
-		    originalCenter = new Point(center);
-		    draggingHandle = true;
-		    return;
-		}
-	Point[] v = canvas.getVerticesPoints();
 	boolean[] selected = canvas.getSelection();
+	recordSelection(selected);
+	click = ev.getPoint();
+	if (ev.isControlDown()
+		&& boxes[CENTER_HANDLE].x <= click.x + 3
+		&& boxes[CENTER_HANDLE].width + 6 >= click.x
+			- boxes[CENTER_HANDLE].x
+		&& boxes[CENTER_HANDLE].y <= click.y + 3
+		&& boxes[CENTER_HANDLE].height + 6 >= click.y
+			- boxes[CENTER_HANDLE].y) {
+	    originalCenter = new Point(center);
+	    draggingHandle = true;
+	    return;
+	}
+	Point[] v = canvas.getVerticesPoints();
 	boolean hit = false;
 	for (int i = 0; i < v.length; i++) {
 	    if (click.x > v[i].x - 3 && click.x < v[i].x + 3
@@ -162,7 +196,7 @@ public class UVMappingManipulator {
 		if (selected[i]) {
 		    if (!ev.isShiftDown() && !ev.isControlDown()) {
 			dragging = true;
-			handle = CENTER_HANDLE;	
+			handle = CENTER_HANDLE;
 		    }
 		}
 		break;
@@ -183,7 +217,7 @@ public class UVMappingManipulator {
 	    }
 	    checkSelectionNumber(selected);
 	    canvas.setSelection(selected, false);
-		computeCenter();
+	    computeCenter();
 	    handle = 0;
 	    dragging = true;
 	} else if (!dragging) {
@@ -193,6 +227,13 @@ public class UVMappingManipulator {
 			&& boxes[i].y <= click.y + 3
 			&& boxes[i].height + 6 >= click.y - boxes[i].y) {
 		    handle = i;
+		    if (handle == US_HANDLE || handle == VS_HANDLE || 
+			    handle == UVS_HANDLE) {
+			deltas = new Vec2[canvas.getVerticesPoints().length];
+			for (int j = 0; j < deltas.length; j++) {
+			    deltas[j] = new Vec2();
+			}
+		    }
 		    dragging = true;
 		    break;
 		}
@@ -202,15 +243,19 @@ public class UVMappingManipulator {
 		if (rotSegment != -1) {
 		    handle = ROTATE_HANDLE;
 		    dragging = true;
+		    deltas = new Vec2[canvas.getVerticesPoints().length];
+		    for (int i = 0; i < deltas.length; i++) {
+			deltas[i] = new Vec2();
+		    }
 		}
 	    }
 	}
 	if (dragging == true) {
 	    if (center == null) {
-	    	computeCenter();
-	    	if (center == null) {
-	    		return;
-	    	}
+		computeCenter();
+		if (center == null) {
+		    return;
+		}
 	    }
 	    originalAxisLength = axisLength;
 	    originalCenter = new Point(center);
@@ -246,8 +291,7 @@ public class UVMappingManipulator {
 			canvas.disableImageDisplay();
 			originalOrigin = canvas.getOrigin();
 			globalMoving = false;
-		    }
-		    else {
+		    } else {
 			Vec2[][] verts = canvas.getMapping().v;
 			originalVertices = new Vec2[verts.length][];
 			for (int i = 0; i < verts.length; i++) {
@@ -262,13 +306,13 @@ public class UVMappingManipulator {
 		}
 	    } else {
 		if (!ev.isShiftDown() && !ev.isControlDown()) {
-			for (int i = 0; i < selected.length; i++) {
-			    selected[i] = false;
-			}
-			canvas.setSelection(selected, false);
-			anchor = -1;
-			center = null;
+		    for (int i = 0; i < selected.length; i++) {
+			selected[i] = false;
 		    }
+		    canvas.setSelection(selected, false);
+		    anchor = -1;
+		    center = null;
+		}
 		dragBox = true;
 		checkSelectionNumber(selected);
 		originalSelection = new boolean[selected.length];
@@ -279,34 +323,54 @@ public class UVMappingManipulator {
 	}
     }
 
+    private void recordSelection(boolean[] selected) {
+	if (curSelection == null || selected.length != curSelection.length) {
+	    curSelection = new boolean[selected.length];
+	}
+	if (window.tensionOn()) {
+	    selection.clear();
+	}
+	for (int i = 0; i < selected.length; i++) {
+	    curSelection[i] = selected[i];
+	    if (window.tensionOn() && selected[i]) {
+		selection.add(i);
+	    }
+	}
+
+    }
+
+    /**
+     * Computes the position of the manipulator
+     *
+     */
     private void computeCenter() {
-    Point[] v = canvas.getVerticesPoints();
+	Point[] v = canvas.getVerticesPoints();
 	boolean[] selected = canvas.getSelection();
 	center = new Point();
 	if (anchor > -1) {
-		center.x = v[anchor].x;
-		center.y = v[anchor].y;
+	    //manipulator is anchored on a vertex
+	    center.x = v[anchor].x;
+	    center.y = v[anchor].y;
+	} else {
+	    int count = 0;
+	    for (int i = 0; i < v.length; i++) {
+		if (selected[i]) {
+		    center.x += v[i].x;
+		    center.y += v[i].y;
+		    count++;
+		}
+	    }
+	    if (count == 0) {
+		center = null;
+		return;
+	    }
+	    double m = 1.0 / ((double) count);
+	    center.x = (int) Math.round(center.x * m);
+	    center.y = (int) Math.round(center.y * m);
 	}
-	else {
-		int count = 0;
-		for (int i = 0; i < v.length; i++) {
-			if (selected[i]) {
-				center.x += v[i].x;
-				center.y += v[i].y;
-				count++;
-			}
-		}
-		if (count == 0) {
-			center = null;
-			return;
-		}
-		double m = 1.0 / ((double) count);
-		center.x = (int) Math.round(center.x * m);
-		center.y = (int) Math.round(center.y * m);
-	}	
 	setCenter();
     }
-    
+
     private void setCenter() {
 	boxes[0].x = center.x - HANDLE_SIZE / 2;
 	boxes[0].y = center.y - HANDLE_SIZE / 2;
@@ -324,12 +388,12 @@ public class UVMappingManipulator {
     }
 
     public void mouseMoved(WidgetMouseEvent ev) {
-    	//Mac workaround for Ctrl-click drag
-    	if (draggingHandle) {
-    		mouseDragged(ev);
-    	}
+	//Mac workaround for Ctrl-click drag
+	if (draggingHandle) {
+	    mouseDragged(ev);
+	}
     }
-    
+
     public void mouseDragged(WidgetMouseEvent ev) {
 	Point currentPt = ev.getPoint();
 	Point[] v = canvas.getVerticesPoints();
@@ -339,43 +403,15 @@ public class UVMappingManipulator {
 	    case CENTER_HANDLE:
 		dx = currentPt.x - click.x;
 		dy = currentPt.y - click.y;
-		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]  && !canvas.isPinned(i) ) {
-			v[i].x = originalPositions[i].x + dx;
-			v[i].y = originalPositions[i].y + dy;
-		    }
-		}
-		canvas.setPositions(v, selected);
-		canvas.repaint();
-		if (liveUpdate) {
-			canvas.updateTextureCoords();
-		}
+		moveVertices(v, dx, dy);
 		break;
 	    case U_HANDLE:
 		dx = currentPt.x - click.x;
-		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]  && !canvas.isPinned(i)) {
-			v[i].x = originalPositions[i].x + dx;
-		    }
-		}
-		canvas.setPositions(v, selected);
-		canvas.repaint();
-		if (liveUpdate) {
-			canvas.updateTextureCoords();
-		}
+		moveVertices(v, dx, 0);
 		break;
 	    case V_HANDLE:
 		dy = currentPt.y - click.y;
-		for (int i = 0; i < v.length; i++) {
-		    if (selected[i] && !canvas.isPinned(i)) {
-			v[i].y = originalPositions[i].y + dy;
-		    }
-		}
-		canvas.setPositions(v, selected);
-		canvas.repaint();
-		if (liveUpdate) {
-			canvas.updateTextureCoords();
-		}
+		moveVertices(v, 0, dy);
 		break;
 	    case US_HANDLE:
 	    case VS_HANDLE:
@@ -398,7 +434,7 @@ public class UVMappingManipulator {
 		    scaley /= base.y * base.y;
 		} else
 		    scaley = 1;
-		if (!ev.isControlDown()) {
+		if (ev.isControlDown()) {
 		    axisLength = (int) Math.round(originalAxisLength * scale);
 		    if (axisLength <= 5) {
 			axisLength = 5;
@@ -431,18 +467,39 @@ public class UVMappingManipulator {
 		    }
 		    double x;
 		    double y;
-		    for (int i = 0; i < v.length; i++) {
-			if (selected[i]  && !canvas.isPinned(i)) {
-			    x = scalex * (originalPositions[i].x - center.x);
-			    y = scaley * (originalPositions[i].y - center.y);
-			    v[i].x = (int) Math.round(x + center.x);
-			    v[i].y = (int) Math.round(y + center.y);
+		    if (window.tensionOn()) {
+			for (int i = 0; i < v.length; i++) {
+				if (selected[i] && !canvas.isPinned(i)) {
+				    x = scalex * (originalPositions[i].x - center.x);
+				    y = scaley * (originalPositions[i].y - center.y);
+				    deltas[i].x = x + center.x - originalPositions[i].x;
+				    deltas[i].y = y + center.y - originalPositions[i].y;
+				}
+				else {
+				    deltas[i].x = 0;
+				    deltas[i].y = 0;
+				}
+			    }
+			    canvas.adjustDeltas(deltas);
+			    for (int i = 0; i < v.length; i++) {
+				v[i].x = originalPositions[i].x + (int)Math.round(deltas[i].x);
+				v[i].y = originalPositions[i].y + (int)Math.round(deltas[i].y);
+			    }
+			    canvas.setPositions(v, null);
+		    } else {
+			for (int i = 0; i < v.length; i++) {
+			    if (selected[i] && !canvas.isPinned(i)) {
+				x = scalex * (originalPositions[i].x - center.x);
+				y = scaley * (originalPositions[i].y - center.y);
+				v[i].x = (int) Math.round(x + center.x);
+				v[i].y = (int) Math.round(y + center.y);
+			    }
 			}
+			canvas.setPositions(v, selected);
 		    }
-		    canvas.setPositions(v, selected);
 		    if (liveUpdate) {
-				canvas.updateTextureCoords();
-			}
+			canvas.updateTextureCoords();
+		    }
 		    canvas.repaint();
 		}
 		break;
@@ -464,20 +521,47 @@ public class UVMappingManipulator {
 		double sn = Math.sin(rotAngle);
 		double x;
 		double y;
-		for (int i = 0; i < v.length; i++) {
-		    if (selected[i]  && !canvas.isPinned(i)) {
-			x = cs * (originalPositions[i].x - center.x) + sn
-				* (originalPositions[i].y - center.y);
-			y = -sn * (originalPositions[i].x - center.x) + cs
-				* (originalPositions[i].y - center.y);
-			v[i].x = (int) Math.round(x + center.x);
-			v[i].y = (int) Math.round(y + center.y);
+		if (window.tensionOn()) {
+		    for (int i = 0; i < v.length; i++) {
+			if (selected[i] && !canvas.isPinned(i)) {
+			    x = cs * (originalPositions[i].x - center.x) + sn
+			    * (originalPositions[i].y - center.y);
+			    y = -sn * (originalPositions[i].x - center.x) + cs
+			    * (originalPositions[i].y - center.y);
+			    deltas[i].x = x + center.x - originalPositions[i].x;
+			    deltas[i].y = y + center.y - originalPositions[i].y;
+			}
+			else {
+			    deltas[i].x = 0;
+			    deltas[i].y = 0;
+			}
 		    }
+		    canvas.adjustDeltas(deltas);
+		    for (int i = 0; i < v.length; i++) {
+			v[i].x = originalPositions[i].x + (int)Math.round(deltas[i].x);
+			v[i].y = originalPositions[i].y + (int)Math.round(deltas[i].y);
+		    }
+		    canvas.setPositions(v, null);
+		} else {
+		    for (int i = 0; i < v.length; i++) {
+			if (selected[i] && !canvas.isPinned(i)) {
+			    x = cs * (originalPositions[i].x - center.x) + sn
+			    * (originalPositions[i].y - center.y);
+			    y = -sn * (originalPositions[i].x - center.x) + cs
+			    * (originalPositions[i].y - center.y);
+			    v[i].x = (int)Math.round(x + center.x);
+			    v[i].y = (int)Math.round(y + center.y);
+			}
+			else {
+			    v[i].x = originalPositions[i].x;
+			    v[i].y = originalPositions[i].y;
+			}
+		    }
+		    canvas.setPositions(v, selected);
 		}
-		canvas.setPositions(v, selected);
 		canvas.repaint();
 		if (liveUpdate) {
-			canvas.updateTextureCoords();
+		    canvas.updateTextureCoords();
 		}
 		break;
 	    }
@@ -498,7 +582,7 @@ public class UVMappingManipulator {
 	    }
 	    checkSelectionNumber(selected);
 	    canvas.setSelection(selected, false);
-		computeCenter();
+	    computeCenter();
 	    canvas.setDragBox(dragBoxRect);
 	} else if (scaling) {
 	    dy = currentPt.y - click.y;
@@ -506,26 +590,27 @@ public class UVMappingManipulator {
 		dy = -499;
 	    double scale = 1.0 + dy * 0.002;
 	    if (!globalScaling) {
-		    canvas.setScale(originalScale * scale);
-		    canvas.repaint();
-		    //canvas.updateTextureCoords();
-		} else {
-		    Vec2[][] verts = canvas.getMapping().v;
-		    Vec2 origin = canvas.getOrigin();
-		    for (int i = 0; i < verts.length; i++) {
-			for (int j = 0; j < verts[i].length; j++) {
-			    verts[i][j].x = (originalVertices[i][j].x - origin.x) * scale + origin.x;
-			    verts[i][j].y = (originalVertices[i][j].y - origin.y) * scale + origin.y;
-			}
+		canvas.setScale(originalScale * scale);
+		canvas.repaint();
+	    } else {
+		Vec2[][] verts = canvas.getMapping().v;
+		Vec2 origin = canvas.getOrigin();
+		for (int i = 0; i < verts.length; i++) {
+		    for (int j = 0; j < verts[i].length; j++) {
+			verts[i][j].x = (originalVertices[i][j].x - origin.x)
+				* scale + origin.x;
+			verts[i][j].y = (originalVertices[i][j].y - origin.y)
+				* scale + origin.y;
 		    }
-		    canvas.refreshVerticesPoints();
-		    canvas.repaint();
 		}
+		canvas.refreshVerticesPoints();
+		canvas.repaint();
+	    }
 	} else if (moving) {
 	    if (!globalMoving) {
 		canvas.setOrigin(originalOrigin.x - (currentPt.x - click.x)
-			/ originalScale, originalOrigin.y + (currentPt.y - click.y)
-			/ originalScale);
+			/ originalScale, originalOrigin.y
+			+ (currentPt.y - click.y) / originalScale);
 		canvas.repaint();
 	    } else {
 		double deltax = (currentPt.x - click.x) / originalScale;
@@ -540,41 +625,82 @@ public class UVMappingManipulator {
 		canvas.refreshVerticesPoints();
 		canvas.repaint();
 	    }
-	    //canvas.updateTextureCoords();
 	} else if (draggingHandle) {
-		center.x = originalCenter.x + currentPt.x -click.x;
-		center.y = originalCenter.y + currentPt.y -click.y;
-		snapToVertex();
-		setCenter();
-		canvas.repaint();
+	    center.x = originalCenter.x + currentPt.x - click.x;
+	    center.y = originalCenter.y + currentPt.y - click.y;
+	    snapToVertex();
+	    setCenter();
+	    canvas.repaint();
 	}
     }
 
-    private void snapToVertex() {
-    	anchor = -1;
-    	Point[] v = canvas.getVerticesPoints();
-    	for (int i = 0; i < v.length; i++) {
-    		if (center.x > v[i].x - 3 && center.x < v[i].x + 3
-    				&& center.y > v[i].y - 3 && center.y < v[i].y + 3) {
-    			center.x = v[i].x;
-    			center.y = v[i].y;
-    			anchor = i;
-    			break;
-    		}
-    	}
-    }
-
-	private void checkSelectionNumber(boolean[] selected) {
-	numSel = 0;
-	for (int i = 0; i < selected.length; i++) {
-	    if (selected[i]) {
-		++numSel;
+    private void moveVertices(Point[] v, int dx, int dy) {
+	if (window.tensionOn()) {
+	    int[] selectionDist = canvas.getSelectionDistance();
+	    int maxDistance = window.getMaxTensionDistance();
+	    double tension = window.getTensionValue();
+	    Vec2 [] drag = new Vec2[maxDistance+1];
+	    drag[0] = new Vec2(dx,dy);
+	    for (int i = 1; i <= maxDistance; i++) {
+		drag[i] = drag[0].times(Math.pow((maxDistance-i+1.0)/(maxDistance+1.0), tension));
+		drag[i].x = (int) Math.round(drag[i].x);
+		drag[i].y = (int) Math.round(drag[i].y);
 	    }
-	    if (numSel == 2)
-		break;
+	    for (int i = 0; i < v.length; i++)
+	    {
+		if (selectionDist[i] > -1 && !canvas.isPinned(i)) {
+		    v[i].x = originalPositions[i].x + (int) drag[selectionDist[i]].x;
+		    v[i].y = originalPositions[i].y + (int) drag[selectionDist[i]].y;
+		} else {
+		    v[i].x = originalPositions[i].x;
+		    v[i].y = originalPositions[i].y;
+		}
+	    }
+	    canvas.setPositions(v, null);
+	}
+	else {
+	    boolean[] selected = canvas.getSelection();
+	    for (int i = 0; i < v.length; i++)
+	    {
+		if (selected[i] && !canvas.isPinned(i)) {
+		    v[i].x = originalPositions[i].x + dx;
+		    v[i].y = originalPositions[i].y + dy;
+		} else {
+		    v[i].x = originalPositions[i].x;
+		    v[i].y = originalPositions[i].y;
+		}
+	    }
+	    canvas.setPositions(v, selected);
+	}
+	canvas.repaint();
+	if (liveUpdate) {
+	    canvas.updateTextureCoords();
 	}
     }
     
+    private void snapToVertex() {
+	anchor = -1;
+	Point[] v = canvas.getVerticesPoints();
+	for (int i = 0; i < v.length; i++) {
+	    if (center.x > v[i].x - 3 && center.x < v[i].x + 3
+		    && center.y > v[i].y - 3 && center.y < v[i].y + 3) {
+		center.x = v[i].x;
+		center.y = v[i].y;
+		anchor = i;
+		break;
+	    }
+	}
+    }
+
+    private void checkSelectionNumber(boolean[] selected) {
+	numSel = 0;
+	for (int i = 0; i < selected.length; i++) {
+	    if (selected[i] && !canvas.isPinned(i)) {
+		++numSel;
+	    }
+	}
+    }
+
     private Rectangle getDragBoxRect(Point p1, Point p2) {
 	int x, y, w, h;
 	if (p1.x < p2.x) {
@@ -599,13 +725,59 @@ public class UVMappingManipulator {
 	draggingHandle = false;
 	boolean[] selected = canvas.getSelection();
 	if (scaling || moving) {
+	    if (globalMoving || globalScaling) {
+		UVMappingCanvas.MappingPositionsCommand cmd = canvas.new MappingPositionsCommand(
+			originalVertices, null);
+		//force vector duplicate for current positions
+		cmd.setNewPos(canvas.getMapping().v);
+		Range range = canvas.getRange();
+		cmd.setOldRange(range.umin, range.umax, range.umin, range.umax);
+		cmd.setNewRange(range.umin, range.umax, range.umin, range.umax);
+		window.addUndoCommand(cmd);
+	    }
 	    computeCenter();
 	    scaling = moving = false;
 	    canvas.enableImageDisplay();
 	    canvas.updatePreview();
+	    return;
+	}
+	int[] selChange = canvas.checkSelectionChange(curSelection, selected);
+	if (selChange != null) {
+	    canvas.getParentDialog().addUndoCommand(
+		    canvas.new SelectionCommand(selChange));
 	}
 	if (dragBox || dragging) {
-		canvas.setDragBox(null);
+	    if (dragging) {
+		int count = 0;
+		Point[] pt = canvas.getVerticesPoints(); 
+		for (int i = 0; i < selected.length; i++) {
+		    if (pt[i].x != originalPositions[i].x ||
+			    pt[i].y != originalPositions[i].y) {
+			count++;
+		    }
+
+		}
+		int[] vertIndices = new int[count];
+		Vec2[] undoPositions = new Vec2[count];
+		Vec2[] redoPositions = new Vec2[count];
+		Vec2[] v = canvas.getMapping().v[canvas.getSelectedPiece()];
+		count = 0;
+		for (int i = 0; i < selected.length; i++) {
+		    if (pt[i].x != originalPositions[i].x ||
+			    pt[i].y != originalPositions[i].y) {
+			vertIndices[count] = canvas.getTrueIndex(i);
+			undoPositions[count] = canvas
+				.LayoutToVertex(originalPositions[i]);
+			redoPositions[count] = new Vec2(v[vertIndices[count]]);
+			count++;
+		    }
+
+		}
+		window.addUndoCommand(canvas.new DragMappingVerticesCommand(
+			vertIndices, undoPositions, redoPositions, canvas
+				.getMapping(), canvas.getSelectedPiece()));
+	    }
+	    canvas.setDragBox(null);
 	    dragBox = dragging = false;
 	    originalSelection = null;
 	    computeCenter();
@@ -617,13 +789,13 @@ public class UVMappingManipulator {
 		    selected[i] = false;
 		}
 		canvas.setSelection(selected);
-		computeCenter();		
+		computeCenter();
 	    }
 	}
 	canvas.repaint();
 	canvas.updateTextureCoords();
     }
-    
+
     public void selectionUpdated() {
 	checkSelectionNumber(canvas.getSelection());
 	computeCenter();
@@ -637,22 +809,33 @@ public class UVMappingManipulator {
     }
 
     public void paint(Graphics2D g) {
-	if (numSel < 2)
+	if (numSel < 2) {
 	    return;
-	if (center == null)
+	}
+	if (center == null) {
 	    return;
+	}
+	if (scaling || moving) {
+	    return;
+	}
 	g.setColor(Color.orange);
 	g.drawLine(center.x + dx, center.y + dy, center.x + dx + axisLength,
 		center.y + dy);
 	g.drawLine(center.x + dx, center.y + dy, center.x + dx, center.y
 		- axisLength + dy);
 
-	g.drawImage(centerhandle, boxes[0].x + dx, boxes[0].y + dy, canvas.getComponent());
-	g.drawImage(uvHandleImages[0], boxes[1].x + dx, boxes[1].y + dy, canvas.getComponent());
-	g.drawImage(uvHandleImages[1], boxes[2].x + dx, boxes[2].y + dy, canvas.getComponent());
-	g.drawImage(uvHandleImages[2], boxes[3].x + dx, boxes[3].y + dy, canvas.getComponent());
-	g.drawImage(uvHandleImages[1], boxes[4].x + dx, boxes[4].y + dy, canvas.getComponent());
-	g.drawImage(uvHandleImages[1], boxes[5].x + dx, boxes[5].y + dy, canvas.getComponent());
+	g.drawImage(centerhandle, boxes[0].x + dx, boxes[0].y + dy, canvas
+		.getComponent());
+	g.drawImage(uvHandleImages[0], boxes[1].x + dx, boxes[1].y + dy, canvas
+		.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[2].x + dx, boxes[2].y + dy, canvas
+		.getComponent());
+	g.drawImage(uvHandleImages[2], boxes[3].x + dx, boxes[3].y + dy, canvas
+		.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[4].x + dx, boxes[4].y + dy, canvas
+		.getComponent());
+	g.drawImage(uvHandleImages[1], boxes[5].x + dx, boxes[5].y + dy, canvas
+		.getComponent());
 
 	if (dragging) {
 	    rotationHandle.setCenter(new Point(center.x + dx, center.y + dy));
@@ -673,13 +856,15 @@ public class UVMappingManipulator {
 		sdx = (int) Math.round(axisLength * scalex);
 		g.drawLine(center.x, center.y, center.x + sdx, center.y);
 		g.drawImage(ghostscale, center.x + sdx + 2 * IMAGE_MARGIN
-			+ HANDLE_SIZE, center.y - HANDLE_SIZE / 2, canvas.getComponent());
+			+ HANDLE_SIZE, center.y - HANDLE_SIZE / 2, canvas
+			.getComponent());
 		break;
 	    case VS_HANDLE:
 		sdy = (int) Math.round(axisLength * scaley);
 		g.drawLine(center.x, center.y, center.x, center.y - sdy);
 		g.drawImage(ghostscale, center.x - HANDLE_SIZE / 2, center.y
-			- sdy - 2 * IMAGE_MARGIN - 2 * HANDLE_SIZE, canvas.getComponent());
+			- sdy - 2 * IMAGE_MARGIN - 2 * HANDLE_SIZE, canvas
+			.getComponent());
 		break;
 	    case UVS_HANDLE:
 		sdx = (int) Math.round(axisLength * scalex);
@@ -721,12 +906,12 @@ public class UVMappingManipulator {
 	protected Point center;
 
 	/**
-         * Creates a 2D Rotation Handle with a given number of segments
-         * 
-         * @param segments
-         *                The number of segments that describe the rotation
-         *                circle
-         */
+	 * Creates a 2D Rotation Handle with a given number of segments
+	 * 
+	 * @param segments
+	 *                The number of segments that describe the rotation
+	 *                circle
+	 */
 	public UVRotationHandle(int segments, Point center, Color color) {
 	    this.segments = segments;
 	    this.color = color;
@@ -734,16 +919,16 @@ public class UVMappingManipulator {
 	}
 
 	/**
-         * @return the center
-         */
+	 * @return the center
+	 */
 	public Point getCenter() {
 	    return center;
 	}
 
 	/**
-         * @param center
-         *                The center to set
-         */
+	 * @param center
+	 *                The center to set
+	 */
 	public void setCenter(Point center) {
 	    this.center = center;
 	    int[] px = new int[segments + 1];
@@ -770,12 +955,12 @@ public class UVMappingManipulator {
 	}
 
 	/**
-         * Given an angle, this method returns a 2D polygon which can be used to
-         * tell the user the rotation amount when drawn on the canvas
-         * 
-         * @param angle
-         * @return The polygon
-         */
+	 * Given an angle, this method returns a 2D polygon which can be used to
+	 * tell the user the rotation amount when drawn on the canvas
+	 * 
+	 * @param angle
+	 * @return The polygon
+	 */
 
 	public Polygon getRotationFeedback(double angle) {
 	    int[] px = new int[segments + 1];
@@ -802,14 +987,14 @@ public class UVMappingManipulator {
 	}
 
 	/**
-         * This method tells if the mouse has been been clicked on a rotation
-         * handle
-         * 
-         * @param pos
-         *                The point where the mouse was clicked
-         * @return The number of the segment being clicked on or -1 if the mouse
-         *         has not been clicked on the handle
-         */
+	 * This method tells if the mouse has been been clicked on a rotation
+	 * handle
+	 * 
+	 * @param pos
+	 *                The point where the mouse was clicked
+	 * @return The number of the segment being clicked on or -1 if the mouse
+	 *         has not been clicked on the handle
+	 */
 	public int findClickTarget(Point pos) {
 	    double u, v, w;
 	    double maxdist = Double.MAX_VALUE;
@@ -859,11 +1044,11 @@ public class UVMappingManipulator {
 	}
     }
 
-	public boolean isLiveUpdate() {
-		return liveUpdate;
-	}
+    public boolean isLiveUpdate() {
+	return liveUpdate;
+    }
 
-	public void setLiveUpdate(boolean liveUpdate) {
-		this.liveUpdate = liveUpdate;
-	}
+    public void setLiveUpdate(boolean liveUpdate) {
+	this.liveUpdate = liveUpdate;
+    }
 }

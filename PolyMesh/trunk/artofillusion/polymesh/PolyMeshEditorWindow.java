@@ -4101,7 +4101,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		File file = chooser.getSelectedFile();
 		DataOutputStream dos = new DataOutputStream(
 			new FileOutputStream(file));
-		((PolyMesh) objInfo.object).writeToFile(dos, null);
+		PolyMesh mesh = (PolyMesh) objInfo.object;
+		//temporarily set mapping data to null
+		UVMappingData mappingData = mesh.mappingData;
+		mesh.mappingData = null;
+		mesh.writeToFile(dos, null);
+		mesh.mappingData = mappingData;
 		dos.close();
 	    } catch (Exception ex) {
 		ex.printStackTrace();
@@ -4297,6 +4302,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	updateMenus();
     }
 
+    @SuppressWarnings("unused")
     private void doUnfoldMesh() {
 	UnfoldStatusDialog dlg = new UnfoldStatusDialog();
 	if (!dlg.cancelled) {

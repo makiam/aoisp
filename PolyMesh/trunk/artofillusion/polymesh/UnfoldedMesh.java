@@ -9,21 +9,17 @@
  */
 
 package artofillusion.polymesh;
-import java.awt.Point;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 
-import artofillusion.Scene;
-import artofillusion.animation.Skeleton;
-import artofillusion.math.BoundingBox;
 import artofillusion.math.Vec2;
 import artofillusion.object.TriangleMesh;
 
 /**
  * An unfolded mesh is a 2D triangle mesh that represents a piece of a facetted
- * mesh which has been unfolded.
+ * mesh which has been unfolded. Heavily derived from triangle mesh class.
  * 
  * @author Francois Guillet
  * 
@@ -334,52 +330,16 @@ public class UnfoldedMesh {
 	this.vertices = vertices;
     }
     
-//    public void setBounds(double umin, double umax, double vmin, double vmax, boolean isotropic) {
-//	double xmin = Double.MAX_VALUE;
-//	double xmax = -Double.MAX_VALUE;
-//	double ymin = Double.MAX_VALUE;
-//	double ymax = -Double.MAX_VALUE;
-//	for (int i = 0; i < vertices.length; i++) {
-//	    if (vertices[i].r.x < xmin) {
-//		xmin= vertices[i].r.x;
-//	    }
-//	    if (vertices[i].r.x > xmax) {
-//		xmax= vertices[i].r.x;
-//	    }
-//	    if (vertices[i].r.y < ymin) {
-//		ymin= vertices[i].r.y;
-//	    }
-//	    if (vertices[i].r.y > ymax) {
-//		ymax= vertices[i].r.y;
-//	    }
-//	}
-//	if (xmin == xmax || ymin == ymax) {
-//	    return;
-//	}
-//	double uscale = (umax - umin)/(xmax - xmin);
-//	double vscale = (vmax - vmin)/(ymax - ymin);
-//	if (isotropic) {
-//	    if (uscale < vscale) {
-//		vscale = uscale;
-//	    } else {
-//		uscale = vscale;
-//	    }
-//	}
-//	for (int i = 0; i < vertices.length; i++) {
-//	    vertices[i].r.x = (vertices[i].r.x - xmin)*uscale + umin;
-//	    vertices[i].r.y = (vertices[i].r.y - ymin)*vscale + vmin;
-//	}
-//    }
 
     /**
-     * @return the name
+     * @return Mesh piece name
      */
     public String getName() {
         return name;
     }
 
     /**
-     * @param name the name to set
+     * @param name The piece name to set
      */
     public void setName(String name) {
         this.name = name;

@@ -5575,21 +5575,20 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 */
 	public PolyMesh(DataInputStream in, Scene theScene) throws IOException,
 			InvalidObjectException {
-		super(in, theScene);
-		initialize();
-		readData(in);
+	    	super(in, theScene);
+	    	initialize();
+		readData(in, theScene);
 		skeleton = new Skeleton(in);
 	}
-
-	public PolyMesh(DataInputStream in) throws IOException,
-			InvalidObjectException {
-		super();
-		initialize();
-		readData(in);
-		skeleton = new Skeleton();
+	
+	public PolyMesh(DataInputStream in) throws IOException, InvalidObjectException {
+	    super();
+	    initialize();
+	    readData(in, null);
+	    skeleton = new Skeleton();
 	}
 
-	private void readData(DataInputStream in) throws IOException,
+	private void readData(DataInputStream in, Scene scene) throws IOException,
 			InvalidObjectException {
 
 		short version = in.readShort();
@@ -5650,7 +5649,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		}
 		if (version > 6) {
 			if (in.readBoolean()) {
-				mappingData = new UVMappingData(in);
+				mappingData = new UVMappingData(in, scene);
 				mappingVerts = vertices.length;
 				mappingEdges = edges.length;
 				mappingFaces = faces.length;
@@ -10743,6 +10742,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		short state = mirrorState;
 		mirrorState = NO_MIRROR;
 		PolyMesh mesh = (PolyMesh) this.duplicate();
+		dumpMesh();
 		mesh.setMirrorState(state);
 		mesh.mirrorMesh();
 		mirroredVerts = mesh.mirroredVerts;
@@ -12725,7 +12725,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		}
 		if (mappingData != null) {
 			out.writeBoolean(true);
-			mappingData.writeToFile(out);
+			mappingData.writeToFile(out, theScene);
 		} else {
 			out.writeBoolean(false);
 		}
