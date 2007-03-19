@@ -58,7 +58,8 @@ public class ImplicitExpression extends ImplicitObject
      */
     public ImplicitExpression(double xsize, double ysize, double zsize)
     {
-        expressionModule = new ExprModule(new Point(0, 0));
+        super();
+	expressionModule = new ExprModule(new Point(0, 0));
         try
         {
             setExpression( "(1/sqrt(x*x+y*y+z*z) - 1)^2" );
@@ -79,7 +80,8 @@ public class ImplicitExpression extends ImplicitObject
 
     public ImplicitExpression(DataInputStream in, Scene theScene) throws IOException, InvalidObjectException
     {
-        short version = in.readShort();
+        super(in, theScene);
+	short version = in.readShort();
         if (version < 0 || version > 0)
             throw new InvalidObjectException("");
         expression = in.readUTF();
@@ -110,7 +112,8 @@ public class ImplicitExpression extends ImplicitObject
 
     public void writeToFile(DataOutputStream out, Scene theScene) throws IOException
     {
-        out.writeShort(0);
+	super.writeToFile(out, theScene);
+	out.writeShort(0);
         out.writeUTF(expression);
         expressionModule.writeToStream(out, theScene);
         out.writeDouble(cutoff);

@@ -2,7 +2,6 @@ package artofillusion.implicit;
 
 import artofillusion.object.ImplicitObject;
 import artofillusion.object.Object3D;
-import artofillusion.object.NullObject;
 import artofillusion.*;
 import artofillusion.animation.Keyframe;
 import artofillusion.math.Vec3;
@@ -45,6 +44,7 @@ public class ImplicitObjectCollection extends ImplicitObject
     private double cutoff;
     private BoundingBox bounds;
 
+    @SuppressWarnings("unused")
     private static final Property PROPERTIES[] = new Property [] {
             new Property(IPTranslate.text("Cutoff"), 0.0, Double.MAX_VALUE, 1.0),
     };
@@ -54,7 +54,8 @@ public class ImplicitObjectCollection extends ImplicitObject
      */
     public ImplicitObjectCollection()
     {
-        collection = new Vector();
+        super();
+	collection = new Vector();
         cutoff = 1.0;
         scale = new Vec3(1.0, 1.0, 1.0);
         box = new Vec3(2, 2, 2);
@@ -63,6 +64,7 @@ public class ImplicitObjectCollection extends ImplicitObject
         initThreadLocal();
     }
 
+    @SuppressWarnings("unchecked")
     public ImplicitObjectCollection(DataInputStream in, Scene theScene) throws IOException, InvalidObjectException {
         super(in, theScene);
         short version = in.readShort();
@@ -123,6 +125,7 @@ public class ImplicitObjectCollection extends ImplicitObject
         return true;
     }
 
+    @SuppressWarnings("unchecked")
     public Object3D duplicate()
     {
         ImplicitObjectCollection obj = new ImplicitObjectCollection();
@@ -138,6 +141,7 @@ public class ImplicitObjectCollection extends ImplicitObject
         return (Object3D)obj;
     }
 
+    @SuppressWarnings("unchecked")
     public void copyObject(Object3D obj)
     {
         ImplicitObjectCollection col = (ImplicitObjectCollection)obj;
@@ -212,7 +216,8 @@ public class ImplicitObjectCollection extends ImplicitObject
     private void initThreadLocal()
     {
         renderingCollection = new ThreadLocal() {
-            protected Object initialValue()
+            @SuppressWarnings("unchecked")
+	    protected Object initialValue()
             {
                 Vector renderCol = new Vector();
                 if ( collection.size() != 0)
@@ -305,7 +310,8 @@ public class ImplicitObjectCollection extends ImplicitObject
         }
 
 
-        public ImplicitObjectWrapper(DataInputStream in, Scene theScene) throws IOException, InvalidObjectException
+        @SuppressWarnings("unchecked")
+	public ImplicitObjectWrapper(DataInputStream in, Scene theScene) throws IOException, InvalidObjectException
         {
             String classname = in.readUTF();
             int len = in.readInt();
@@ -375,6 +381,7 @@ public class ImplicitObjectCollection extends ImplicitObject
      * @param object The object to add
      * @param coords The coordinates at which the expression must be placed
      */
+    @SuppressWarnings("unchecked")
     public void addObject(ImplicitObject object, CoordinateSystem coords)
     {
         collection.add(new ImplicitObjectWrapper(object, coords));

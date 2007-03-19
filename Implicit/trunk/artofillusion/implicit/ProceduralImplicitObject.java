@@ -47,7 +47,7 @@ public class ProceduralImplicitObject extends ImplicitObject implements Procedur
 
     public ProceduralImplicitObject(double xsize, double ysize, double zsize)
     {
-
+	super();
         box = new Vec3(2.0, 2.0, 2.0);
         bounds = new BoundingBox(-box.x/2, box.x/2.0, -box.y/2.0, box.y/2.0, -box.z/2.0, box.z/2.0);
         scale = new Vec3(1, 1, 1);

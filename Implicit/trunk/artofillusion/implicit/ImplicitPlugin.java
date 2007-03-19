@@ -68,7 +68,8 @@ public class ImplicitPlugin
             window = w;
         }
 
-        private void doCreate()
+        @SuppressWarnings("unused")
+	private void doCreate()
         {
             Scene theScene = window.getScene();
             Object3D obj = new ImplicitExpression( 1.0, 1.0, 1.0);

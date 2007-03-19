@@ -11,88 +11,83 @@ package artofillusion.implicit;
  */
 
 import artofillusion.ui.*;
-import buoy.event.*;
 import buoy.widget.*;
-import java.awt.*;
-import java.text.*;
 import javax.swing.*;
-import java.lang.reflect.*;
 
 /**
- *  A IPValueField is a ValueField for which the BTextField can be set
- *
- *@author     Francois Guillet
- *@created    January, 18 2005
+ * A IPValueField is a ValueField for which the BTextField can be set
+ * 
+ * @author Francois Guillet
+ * @created January, 18 2005
  */
 
-public class IPValueField extends ValueField
-{
+public class IPValueField extends ValueField {
     /**
-     *  Constructor for the ValueField object
-     *
-     *@param  value        Description of the Parameter
-     *@param  constraints  Description of the Parameter
-     */
-    public IPValueField( double value, int constraints )
-    {
-        super( value, constraints, 5 );
+         * Constructor for the ValueField object
+         * 
+         * @param value
+         *                Description of the Parameter
+         * @param constraints
+         *                Description of the Parameter
+         */
+    public IPValueField(double value, int constraints) {
+	super(value, constraints, 5);
     }
 
-
     /**
-     *  Constructor for the ValueField object
-     *
-     *@param  value        Description of the Parameter
-     *@param  constraints  Description of the Parameter
-     */
-    public IPValueField( float value, int constraints )
-    {
-        super( (double) value, constraints, 5 );
+         * Constructor for the ValueField object
+         * 
+         * @param value
+         *                Description of the Parameter
+         * @param constraints
+         *                Description of the Parameter
+         */
+    public IPValueField(float value, int constraints) {
+	super((double) value, constraints, 5);
     }
 
-
     /**
-     *  Constructor for the ValueField object
-     *
-     *@param  value        Description of the Parameter
-     *@param  constraints  Description of the Parameter
-     *@param  columns      Description of the Parameter
-     */
-    public IPValueField( float value, int constraints, int columns )
-    {
-        super( (double) value, constraints, columns );
+         * Constructor for the ValueField object
+         * 
+         * @param value
+         *                Description of the Parameter
+         * @param constraints
+         *                Description of the Parameter
+         * @param columns
+         *                Description of the Parameter
+         */
+    public IPValueField(float value, int constraints, int columns) {
+	super((double) value, constraints, columns);
     }
 
-
     /**
-     *  Constructor for the ValueField object
-     *
-     *@param  value        Description of the Parameter
-     *@param  constraints  Description of the Parameter
-     *@param  columns      Description of the Parameter
-     */
-    public IPValueField( double value, int constraints, int columns )
-    {
-        super( value, constraints, columns );
+         * Constructor for the ValueField object
+         * 
+         * @param value
+         *                Description of the Parameter
+         * @param constraints
+         *                Description of the Parameter
+         * @param columns
+         *                Description of the Parameter
+         */
+    public IPValueField(double value, int constraints, int columns) {
+	super(value, constraints, columns);
     }
 
-
-
     /**
-     *  Sets the textField attribute of the ValueField object
-     *
-     *@param  tf  The new textField value
-     */
-    public void setTextField( BTextField tf )
-    {
-        String text = getText();
-        int c = getColumns();
-        component = tf.getComponent();
-        JTextField jtf = (JTextField) component;
-        jtf.setText( text );
-        jtf.setColumns( c );
-        jtf.addCaretListener( caretListener );
-        jtf.getDocument().addDocumentListener( documentListener );
+         * Sets the textField attribute of the ValueField object
+         * 
+         * @param tf
+         *                The new textField value
+         */
+    public void setTextField(BTextField tf) {
+	String text = getText();
+	int c = getColumns();
+	component = tf.getComponent();
+	JTextField jtf = (JTextField) component;
+	jtf.setText(text);
+	jtf.setColumns(c);
+	jtf.addCaretListener(caretListener);
+	jtf.getDocument().addDocumentListener(documentListener);
     }
 }
-
