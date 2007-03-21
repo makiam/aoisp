@@ -43,6 +43,7 @@ import artofillusion.TaperMeshTool;
 import artofillusion.TextureParameter;
 import artofillusion.ThickenMeshTool;
 import artofillusion.UndoRecord;
+import artofillusion.ViewerCanvas;
 import artofillusion.animation.Joint;
 import artofillusion.animation.Skeleton;
 import artofillusion.animation.SkeletonTool;
@@ -313,6 +314,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
     private Shortcut singleNormalShortcut, groupNormalShortcut;
 
+	private BCheckBox frontSelectCB;
+
     /**
          * Constructor for the PolyMeshEditorWindow object
          * 
@@ -331,7 +334,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	scene = ((LayoutWindow) parent).getScene();
 	PolyMesh mesh = (PolyMesh) objInfo.object;
 	PMTranslate.setLocale(Translate.getLocale());
-	// oldMesh = (PolyMesh) objInfo.object;
 	if (eventSource == null)
 	    eventSource = new EventSource();
 	eventSource.addEventLink(CopyEvent.class, this, "doCopyEvent");
@@ -351,6 +353,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	vertexContainer = new RowContainer();
 	edgeContainer = new RowContainer();
 	faceContainer = new RowContainer();
+	meshContainer.add(frontSelectCB = new BCheckBox(PMTranslate.text("frontSelect"), false));
+	frontSelectCB.addEventLink(ValueChangedEvent.class, this, "doFrontSelectionChanged");
 	meshContainer.add(new BLabel(PMTranslate.text("meshTension") + ": "));
 	tensionSpin = new BSpinner(tensionDistance, 0, 999, 1);
 	setSpinnerColumns(tensionSpin, 3);
@@ -1031,7 +1035,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	BMenu textureMenu = PMTranslate.menu("texture");
 	menubar.add(textureMenu);
-	textureMenuItem = new BMenuItem[2];
+	textureMenuItem = new BMenuItem[6];
 	textureMenu.add(textureMenuItem[0] = PMTranslate.menuItem("unfoldMesh",
 		this, "doUnfoldMesh"));
 	textureMenu.add(textureMenuItem[1] = PMTranslate.menuItem(
@@ -1123,16 +1127,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	setUndoRecord(new UndoRecord(this, false,
 		UndoRecord.SET_MESH_SELECTION, new Object[] { this,
 			new Integer(selectMode), selected.clone() }));
-	if (selectMode == FACE_MODE) {
 	    for (int i = 0; i < selected.length; i++)
 		selected[i] = true;
-	    setSelection(selected);
-	} else {
-	    for (int i = 0; i < selected.length; i++)
-		selected[i] = true;
-	    setSelection(selected);
-	}
-
+	    setSelection(selected, true);
     }
 
     /**
@@ -3381,6 +3378,10 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	updateImage();
 	repaint();
     }
+    
+    public void setSelection(boolean[] sel) {
+    	setSelection(sel, false);
+    }
 
     /**
          * Sets point or edge selection
@@ -3388,21 +3389,47 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
          * @param sel
          *                The new selection array
          */
-    public void setSelection(boolean sel[]) {
-	PolyMesh mesh = (PolyMesh) objInfo.object;
-	if (selectMode == POINT_MODE
-		&& sel.length == ((PolyMesh) mesh).getVertices().length)
-	    selected = sel;
-	if (selectMode == EDGE_MODE
-		&& sel.length == ((PolyMesh) mesh).getEdges().length / 2)
-	    selected = sel;
-	if (selectMode == FACE_MODE
-		&& sel.length == ((PolyMesh) mesh).getFaces().length)
-	    selected = sel;
-	findSelectionDistance();
-	currentTool.getWindow().updateMenus();
-	updateImage();
-	repaint();
+    public void setSelection(boolean sel[], boolean force) {
+    	PolyMesh mesh = (PolyMesh) objInfo.object;
+    	boolean transparent = true;
+    	Vec3 viewDir = null;
+    	Vec3[] normals = null;
+    	int renderMode = getView().getRenderMode();
+    	if (!force) {
+			if (frontSelectCB.getState()) {
+				viewDir = getView().getCamera().getViewToWorld()
+						.timesDirection(Vec3.vz());
+			}
+		}    	
+		if (selectMode == POINT_MODE
+    			&& sel.length == ((PolyMesh) mesh).getVertices().length) {
+    		selected = sel;
+    		normals = mesh.getNormals();    		
+    	}
+    	else if (selectMode == EDGE_MODE
+    			&& sel.length == ((PolyMesh) mesh).getEdges().length / 2) {
+    		selected = sel;
+    		normals = mesh.getEdgeNormals();
+    	}
+    	else if (selectMode == FACE_MODE
+    			&& sel.length == ((PolyMesh) mesh).getFaces().length) {
+    		selected = sel;
+    		normals = mesh.getFaceNormals();
+    	}
+		//new Exception().printStackTrace();
+    	if (frontSelectCB.getState()) {
+			for (int i = 0; i < normals.length; i++) {
+				if (selected[i]) {
+					if (viewDir.dot(normals[i]) > 0.0001) {
+						selected[i] = false;
+					}
+				}
+			}
+		}
+    	findSelectionDistance();
+    	currentTool.getWindow().updateMenus();
+    	updateImage();
+    	repaint();
     }
 
     /**
@@ -4101,12 +4128,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		File file = chooser.getSelectedFile();
 		DataOutputStream dos = new DataOutputStream(
 			new FileOutputStream(file));
-		PolyMesh mesh = (PolyMesh) objInfo.object;
-		//temporarily set mapping data to null
-		UVMappingData mappingData = mesh.mappingData;
-		mesh.mappingData = null;
-		mesh.writeToFile(dos, null);
-		mesh.mappingData = mappingData;
+		((PolyMesh) objInfo.object).writeToFile(dos, null);
 		dos.close();
 	    } catch (Exception ex) {
 		ex.printStackTrace();
@@ -4130,6 +4152,16 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	    ((PolyMeshViewer) theView[i])
 		    .setSkeletonDetached(((BCheckBoxMenuItem) skeletonMenuItem[5])
 			    .getState());
+    }
+    
+    private void doFrontSelectionChanged() {
+    	if (frontSelectCB.getState()) {
+    		setSelection(selected);
+    	}
+    }
+    
+    public boolean isFrontSelectionOn() {
+    	return frontSelectCB.getState();
     }
 
     /**
@@ -4302,7 +4334,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	updateMenus();
     }
 
-    @SuppressWarnings("unused")
     private void doUnfoldMesh() {
 	UnfoldStatusDialog dlg = new UnfoldStatusDialog();
 	if (!dlg.cancelled) {
@@ -5366,7 +5397,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	    private BButton proceedButton;
 	    private BButton advancedButton;
 	    private BLabel residualLabel;
-	    private BLabel unfoldStatusLabel;
 	    private RowContainer rowContainer1;
 	    private BTextField residualTF;
 	    private int status;
@@ -5378,17 +5408,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	    public UnfoldStatusDialog() {
 		super(PolyMeshEditorWindow.this, PMTranslate.text("meshUnfolding"), true);
 		int nverts = ((PolyMesh) objInfo.object).getVertices().length;
-		if (nverts >= 1000) {
-		    residual = 1;
-		} else {
-		    residual = 0.001;
-		}
+		residual = 1.0e-4 / nverts;
 		InputStream inputStream = null;
 		try
 		{
 		    WidgetDecoder decoder = new WidgetDecoder( inputStream = getClass().getResource("interfaces/unfoldStatus.xml").openStream(), PMTranslate.getResources() );
 		    borderContainer1 = (BorderContainer) decoder.getRootObject();
-		    unfoldStatusLabel = ((BLabel) decoder.getObject("unfoldStatusLabel"));
 		    progressBar = ((BProgressBar) decoder.getObject("progressBar"));
 		    textArea = ((BTextArea) decoder.getObject("TextArea"));
 		    rowContainer1 = ((RowContainer) decoder.getObject("RowContainer1"));
@@ -5405,7 +5430,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		    residualVF.addEventLink(ValueChangedEvent.class, this, "doResidualChanged");
 		    residualLabel.setVisible(false);
 		    residualVF.setVisible(false);
-		    unfoldStatusLabel.setText(PMTranslate.text("unfoldProceed"));
 		}
 		catch ( IOException ex )
 		{
@@ -5450,7 +5474,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	    private void doProceedButton() {
 		switch (status) {
 		case 0:
-		    unfoldStatusLabel.setText(PMTranslate.text("unfoldStatus"));
 		    proceedButton.setText(PMTranslate.text("abort"));
 		    progressBar.setProgressText(PMTranslate.text("unfolding"));
 		    progressBar.setEnabled(true);
@@ -5491,7 +5514,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	    
 	    private void unfoldFinished(boolean ok) {
 		if (ok) {
-		    unfoldStatusLabel.setText(PMTranslate.text("unfoldDone"));
 		    proceedButton.setText(PMTranslate.text("continue"));
 		    progressBar.setProgressText("");
 		    progressBar.setEnabled(false);
