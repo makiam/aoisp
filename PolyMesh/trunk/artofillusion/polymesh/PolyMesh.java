@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2005 by Francois Guillet
+ *  Copyright (C) 2005-2007 by Francois Guillet
  *  This program is free software; you can redistribute it and/or modify it under the
  *  terms of the GNU General Public License as published by the Free Software
  *  Foundation; either version 2 of the License, or (at your option) any later version.
@@ -9,6 +9,7 @@
  */
 package artofillusion.polymesh;
 
+import java.awt.Color;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.io.InvalidObjectException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.prefs.Preferences;
 
 import artofillusion.MeshViewer;
 import artofillusion.ObjectViewer;
@@ -32,6 +34,7 @@ import artofillusion.animation.MeshGesture;
 import artofillusion.animation.Skeleton;
 import artofillusion.math.BoundingBox;
 import artofillusion.math.CoordinateSystem;
+import artofillusion.math.RGBColor;
 import artofillusion.math.Vec3;
 import artofillusion.object.FacetedMesh;
 import artofillusion.object.Mesh;
@@ -139,6 +142,33 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	protected UVMappingData mappingData;
 
 	private int mappingVerts, mappingEdges, mappingFaces;
+	
+	//colors
+	private Color vertColor;// = new Color(0, 0, 0);
+	
+	private Color selectedVertColor; // = new Color(255, 0, 0);
+	
+	private Color edgeColor; // = new Color(0, 0, 0);
+	
+	private Color selectedEdgeColor; // = new Color(255, 0, 0);
+	
+	private Color meshColor; // = new Color(204, 204, 255);
+
+	private Color selectedFaceColor; // = new Color(255, 127, 127);
+	
+	private RGBColor meshRGBColor; // = new RGBColor(0.8f, 0.8f, 1.0f);
+
+	private RGBColor selectedFaceRGBColor; // = new RGBColor(1.0f, 0.5f, 0.5f);
+
+	private Color seamColor; // = new Color(0, 0, 255);
+
+	private Color selectedSeamColor; // = new Color(0, 162, 255);
+	
+	private int handleSize; // = 3;
+	
+	//preferences
+	
+	private static Preferences preferences = Preferences.userRoot().node("artofillusion.polymesh");
 
 	// direction constants
 	/**
@@ -412,6 +442,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		smoothingMethod = Mesh.NO_SMOOTHING;
 		setSkeleton(new Skeleton());
 	}
+	
+	private PolyMesh() {
+		smoothingMethod = Mesh.NO_SMOOTHING;
+		initialize();
+		setSkeleton(new Skeleton());
+	}
 
 	/**
 	 * Initialization stuff common to several constructors
@@ -425,6 +461,103 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		interactiveSmoothLevel = 1;
 		renderingSmoothLevel = 2;
 		finalSmoothing = false;
+		//display properties
+		loadFromDisplayPropertiesPreferences();	
+	}
+	
+	/**
+	 * Sets the mesh display properties using stored preferences
+	 *
+	 */
+	public void loadFromDisplayPropertiesPreferences() {
+		vertColor = new Color( preferences.getInt("vertColor_red", 0),
+				preferences.getInt("vertColor_green", 0),
+				preferences.getInt("vertColor_blue", 0));
+		selectedVertColor = new Color( preferences.getInt("selectedVertColor_red", 255),
+				preferences.getInt("selectedVertColor_green", 0),
+				preferences.getInt("selectedVertColor_blue", 0));
+		edgeColor = new Color( preferences.getInt("edgeColor_red", 0),
+				preferences.getInt("edgeColor_green", 0),
+				preferences.getInt("edgeColor_blue", 0));
+		selectedEdgeColor = new Color( preferences.getInt("selectedEdgeColor_red", 255),
+				preferences.getInt("selectedEdgeColor_green", 0),
+				preferences.getInt("selectedEdgeColor_blue", 0));
+		seamColor = new Color( preferences.getInt("seamColor_red", 0),
+				preferences.getInt("seamColor_green", 0),
+				preferences.getInt("seamColor_blue", 255));
+		selectedSeamColor = new Color( preferences.getInt("selectedSeamColor_red", 0),
+				preferences.getInt("selectedSeamColor_green", 162),
+				preferences.getInt("selectedSeamColor_blue", 255));
+		meshColor = new Color( preferences.getInt("meshColor_red", 204),
+				preferences.getInt("meshColor_green", 204),
+				preferences.getInt("meshColor_blue", 255));
+		selectedFaceColor = new Color( preferences.getInt("selectedFaceColor_red", 255),
+				preferences.getInt("selectedFaceColor_green", 127),
+				preferences.getInt("selectedFaceColor_blue", 127));
+		meshRGBColor = ColorToRGB(meshColor);
+		selectedFaceRGBColor = ColorToRGB(selectedFaceColor);
+		handleSize = preferences.getInt("handleSize", 3);
+	}
+	
+	/**
+	 * Uses current display properties to store them as new default properties
+	 *
+	 */
+	public void resetDisplayPropertiesPreferences() {
+		preferences.putInt("vertColor_red", 0);
+		preferences.putInt("vertColor_green", 0);
+		preferences.putInt("vertColor_blue", 0);
+		preferences.putInt("selectedVertColor_red", 255);
+		preferences.putInt("selectedVertColor_green", 0);
+		preferences.putInt("selectedVertColor_blue", 0);
+		preferences.putInt("edgeColor_red", 0);
+		preferences.putInt("edgeColor_green", 0);
+		preferences.putInt("edgeColor_blue", 0);
+		preferences.putInt("selectedEdgeColor_red", 255);
+		preferences.putInt("selectedEdgeColor_green", 0);
+		preferences.putInt("selectedEdgeColor_blue", 0);
+		preferences.putInt("seamColor_red", 0);
+		preferences.putInt("seamColor_green", 0);
+		preferences.putInt("seamColor_blue", 255);
+		preferences.putInt("selectedSeamColor_red", 0);
+		preferences.putInt("selectedSeamColor_green", 162);
+		preferences.putInt("selectedSeamColor_blue", 255);
+		preferences.putInt("meshColor_red",204);
+		preferences.putInt("meshColor_green", 204);
+		preferences.putInt("meshColor_blue", 255);
+		preferences.putInt("selectedFaceColor_red", 255);
+		preferences.putInt("selectedFaceColor_green", 127);
+		preferences.putInt("selectedFaceColor_blue", 127);
+		preferences.putInt("handleSize", 3);
+		loadFromDisplayPropertiesPreferences();
+	}
+	
+	public void storeDisplayPropertiesAsReferences() {
+		preferences.putInt("vertColor_red", vertColor.getRed());
+		preferences.putInt("vertColor_green", vertColor.getGreen());
+		preferences.putInt("vertColor_blue", vertColor.getBlue());
+		preferences.putInt("selectedVertColor_red", selectedVertColor.getRed());
+		preferences.putInt("selectedVertColor_green", selectedVertColor.getGreen());
+		preferences.putInt("selectedVertColor_blue", selectedVertColor.getBlue());
+		preferences.putInt("edgeColor_red", edgeColor.getRed());
+		preferences.putInt("edgeColor_green", edgeColor.getGreen());
+		preferences.putInt("edgeColor_blue", edgeColor.getBlue());
+		preferences.putInt("selectedEdgeColor_red", selectedEdgeColor.getRed());
+		preferences.putInt("selectedEdgeColor_green", selectedEdgeColor.getGreen());
+		preferences.putInt("selectedEdgeColor_blue", selectedEdgeColor.getBlue());
+		preferences.putInt("seamColor_red", seamColor.getRed());
+		preferences.putInt("seamColor_green", seamColor.getGreen());
+		preferences.putInt("seamColor_blue", seamColor.getBlue());
+		preferences.putInt("selectedSeamColor_red", selectedSeamColor.getRed());
+		preferences.putInt("selectedSeamColor_green", selectedSeamColor.getGreen());
+		preferences.putInt("selectedSeamColor_blue", selectedSeamColor.getBlue());
+		preferences.putInt("meshColor_red", meshColor.getRed());
+		preferences.putInt("meshColor_green", meshColor.getGreen());
+		preferences.putInt("meshColor_blue", meshColor.getBlue());
+		preferences.putInt("selectedFaceColor_red", selectedFaceColor.getRed());
+		preferences.putInt("selectedFaceColor_green", selectedFaceColor.getGreen());
+		preferences.putInt("selectedFaceColor_blue", selectedFaceColor.getBlue());
+		preferences.putInt("handleSize", handleSize);
 	}
 
 	/**
@@ -545,11 +678,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			--uSize;
 			vertices = newVertices;
 			edges = newEdges;
-			// System.out.println( "avant: " + vertices.length );
-			// dumpMesh();
 			updateResizedMesh();
-			// dumpMesh();
-			// System.out.println( "apres: " + vertices.length );
 			for (int i = 0; i < uSize * vSize; ++i) {
 				u = (int) Math.round(vertices[i].r.x);
 				v = (int) Math.round(vertices[i].r.y);
@@ -634,15 +763,9 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			--vSize;
 			vertices = newVertices;
 			edges = newEdges;
-			// System.out.println( "avant: " + vertices.length );
-			// dumpMesh();
 			updateResizedMesh();
-			// dumpMesh();
-			// System.out.println( "apres: " + vertices.length );
 
 		}
-		// System.out.println( uSize + " " + vSize + " " + vertices.length + " "
-		// + vp.length );
 		for (int i = 0; i < vertices.length; ++i) {
 			u = (int) Math.round(vertices[i].r.x);
 			v = (int) Math.round(vertices[i].r.y);
@@ -652,8 +775,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		setSmoothingMethod(smesh.getSmoothingMethod());
 		copyTextureAndMaterial(smesh);
 		resetMesh();
-		// dumpMesh();
-		// System.out.println( checkMesh() );
 	}
 
 	/**
@@ -943,8 +1064,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			if (j == evSize - 1)
 				edges[ec + el].next = euSize * evSize * 2 + el;
 		}
-		// dumpMesh();
-		// System.out.println( checkMesh() );
 	}
 
 	/**
@@ -965,11 +1084,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 */
 	public PolyMesh(Vec3[] v, int[][] f) {
 		initialize();
-		/*
-		 * for (int i = 0; i < f.length; i++) { System.out.println("***** " +
-		 * i); for (int j = 0; j < f[i].length; ++j)
-		 * System.out.println(f[i][j]); }
-		 */
 		vertices = new Wvertex[v.length];
 		faces = new Wface[f.length];
 		int count = 0;
@@ -1008,8 +1122,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			}
 			faces[i] = new Wface(prevEdge);
 		}
-		// dumpMesh();
-		// boundaries reconstruction
 		int n;
 		for (int i = 0; i < edges.length; i++) {
 			if (edges[i] != null && edges[i].face == -1 && edges[i].next == -1) {
@@ -1048,8 +1160,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		for (int i = 0; i < faces.length; ++i)
 			faces[i].edge = edgeTable[faces[i].edge];
 		edges = newEdges;
-		// dumpMesh();
-		// System.out.println( checkMesh() );
 		setSkeleton(new Skeleton());
 	}
 
@@ -1126,6 +1236,17 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			for (int i = 0; i < seams.length; i++)
 				seams[i] = mesh.seams[i];
 		}
+		vertColor = mesh.vertColor;
+		selectedVertColor = mesh.selectedVertColor;
+		edgeColor = mesh.edgeColor;
+		selectedEdgeColor = mesh.selectedEdgeColor;
+		seamColor = mesh.seamColor;
+		selectedSeamColor = mesh.selectedSeamColor;
+		meshColor = mesh.meshColor;
+		selectedFaceColor = mesh.selectedFaceColor;
+		meshRGBColor = mesh.meshRGBColor;
+		selectedFaceRGBColor = mesh.selectedFaceRGBColor;
+		handleSize = mesh.handleSize;
 	}
 
 	/**
@@ -1155,7 +1276,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 */
 
 	public Object3D duplicate() {
-		PolyMesh mesh = new PolyMesh(0, 0, 0, 1.0, 1.0, 1.0);
+		PolyMesh mesh = new PolyMesh();
 		mesh.copyObject(this);
 		return mesh;
 	}
@@ -5592,7 +5713,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			InvalidObjectException {
 
 		short version = in.readShort();
-		if (version < 0 || version > 7)
+		if (version < 0 || version > 8)
 			throw new InvalidObjectException("");
 		if (version > 0)
 			mirrorState = in.readShort();
@@ -5654,6 +5775,19 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				mappingEdges = edges.length;
 				mappingFaces = faces.length;
 			}
+		}
+		if (version > 7) {
+			vertColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			selectedVertColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			edgeColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			selectedEdgeColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			seamColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			selectedSeamColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			meshColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			selectedFaceColor = new Color(in.readInt(), in.readInt(), in.readInt());
+			meshRGBColor = ColorToRGB(meshColor);
+			selectedFaceRGBColor = ColorToRGB(selectedFaceColor);
+			handleSize = in.readInt();
 		}
 	}
 
@@ -12631,7 +12765,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		if (theScene != null)
 			super.writeToFile(out, theScene);
 
-		out.writeShort(7);
+		out.writeShort(8);
 		out.writeShort(mirrorState);
 		out.writeInt(smoothingMethod);
 		out.writeInt(vertices.length);
@@ -12684,6 +12818,31 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		} else {
 			out.writeBoolean(false);
 		}
+		out.writeInt(vertColor.getRed());
+		out.writeInt(vertColor.getGreen());
+		out.writeInt(vertColor.getBlue());
+		out.writeInt(selectedVertColor.getRed());
+		out.writeInt(selectedVertColor.getGreen());
+		out.writeInt(selectedVertColor.getBlue());
+		out.writeInt(edgeColor.getRed());
+		out.writeInt(edgeColor.getGreen());
+		out.writeInt(edgeColor.getBlue());
+		out.writeInt(selectedEdgeColor.getRed());
+		out.writeInt(selectedEdgeColor.getGreen());
+		out.writeInt(selectedEdgeColor.getBlue());
+		out.writeInt(seamColor.getRed());
+		out.writeInt(seamColor.getGreen());
+		out.writeInt(seamColor.getBlue());
+		out.writeInt(selectedSeamColor.getRed());
+		out.writeInt(selectedSeamColor.getGreen());
+		out.writeInt(selectedSeamColor.getBlue());
+		out.writeInt(meshColor.getRed());
+		out.writeInt(meshColor.getGreen());
+		out.writeInt(meshColor.getBlue());
+		out.writeInt(selectedFaceColor.getRed());
+		out.writeInt(selectedFaceColor.getGreen());
+		out.writeInt(selectedFaceColor.getBlue());
+		out.writeInt(handleSize);
 		if (theScene != null)
 			skeleton.writeToStream(out);
 	}
@@ -13437,5 +13596,93 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		mappingVerts = vertices.length;
 		mappingEdges = edges.length;
 		mappingFaces = faces.length;
+	}
+
+	public Color getEdgeColor() {
+		return edgeColor;
+	}
+
+	public void setEdgeColor(Color edgeColor) {
+		this.edgeColor = edgeColor;
+	}
+
+	public Color getMeshColor() {
+		return meshColor;
+	}
+
+	public void setMeshColor(Color meshColor) {
+		this.meshColor = meshColor;
+		meshRGBColor = ColorToRGB(meshColor);
+	}
+
+	public Color getSelectedFaceColor() {
+		return selectedFaceColor;
+	}
+
+	public void setSelectedFaceColor(Color selectedFaceColor) {
+		this.selectedFaceColor = selectedFaceColor;
+		selectedFaceRGBColor = ColorToRGB(selectedFaceColor);
+	}
+
+	public int getHandleSize() {
+		return handleSize;
+	}
+
+	public void setHandleSize(int handleSize) {
+		this.handleSize = handleSize;
+	}
+
+	public Color getSelectedEdgeColor() {
+		return selectedEdgeColor;
+	}
+
+	public void setSelectedEdgeColor(Color selectedEdgeColor) {
+		this.selectedEdgeColor = selectedEdgeColor;
+	}
+
+	public Color getSelectedSeamColor() {
+		return selectedSeamColor;
+	}
+
+	public void setSelectedSeamColor(Color selectedSeamColor) {
+		this.selectedSeamColor = selectedSeamColor;
+	}
+
+	public Color getSelectedVertColor() {
+		return selectedVertColor;
+	}
+
+	public void setSelectedVertColor(Color selectedVertColor) {
+		this.selectedVertColor = selectedVertColor;
+	}
+
+	public Color getVertColor() {
+		return vertColor;
+	}
+
+	public void setVertColor(Color vertColor) {
+		this.vertColor = vertColor;
+	}
+
+	public Color getSeamColor() {
+		return seamColor;
+	}
+
+	public void setSeamColor(Color seamColor) {
+		this.seamColor = seamColor;
+	}
+
+	public RGBColor getMeshRGBColor() {
+		return meshRGBColor;
+	}
+
+	public RGBColor getSelectedFaceRGBColor() {
+		return selectedFaceRGBColor;
+	}
+	
+	public RGBColor ColorToRGB(Color color) {
+		return new RGBColor(((float) color.getRed()) / 255.0f, ((float) color
+				.getGreen()) / 255.0f, ((float) color.getBlue()) / 255.0f);
+
 	}
 }

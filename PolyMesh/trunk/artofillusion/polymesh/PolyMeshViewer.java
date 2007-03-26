@@ -49,11 +49,11 @@ import buoy.event.WidgetMouseEvent;
 import buoy.widget.RowContainer;
 
 /**
- *  The PolyMeshViewer class is a component which displays a PolyMesh object and
- *  allow the user to edit it.
- *
- *@author     Francois Guillet
- *@created    december, 22 2004
+ * The PolyMeshViewer class is a component which displays a PolyMesh object and
+ * allow the user to edit it.
+ * 
+ * @author Francois Guillet
+ * @created december, 22 2004
  */
 
 public class PolyMeshViewer extends MeshViewer {
@@ -71,23 +71,15 @@ public class PolyMeshViewer extends MeshViewer {
 
 	boolean visible[];
 
-	final static RGBColor surfaceRGB = new RGBColor(0.8f, 0.8f, 1.0f);
-
-	final static Color surfaceColor = new Color(0.8f, 0.8f, 1.0f);
-
-	final static Color faceSelectedColor = new Color(255, 183, 255);
-
-	final static Color seamColor = new Color(0, 0, 255);
-
-	final static Color selectedSeamColor = new Color(0, 162, 255);
-
 	private ArrayList manipulators;
 
 	/**
-	 *  Constructor for the PolyMeshViewer object
-	 *
-	 *@param  p       Parent RowContainer
-	 *@param  window  MeshEditController
+	 * Constructor for the PolyMeshViewer object
+	 * 
+	 * @param p
+	 *            Parent RowContainer
+	 * @param window
+	 *            MeshEditController
 	 */
 	public PolyMeshViewer(MeshEditController window, RowContainer p) {
 		super(window, p);
@@ -100,18 +92,20 @@ public class PolyMeshViewer extends MeshViewer {
 
 	/**
 	 * Adds a manipulator to the current list of manipulators
-	 *
-	 * @param manipulator The manipulator to add to the current set
+	 * 
+	 * @param manipulator
+	 *            The manipulator to add to the current set
 	 */
 	public void addManipulator(Manipulator manipulator) {
 		manipulators.add(manipulator);
 	}
 
 	/**
-	 * Sets the manipulator set to one manipulator. The current manipulator list is cleared
-	 * in the process
-	 *
-	 * @param manipulator The manipulator to initialize the manipulator set to
+	 * Sets the manipulator set to one manipulator. The current manipulator list
+	 * is cleared in the process
+	 * 
+	 * @param manipulator
+	 *            The manipulator to initialize the manipulator set to
 	 */
 	public void setManipulator(Manipulator manipulator) {
 		manipulators.clear();
@@ -127,8 +121,8 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  Mesh drawing
-	 *
+	 * Mesh drawing
+	 * 
 	 */
 	protected void drawObject() {
 		PolyMesh mesh = (PolyMesh) getController().getObject().object;
@@ -190,35 +184,26 @@ public class PolyMeshViewer extends MeshViewer {
 
 		// Now draw the object.
 		drawSurface();
-		Color meshColor;
-		Color selectedColor;
-		if (currentTool instanceof SkeletonTool) {
-			meshColor = disabledColor;
-			selectedColor = new Color(255, 127, 255);
-		} else {
-			meshColor = lineColor;
-			selectedColor = highlightColor;
+		if (!(currentTool instanceof SkeletonTool)) {
 			if (showSkeleton && mesh.getSkeleton() != null)
 				mesh.getSkeleton().draw(this, false);
 		}
 		if (controller.getSelectionMode() == MeshEditController.POINT_MODE) {
-			drawEdges(p, disabledColor, disabledColor);
-			drawVertices(meshColor,
-					currentTool.hilightSelection() ? selectedColor : meshColor);
+			drawEdges(p);
+			drawVertices();
 		} else {
-			drawEdges(p, meshColor,
-					currentTool.hilightSelection() ? selectedColor : meshColor);
+			drawEdges(p);
 		}
 		if (currentTool instanceof SkeletonTool)
 			if (showSkeleton && mesh.getSkeleton() != null)
 				mesh.getSkeleton().draw(this, true);
-		//Now draw manipulators
+		// Now draw manipulators
 		for (int i = 0; i < manipulators.size(); i++)
 			((Manipulator) manipulators.get(i)).draw();
 	}
 
 	/**
-	 *  Draw the surface of the object.
+	 * Draw the surface of the object.
 	 */
 
 	private void drawSurface() {
@@ -226,11 +211,14 @@ public class PolyMeshViewer extends MeshViewer {
 			return;
 		boolean hide[] = null;
 		int faceIndex[] = null;
+		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		Color surfaceColor = mesh.getMeshColor();
+		RGBColor surfaceRGBColor = mesh.getMeshRGBColor();
 		ObjectInfo objInfo = controller.getObject();
 		if (controller instanceof PolyMeshEditorWindow
 				&& ((PolyMeshEditorWindow) controller).getExtraParameter() != null) {
-			RenderingMesh mesh = objInfo.getPreviewMesh();
-			double param[] = ((FaceParameterValue) mesh.param[mesh.param.length - 1])
+			RenderingMesh rmesh = objInfo.getPreviewMesh();
+			double param[] = ((FaceParameterValue) rmesh.param[rmesh.param.length - 1])
 					.getValue();
 			faceIndex = new int[param.length];
 			for (int i = 0; i < faceIndex.length; i++)
@@ -246,45 +234,61 @@ public class PolyMeshViewer extends MeshViewer {
 			renderWireframe(objInfo.getWireframePreview(), theCamera,
 					surfaceColor);
 		} else if (renderMode == RENDER_TRANSPARENT) {
-			VertexShader shader = new ConstantVertexShader(transparentColor);
+			VertexShader shader = new ConstantVertexShader(mesh
+					.getMeshRGBColor());
 			if (faceIndex != null
-					&& controller.getSelectionMode() == MeshEditController.FACE_MODE)
-				shader = new SelectionVertexShader(new RGBColor(1.0, 0.4, 1.0),
-						shader, faceIndex, controller.getSelection());
+					&& controller.getSelectionMode() == MeshEditController.FACE_MODE) {
+				shader = new SelectionVertexShader(mesh
+						.getSelectedFaceRGBColor(), shader, faceIndex, controller
+						.getSelection());
+			}
 			renderMeshTransparent(objInfo.getPreviewMesh(), shader, theCamera,
 					theCamera.getViewToWorld().timesDirection(Vec3.vz()), hide);
 		} else {
-			RenderingMesh mesh = objInfo.getPreviewMesh();
+			RenderingMesh rmesh = objInfo.getPreviewMesh();
 			Vec3 viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
 			VertexShader shader;
 			if (renderMode == RENDER_FLAT)
-				shader = new FlatVertexShader(mesh, surfaceRGBColor, viewDir);
+				shader = new FlatVertexShader(rmesh, surfaceRGBColor, viewDir);
 			else if (renderMode == RENDER_SMOOTH)
-				shader = new SmoothVertexShader(mesh, surfaceRGBColor, viewDir);
+				shader = new SmoothVertexShader(rmesh, surfaceRGBColor, viewDir);
 			else
-				shader = new TexturedVertexShader(mesh, objInfo.object, 0.0,
+				shader = new TexturedVertexShader(rmesh, objInfo.object, 0.0,
 						viewDir).optimize();
 			if (faceIndex != null
 					&& controller.getSelectionMode() == MeshEditController.FACE_MODE)
-				shader = new SelectionVertexShader(new RGBColor(1.0, 0.4, 1.0),
+				shader = new SelectionVertexShader(mesh
+						.getSelectedFaceRGBColor(),
 						shader, faceIndex, controller.getSelection());
-			renderMesh(mesh, shader, theCamera, objInfo.object.isClosed(), hide);
+			renderMesh(rmesh, shader, theCamera, objInfo.object.isClosed(),
+					hide);
 		}
 	}
 
 	/**
-	 *  Draw the vertices of the control mesh.
-	 *
-	 *@param  unselectedColor  Color for unselected vertices
-	 *@param  selectedColor    Color for selected vertices
+	 * Draw the vertices of the control mesh.
+	 * 
+	 * @param unselectedColor
+	 *            Color for unselected vertices
+	 * @param selectedColor
+	 *            Color for selected vertices
 	 */
 
-	private void drawVertices(Color unselectedColor, Color selectedColor) {
+	private void drawVertices() {
 		if (!showMesh)
 			return;
 		PolyMesh mesh = (PolyMesh) getController().getObject().object;
 		PolyMesh viewMesh = mesh;
-
+		Color vertColor = mesh.getVertColor();
+		Color selectedVertColor = vertColor;
+		int handleSize = mesh.getHandleSize();
+		if (currentTool.hilightSelection()) {
+			selectedVertColor = mesh.getSelectedVertColor();
+		}
+		if (currentTool instanceof SkeletonTool) {
+			selectedVertColor = disableColor(selectedVertColor);
+			vertColor = disableColor(vertColor);
+		}
 		// First, draw any unselected portions of the object.
 		boolean selected[] = controller.getSelection();
 		int ref = 0;
@@ -309,14 +313,14 @@ public class PolyMeshViewer extends MeshViewer {
 			if (renderMode == RENDER_WIREFRAME
 					|| renderMode == RENDER_TRANSPARENT) {
 				if (!selected[ref] && visible[i])
-					drawBox(screenVert[i].x - HANDLE_SIZE / 2, screenVert[i].y
-							- HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE,
-							unselectedColor);
+					drawBox(screenVert[i].x - handleSize / 2, screenVert[i].y
+							- handleSize / 2, handleSize, handleSize,
+							vertColor);
 			} else {
 				if (!selected[ref] && visible[i])
-					renderBox(screenVert[i].x - HANDLE_SIZE / 2,
-							screenVert[i].y - HANDLE_SIZE / 2, HANDLE_SIZE,
-							HANDLE_SIZE, screenZ[i] - 0.01, unselectedColor);
+					renderBox(screenVert[i].x - handleSize / 2,
+							screenVert[i].y - handleSize / 2, handleSize,
+							handleSize, screenZ[i] - 0.01, vertColor);
 			}
 
 			// Now draw the selected portions.
@@ -324,14 +328,14 @@ public class PolyMeshViewer extends MeshViewer {
 			if (renderMode == RENDER_WIREFRAME
 					|| renderMode == RENDER_TRANSPARENT) {
 				if (selected[ref] && visible[i])
-					drawBox(screenVert[i].x - HANDLE_SIZE / 2, screenVert[i].y
-							- HANDLE_SIZE / 2, HANDLE_SIZE, HANDLE_SIZE,
-							selectedColor);
+					drawBox(screenVert[i].x - handleSize / 2, screenVert[i].y
+							- handleSize / 2, handleSize, handleSize,
+							selectedVertColor);
 			} else {
 				if (selected[ref] && visible[i])
-					renderBox(screenVert[i].x - HANDLE_SIZE / 2,
-							screenVert[i].y - HANDLE_SIZE / 2, HANDLE_SIZE,
-							HANDLE_SIZE, screenZ[i] - 0.01, selectedColor);
+					renderBox(screenVert[i].x - handleSize / 2,
+							screenVert[i].y - handleSize / 2, handleSize,
+							handleSize, screenZ[i] - 0.01, selectedVertColor);
 			}
 			if (screenVertNormals != null && screenVertNormals[i] != null) {
 				if (renderMode == RENDER_WIREFRAME
@@ -339,18 +343,18 @@ public class PolyMeshViewer extends MeshViewer {
 					if (!selected[ref] && visible[i]) {
 						drawLine(screenVert[i], screenVertNormals[i],
 								Color.black);
-						drawBox(screenVertNormals[i].x - HANDLE_SIZE / 2,
-								screenVertNormals[i].y - HANDLE_SIZE / 2,
-								HANDLE_SIZE, HANDLE_SIZE, unselectedColor);
+						drawBox(screenVertNormals[i].x - handleSize / 2,
+								screenVertNormals[i].y - handleSize / 2,
+								handleSize, handleSize, vertColor);
 					}
 				} else {
 					if (!selected[ref] && visible[i]) {
 						renderLine(sv[i].r, sv[i].r.plus(sv[i].normal
 								.times(0.5)), theCamera, Color.black);
-						renderBox(screenVertNormals[i].x - HANDLE_SIZE / 2,
-								screenVertNormals[i].y - HANDLE_SIZE / 2,
-								HANDLE_SIZE, HANDLE_SIZE,
-								screenZNormals[i] - 0.01, unselectedColor);
+						renderBox(screenVertNormals[i].x - handleSize / 2,
+								screenVertNormals[i].y - handleSize / 2,
+								handleSize, handleSize,
+								screenZNormals[i] - 0.01, vertColor);
 					}
 				}
 
@@ -361,18 +365,18 @@ public class PolyMeshViewer extends MeshViewer {
 					if (selected[ref] && visible[i]) {
 						drawLine(screenVert[i], screenVertNormals[i],
 								Color.black);
-						drawBox(screenVertNormals[i].x - HANDLE_SIZE / 2,
-								screenVertNormals[i].y - HANDLE_SIZE / 2,
-								HANDLE_SIZE, HANDLE_SIZE, selectedColor);
+						drawBox(screenVertNormals[i].x - handleSize / 2,
+								screenVertNormals[i].y - handleSize / 2,
+								handleSize, handleSize, selectedVertColor);
 					}
 				} else {
 					if (selected[ref] && visible[i]) {
 						renderLine(sv[i].r, sv[i].r.plus(sv[i].normal
 								.times(0.5)), theCamera, Color.black);
-						renderBox(screenVertNormals[i].x - HANDLE_SIZE / 2,
-								screenVertNormals[i].y - HANDLE_SIZE / 2,
-								HANDLE_SIZE, HANDLE_SIZE,
-								screenZNormals[i] - 0.01, selectedColor);
+						renderBox(screenVertNormals[i].x - handleSize / 2,
+								screenVertNormals[i].y - handleSize / 2,
+								handleSize, handleSize,
+								screenZNormals[i] - 0.01, selectedVertColor);
 					}
 				}
 			}
@@ -380,14 +384,17 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  Draw the edges of the control mesh.
-	 *
-	 *@param  p                Description of the Parameter
-	 *@param  unselectedColor  Color for unselected vertices
-	 *@param  selectedColor    Color for selected vertices
+	 * Draw the edges of the control mesh.
+	 * 
+	 * @param p
+	 *            Description of the Parameter
+	 * @param unselectedColor
+	 *            Color for unselected vertices
+	 * @param selectedColor
+	 *            Color for selected vertices
 	 */
 
-	private void drawEdges(Vec2[] p, Color unselectedColor, Color selectedColor) {
+	private void drawEdges(Vec2[] p) {
 		if (!showMesh)
 			return;
 		PolyMesh divMesh = null;
@@ -398,16 +405,20 @@ public class PolyMeshViewer extends MeshViewer {
 		Vec2 divPos[] = null;
 
 		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		Color seamColor = mesh.getSeamColor();
+		Color selectedSeamColor = seamColor;
+		Color edgeColor = mesh.getEdgeColor();
+		Color selectedEdgeColor = edgeColor;
+		if (currentTool.hilightSelection()
+				&& !(currentTool instanceof SkeletonTool)) {
+			selectedEdgeColor = mesh.getSelectedEdgeColor();
+			selectedSeamColor = mesh.getSelectedSeamColor();
+		}
+		if (currentTool instanceof SkeletonTool) {
+			selectedEdgeColor = edgeColor = disableColor(edgeColor);
+			selectedSeamColor = seamColor = disableColor(seamColor);
+		}
 		boolean[] seams = mesh.getSeams();
-		/*if (seams != null)
-		 {
-		 System.out.println("seams ***********");
-		 for (int i = 0; i < seams.length; i++)
-		 System.out.println( seams[i] );
-		 System.out.println("***********");
-		 }
-		 else
-		 System.out.println("no seams");*/
 		boolean seam;
 		boolean[] selected = controller.getSelection();
 		PolyMesh viewMesh = mesh;
@@ -460,7 +471,7 @@ public class PolyMeshViewer extends MeshViewer {
 			}
 		}
 		int index;
-		int v1, v2; //orv1, orv2;
+		int v1, v2; // orv1, orv2;
 		int loop = e.length / 2;
 		if (mirror)
 			loop = invEdgeTable.length;
@@ -477,18 +488,12 @@ public class PolyMeshViewer extends MeshViewer {
 				continue;
 			if (mirror) {
 				ref = invEdgeTable[index];
-				//if (ref >= trueEdges.length/2)
-				//    ref = trueEdges[ref].hedge;
 				v1 = e[index].vertex;
 				v2 = e[e[index].hedge].vertex;
-				//orv1 = trueEdges[ref].vertex;
-				//orv2 = trueEdges[trueEdges[ref].hedge].vertex;
 			} else {
 				ref = index;
 				v1 = e[ref].vertex;
 				v2 = e[e[ref].hedge].vertex;
-				//orv1 = v1;
-				//orv2 = v2;
 			}
 
 			if (renderMode == RENDER_WIREFRAME
@@ -501,7 +506,7 @@ public class PolyMeshViewer extends MeshViewer {
 							else
 								seam = false;
 							drawLine(screenVert[v1], screenVert[v2],
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					} else {
 						if (visible[v1] && visible[v2]) {
@@ -512,7 +517,7 @@ public class PolyMeshViewer extends MeshViewer {
 							drawLine(
 									divScreenVert[divEdge[i].vertex],
 									divScreenVert[divEdge[divEdge[i].hedge].vertex],
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					}
 				} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE
@@ -524,7 +529,7 @@ public class PolyMeshViewer extends MeshViewer {
 							else
 								seam = false;
 							drawLine(screenVert[v1], screenVert[v2],
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					} else {
 						if (!edgeSelected[ref] && visible[v1] && visible[v2]) {
@@ -535,7 +540,7 @@ public class PolyMeshViewer extends MeshViewer {
 							drawLine(
 									divScreenVert[divEdge[i].vertex],
 									divScreenVert[divEdge[divEdge[i].hedge].vertex],
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					}
 				}
@@ -549,7 +554,7 @@ public class PolyMeshViewer extends MeshViewer {
 								seam = false;
 							renderLine(p[v1], screenZ[v1] - 0.01, p[v2],
 									screenZ[v2] - 0.01, theCamera,
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					} else {
 						if (visible[v1] && visible[v2]) {
@@ -562,8 +567,7 @@ public class PolyMeshViewer extends MeshViewer {
 									divScreenZ[divEdge[i].vertex] - 0.01,
 									divPos[divEdge[divEdge[i].hedge].vertex],
 									divScreenZ[divEdge[divEdge[i].hedge].vertex] - 0.01,
-									theCamera, seam ? seamColor
-											: unselectedColor);
+									theCamera, seam ? seamColor : edgeColor);
 						}
 					}
 				} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE
@@ -574,10 +578,11 @@ public class PolyMeshViewer extends MeshViewer {
 								seam = seams[ref];
 							else
 								seam = false;
-							//System.out.println("seam not selected : " + ref + " / " + seam );
+							// System.out.println("seam not selected : " + ref +
+							// " / " + seam );
 							renderLine(p[v1], screenZ[v1] - 0.01, p[v2],
 									screenZ[v2] - 0.01, theCamera,
-									seam ? seamColor : unselectedColor);
+									seam ? seamColor : edgeColor);
 						}
 					} else {
 						if (!edgeSelected[ref] && visible[v1] && visible[v2]) {
@@ -590,8 +595,7 @@ public class PolyMeshViewer extends MeshViewer {
 									divScreenZ[divEdge[i].vertex] - 0.01,
 									divPos[divEdge[divEdge[i].hedge].vertex],
 									divScreenZ[divEdge[divEdge[i].hedge].vertex] - 0.01,
-									theCamera, seam ? seamColor
-											: unselectedColor);
+									theCamera, seam ? seamColor : edgeColor);
 						}
 					}
 				}
@@ -610,9 +614,11 @@ public class PolyMeshViewer extends MeshViewer {
 								seam = seams[ref];
 							else
 								seam = false;
-							//System.out.println("seam selected : " + ref + " / " + seam );
+							// System.out.println("seam selected : " + ref + " /
+							// " + seam );
 							drawLine(screenVert[v1], screenVert[v2],
-									seam ? selectedSeamColor : selectedColor);
+									seam ? selectedSeamColor
+											: selectedEdgeColor);
 						}
 					} else {
 						if (edgeSelected[ref] && visible[v1] && visible[v2]) {
@@ -623,7 +629,8 @@ public class PolyMeshViewer extends MeshViewer {
 							drawLine(
 									divScreenVert[divEdge[i].vertex],
 									divScreenVert[divEdge[divEdge[i].hedge].vertex],
-									seam ? selectedSeamColor : selectedColor);
+									seam ? selectedSeamColor
+											: selectedEdgeColor);
 						}
 					}
 				} else {
@@ -635,7 +642,8 @@ public class PolyMeshViewer extends MeshViewer {
 								seam = false;
 							renderLine(p[v1], screenZ[v1] - 0.01, p[v2],
 									screenZ[v2] - 0.01, theCamera,
-									seam ? selectedSeamColor : selectedColor);
+									seam ? selectedSeamColor
+											: selectedEdgeColor);
 						}
 					} else {
 						if (edgeSelected[ref] && visible[v1] && visible[v2]) {
@@ -649,7 +657,7 @@ public class PolyMeshViewer extends MeshViewer {
 									divPos[divEdge[divEdge[i].hedge].vertex],
 									divScreenZ[divEdge[divEdge[i].hedge].vertex] - 0.01,
 									theCamera, seam ? selectedSeamColor
-											: selectedColor);
+											: selectedEdgeColor);
 						}
 					}
 				}
@@ -659,6 +667,7 @@ public class PolyMeshViewer extends MeshViewer {
 
 	/**
 	 * Forwards mouse moved events to current tool if appropriate
+	 * 
 	 * @param e
 	 */
 	protected void mouseMoved(WidgetMouseEvent e) {
@@ -673,11 +682,12 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  When the user presses the mouse, forward events to the current tool as
-	 *  appropriate. If this is a vertex based tool, allow them to select or
-	 *  deselect vertices.
-	 *
-	 *@param  e  Description of the Parameter
+	 * When the user presses the mouse, forward events to the current tool as
+	 * appropriate. If this is a vertex based tool, allow them to select or
+	 * deselect vertices.
+	 * 
+	 * @param e
+	 *            Description of the Parameter
 	 */
 
 	protected void mousePressed(WidgetMouseEvent e) {
@@ -713,7 +723,8 @@ public class PolyMeshViewer extends MeshViewer {
 			else if (altTool != null && e.isAltDown())
 				activeTool = altTool;
 
-			// If the current tool wants all clicks, just forward the event and return.
+			// If the current tool wants all clicks, just forward the event and
+			// return.
 			if (activeTool.whichClicks() == EditingTool.ALL_CLICKS) {
 				activeTool.mousePressed(e, this);
 				dragging = true;
@@ -728,13 +739,14 @@ public class PolyMeshViewer extends MeshViewer {
 						return;
 					}
 				}
-			//forward to alternate tools
+			// forward to alternate tools
 			// Determine which tool is active.
 			if (metaTool != null && e.isMetaDown())
 				activeTool = metaTool;
 			else if (altTool != null && e.isAltDown())
 				activeTool = altTool;
-			// If the current tool wants all clicks, just forward the event and return.
+			// If the current tool wants all clicks, just forward the event and
+			// return.
 			if (activeTool != currentTool
 					&& activeTool.whichClicks() == EditingTool.ALL_CLICKS) {
 				activeTool.mousePressed(e, this);
@@ -755,7 +767,8 @@ public class PolyMeshViewer extends MeshViewer {
 			return;
 		}
 
-		// If we are in edge or face selection mode, find a vertex of the clicked edge or face,
+		// If we are in edge or face selection mode, find a vertex of the
+		// clicked edge or face,
 		// so that it can be passed to editing tools.
 
 		if (controller.getSelectionMode() == MeshEditController.EDGE_MODE) {
@@ -786,7 +799,8 @@ public class PolyMeshViewer extends MeshViewer {
 		} else
 			j = i;
 
-		// If the click was on a selected object, forward it to the current tool.  If it was a
+		// If the click was on a selected object, forward it to the current
+		// tool. If it was a
 		// shift-click, the user may want to deselect it, so set a flag.
 
 		boolean selected[] = controller.getSelection();
@@ -816,7 +830,8 @@ public class PolyMeshViewer extends MeshViewer {
 			return;
 		}
 
-		// The click was on an unselected object.  Select it and send an event to the current tool.
+		// The click was on an unselected object. Select it and send an event to
+		// the current tool.
 
 		boolean oldSelection[] = (boolean[]) selected.clone();
 		if (!e.isShiftDown()) {
@@ -866,9 +881,10 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  Description of the Method
-	 *
-	 *@param  e  Description of the Parameter
+	 * Description of the Method
+	 * 
+	 * @param e
+	 *            Description of the Parameter
 	 */
 	protected void mouseDragged(WidgetMouseEvent e) {
 		if (!dragging && clickPoint == null)
@@ -890,9 +906,10 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  Description of the Method
-	 *
-	 *@param  e  Description of the Parameter
+	 * Description of the Method
+	 * 
+	 * @param e
+	 *            Description of the Parameter
 	 */
 	protected void mouseReleased(WidgetMouseEvent e) {
 
@@ -933,7 +950,8 @@ public class PolyMeshViewer extends MeshViewer {
 				selected[i] = false;
 		}
 
-		// If the user was dragging a selection box, then select or deselect anything
+		// If the user was dragging a selection box, then select or deselect
+		// anything
 		// it intersects.
 		if (selectBounds != null) {
 			boolean newsel = !e.isControlDown();
@@ -1033,7 +1051,8 @@ public class PolyMeshViewer extends MeshViewer {
 				activeTool.mouseReleased(e, this);
 		}
 
-		// If the user shift-clicked a selected point and released the mouse without dragging,
+		// If the user shift-clicked a selected point and released the mouse
+		// without dragging,
 		// then deselect the point.
 
 		if (deselect > -1)
@@ -1063,19 +1082,25 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	/**
-	 *  Determine which vertex, edge, or face (depending on the current
-	 *  selection mode) the mouse was clicked on. If the click was on top of
-	 *  multiple objects, priority is given to ones which are currently
-	 *  selected, and then to ones which are in front. If the click is not over
-	 *  any object, -1 is returned.
-	 *
-	 *@param  pos  Description of the Parameter
-	 *@param  uvw  Description of the Parameter
-	 *@return      Description of the Return Value
+	 * Determine which vertex, edge, or face (depending on the current selection
+	 * mode) the mouse was clicked on. If the click was on top of multiple
+	 * objects, priority is given to ones which are currently selected, and then
+	 * to ones which are in front. If the click is not over any object, -1 is
+	 * returned.
+	 * 
+	 * @param pos
+	 *            Description of the Parameter
+	 * @param uvw
+	 *            Description of the Parameter
+	 * @return Description of the Return Value
 	 */
 
 	public int findClickTarget(Point pos, Vec3 uvw) {
 		PolyMesh polymesh = (PolyMesh) getController().getObject().object;
+		int loose = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
+				.getLooseSelectionRange()
+				: 0);
+		int handleSize = polymesh.getHandleSize();
 		Wedge[] sed = null;
 		int projectedEdge[] = null;
 		PolyMesh viewMesh = polymesh;
@@ -1106,6 +1131,7 @@ public class PolyMeshViewer extends MeshViewer {
 			sed = submesh.getEdges();
 		} else
 			submesh = polymesh;
+		Wvertex[] trueVerts = (Wvertex[])polymesh.getVertices();
 		Wedge[] trueEdges = polymesh.getEdges();
 		Wface[] trueFaces = polymesh.getFaces();
 		MeshVertex vt[] = (Wvertex[]) submesh.getVertices();
@@ -1119,42 +1145,69 @@ public class PolyMeshViewer extends MeshViewer {
 		Point v2;
 		int i;
 		int which = -1;
+		double distance;
+		double maxDistance = Double.MAX_VALUE;
 		boolean selected[] = controller.getSelection();
 		boolean hideFace[] = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).hideFace
 				: new boolean[trueFaces.length]);
-		boolean frontSelect = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).isFrontSelectionOn()
-				: false);;
+		boolean frontSelect = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
+				.isFrontSelectionOn()
+				: false);
+		;
 		Vec3 viewDir = null;
 		if (frontSelect) {
 			viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
+			normals = polymesh.getFaceNormals();
 		}
 		if (controller.getSelectionMode() == MeshEditController.POINT_MODE) {
-			//System.out.println( screenVert.length + " / " + invVertTable.length);
-			if (frontSelect) {
-				normals = polymesh.getNormals();
-			}
+			// System.out.println( screenVert.length + " / " +
+			// invVertTable.length);
 			int loop = screenVert.length;
 			boolean found = false;
+			int edge, start, face;
+			boolean visibleVert;
 			for (i = 0; i < loop; i++) {
 				if (mirror)
 					ref = invVertTable[i];
 				else
 					ref = i;
-				if (frontSelect && normals[ref].dot(viewDir) > 0.0001) {
-					continue;
+				if (frontSelect) {
+					visibleVert =false;
+					start = trueVerts[ref].edge;
+					edge = start;
+					do {
+						face = trueEdges[edge].face;
+						if (face != -1) {
+							if (normals[face].dot(viewDir) < 0.0001) {
+								visibleVert = true;
+							}
+						}
+						edge = trueEdges[trueEdges[edge].hedge].next;
+					} while (edge != start && !visibleVert);
+					if (!visibleVert) {
+						continue;
+					}
 				}
 				if (!visible[ref])
 					continue;
 				if (sel && !selected[ref])
 					continue;
 				v1 = screenVert[i];
-				if (pos.x < v1.x - HANDLE_SIZE / 2
-						|| pos.x > v1.x + HANDLE_SIZE / 2
-						|| pos.y < v1.y - HANDLE_SIZE / 2
-						|| pos.y > v1.y + HANDLE_SIZE / 2)
+				if (pos.x < v1.x - handleSize / 2 - loose
+						|| pos.x > v1.x + handleSize / 2 + loose
+						|| pos.y < v1.y - handleSize / 2 - loose
+						|| pos.y > v1.y + handleSize / 2 + loose)
 					continue;
+				distance = (pos.x - v1.x) * (pos.x - v1.x) + (pos.y - v1.y)
+						* (pos.y - v1.y);
 				z = theCamera.getObjectToView().timesZ(pv[i].r);
-				if (z < closestz) {
+				if (distance < maxDistance) {
+					maxDistance = distance;
+					which = ref;
+					closestz = z;
+					sel = selected[ref];
+					found = true;
+				} else if (distance == maxDistance && z < closestz) {
 					which = ref;
 					closestz = z;
 					sel = selected[ref];
@@ -1175,13 +1228,21 @@ public class PolyMeshViewer extends MeshViewer {
 					v1 = screenVertNormals[i];
 					if (v1 == null)
 						continue;
-					if (pos.x < v1.x - HANDLE_SIZE / 2
-							|| pos.x > v1.x + HANDLE_SIZE / 2
-							|| pos.y < v1.y - HANDLE_SIZE / 2
-							|| pos.y > v1.y + HANDLE_SIZE / 2)
+					if (pos.x < v1.x - handleSize / 2 - loose
+							|| pos.x > v1.x + handleSize / 2 + loose
+							|| pos.y < v1.y - handleSize / 2 - loose
+							|| pos.y > v1.y + handleSize / 2 + loose)
 						continue;
+					distance = (pos.x - v1.x) * (pos.x - v1.x) + (pos.y - v1.y)
+							* (pos.y - v1.y);
 					z = theCamera.getObjectToView().timesZ(pv[i].r);
-					if (z < closestz) {
+					if (distance < maxDistance) {
+						maxDistance = distance;
+						which = ref;
+						closestz = z;
+						sel = selected[ref];
+						found = true;
+					} else if (distance == maxDistance && z < closestz) {
 						which = ref;
 						closestz = z;
 						sel = selected[ref];
@@ -1190,9 +1251,6 @@ public class PolyMeshViewer extends MeshViewer {
 				}
 			}
 		} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE) {
-			if (frontSelect) {
-				normals = polymesh.getEdgeNormals();
-			}
 			int loop;
 			if (mirror)
 				loop = invEdgeTable.length;
@@ -1201,6 +1259,7 @@ public class PolyMeshViewer extends MeshViewer {
 			if (projectedEdge != null)
 				loop = submesh.getEdges().length / 2;
 			int vv1, vv2;// orv1, orv2;
+			boolean visibleEdge;
 			for (i = 0; i < loop; i++) {
 				int orig;
 				vv1 = vv2 = 0;
@@ -1216,8 +1275,21 @@ public class PolyMeshViewer extends MeshViewer {
 					}
 					if (!visible[vv1] || !visible[vv2])
 						continue;
-					if (frontSelect && normals[ref].dot(viewDir) > 0.0001) {
-						continue;
+					if (frontSelect) {
+						visibleEdge =false;
+						if (trueEdges[ref].face != -1) {
+							if (normals[trueEdges[ref].face].dot(viewDir) < 0.0001) {
+								visibleEdge = true;
+							}
+						}
+						if (trueEdges[trueEdges[ref].hedge].face != -1) {
+							if (normals[trueEdges[trueEdges[ref].hedge].face].dot(viewDir) < 0.0001) {
+								visibleEdge = true;
+							}
+						}
+						if (!visibleEdge) {
+							continue;
+						}
 					}
 					if (sel && !selected[ref])
 						continue;
@@ -1250,14 +1322,14 @@ public class PolyMeshViewer extends MeshViewer {
 					v1 = new Point((int) screen1.x, (int) screen1.y);
 					v2 = new Point((int) screen2.x, (int) screen2.y);
 				}
-				if ((pos.x < v1.x - HANDLE_SIZE / 2 && pos.x < v2.x
-						- HANDLE_SIZE / 2)
-						|| (pos.x > v1.x + HANDLE_SIZE / 2 && pos.x > v2.x
-								+ HANDLE_SIZE / 2)
-						|| (pos.y < v1.y - HANDLE_SIZE / 2 && pos.y < v2.y
-								- HANDLE_SIZE / 2)
-						|| (pos.y > v1.y + HANDLE_SIZE / 2 && pos.y > v2.y
-								+ HANDLE_SIZE / 2))
+				if ((pos.x < v1.x - handleSize / 2 - loose && pos.x < v2.x
+						- handleSize / 2 - loose)
+						|| (pos.x > v1.x + handleSize / 2 + loose && pos.x > v2.x
+								+ handleSize / 2 + loose)
+						|| (pos.y < v1.y - handleSize / 2 - loose && pos.y < v2.y
+								- handleSize / 2 - loose)
+						|| (pos.y > v1.y + handleSize / 2 + loose && pos.y > v2.y
+								+ handleSize / 2 + loose))
 					continue;
 
 				// Determine the distance of the click point from the line.
@@ -1281,11 +1353,21 @@ public class PolyMeshViewer extends MeshViewer {
 					}
 					w = u * v1.x + v * v2.x - pos.x;
 				}
-				if (Math.abs(w) > HANDLE_SIZE / 2)
+				distance = Math.abs(w);
+				if (distance > handleSize / 2 + loose)
 					continue;
 				z = u * theCamera.getObjectToView().timesZ(pv[vv1].r) + v
 						* theCamera.getObjectToView().timesZ(pv[vv2].r);
-				if (z < closestz) {
+				if (distance < maxDistance) {
+					maxDistance = distance;
+					closestz = z;
+					if (projectedEdge == null && ref >= trueEdges.length / 2)
+						ref = trueEdges[ref].hedge;
+					which = ref;
+					sel = selected[ref];
+					if (uvw != null)
+						uvw.set(u, v, w);
+				} else if (distance < handleSize / 2 && z < closestz) {
 					closestz = z;
 					if (projectedEdge == null && ref >= trueEdges.length / 2)
 						ref = trueEdges[ref].hedge;
@@ -1296,9 +1378,6 @@ public class PolyMeshViewer extends MeshViewer {
 				}
 			}
 		} else {
-			if (frontSelect) {
-				normals = polymesh.getFaceNormals();
-			}
 			int vv;
 			Polygon polygon;
 			int loop;
@@ -1331,7 +1410,6 @@ public class PolyMeshViewer extends MeshViewer {
 				Vec3 bary = new Vec3();
 				z = 0;
 				for (int j = 0; j < vf.length; ++j) {
-
 					vv = vf[j];
 					polygon.addPoint(screenVert[vv].x, screenVert[vv].y);
 					bary.add(vt[vv].r);
@@ -1386,5 +1464,12 @@ public class PolyMeshViewer extends MeshViewer {
 		while (iter.hasNext()) {
 			((Manipulator) iter.next()).setPerspective(perspective);
 		}
+	}
+
+	protected static Color disableColor(Color color) {
+		float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color
+				.getBlue(), null);
+		hsb[1] *= 0.5;
+		return new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 	}
 }
