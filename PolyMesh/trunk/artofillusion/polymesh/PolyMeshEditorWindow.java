@@ -361,7 +361,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		faceContainer = new RowContainer();
 		meshContainer.add(looseSelectCB = new BCheckBox(PMTranslate
 				.text("looseSelect"), true));
-		meshContainer.add(looseSelectSpinner = new BSpinner(10, 1, 100, 1));
+		meshContainer.add(looseSelectSpinner = new BSpinner(20, 1, 100, 1));
 		meshContainer.add(frontSelectCB = new BCheckBox(PMTranslate
 				.text("frontSelect"), false));
 		frontSelectCB.addEventLink(ValueChangedEvent.class, this,
@@ -581,7 +581,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"thickenMeshVertexNormal", this, "doThickenMesh"));
 		BMenu mirrorMenu;
 		meshMenu.add(mirrorMenu = PMTranslate.menu("mirrorMesh"));
-		RadioButtonGroup group = new RadioButtonGroup();
 		mirrorItem = new BMenuItem[4];
 		mirrorMenu.add(mirrorItem[0] = PMTranslate.menuItem("mirrorOff", this,
 				"doMirrorOff"));
@@ -3479,11 +3478,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		Wvertex[] verts = (Wvertex[])mesh.getVertices();
 		Wedge[] edges = mesh.getEdges();
-		Wface[] faces = mesh.getFaces();
-		boolean transparent = true;
 		Vec3 viewDir = null;
 		Vec3[] normals = null;
-		int renderMode = getView().getRenderMode();
 		if (!force) {
 			if (frontSelectCB.getState()) {
 				viewDir = getView().getCamera().getViewToWorld()
@@ -3494,10 +3490,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		if (selectMode == POINT_MODE
 				&& sel.length == verts.length) {
 			selected = sel;
-			if (frontSelectCB.getState()) {
+			if (frontSelectCB.getState() && !force) {
 				int edge, start, face;
 				boolean visibleVert;
 				for (int i = 0; i < verts.length; i++) {
+					if (!selected[i]) {
+						continue;
+					}
 					visibleVert = false;
 					start = verts[i].edge;
 					edge = start;
@@ -3516,9 +3515,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		} else if (selectMode == EDGE_MODE
 				&& sel.length == mesh.getEdges().length / 2) {
 			selected = sel;
-			if (frontSelectCB.getState()) {
+			if (frontSelectCB.getState() && !force) {
 				boolean visibleEdge;
 				for (int i = 0; i < selected.length; i++) {
+					if (!selected[i]) {
+						continue;
+					}
 					visibleEdge = false;
 					if (edges[i].face != -1) {
 						if (normals[edges[i].face].dot(viewDir) < 0.0001) {
@@ -3537,8 +3539,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		} else if (selectMode == FACE_MODE
 				&& sel.length == mesh.getFaces().length) {
 			selected = sel;
-			if (frontSelectCB.getState()) {
+			if (frontSelectCB.getState() && !force) {
 				for (int i = 0; i < selected.length; i++) {
+					if (!selected[i]) {
+						continue;
+					}
 					if (normals[i].dot(viewDir) > 0.0001) {
 						selected[i] = false;
 					}
@@ -4273,6 +4278,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 							.getState());
 	}
 
+	@SuppressWarnings("unused")
 	private void doFrontSelectionChanged() {
 		if (frontSelectCB.getState()) {
 			setSelection(selected);
@@ -4474,13 +4480,34 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		PolyMesh mesh = (PolyMesh) ((PolyMesh) objInfo.object).duplicate();
 		ObjectInfo info = objInfo.duplicate();
 		info.coords = new CoordinateSystem();
-		int[] vertexTable;
-		vertexTable = mesh.openSeams();
+		int[] vertTable;
+		vertTable = mesh.openSeams();
+		int vertCount = mesh.getVertices().length;
 		try {
 			TriangleMesh triMesh = mesh.convertToTriangleMesh(0);
+			int newVertCount = triMesh.getVertices().length;
+			if (vertTable == null && newVertCount != vertCount) {
+				vertTable = new int[newVertCount];
+				for (int i = 0; i < vertCount; i++) {
+					vertTable[i] = i;
+				}
+				for (int i = vertCount; i < newVertCount; i++) {
+					vertTable[i] = -1;
+				}
+			}
+			else if (vertTable != null && newVertCount != vertCount) {
+				int [] nVertTable = new int[newVertCount];
+				for (int i = 0; i < vertCount; i++) {
+					nVertTable[i] = vertTable[i];
+				}
+				for (int i = vertCount; i < newVertCount; i++) {
+					nVertTable[i] = -1;
+				}
+				vertTable = nVertTable;
+			}
 			int[] faceTable = mesh.getTriangleFaceIndex();
 			MeshUnfolder unfolder = new MeshUnfolder(mesh, triMesh,
-					vertexTable, faceTable);
+					vertTable, faceTable);
 			if (unfolder.unfold(dlg.textArea, dlg.residual)) {
 				UVMappingData data = new UVMappingData(unfolder
 						.getUnfoldedMeshes());
@@ -5549,7 +5576,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			super(PolyMeshEditorWindow.this, PMTranslate.text("meshUnfolding"),
 					true);
 			int nverts = ((PolyMesh) objInfo.object).getVertices().length;
-			residual = 1.0e-4 / nverts;
+			if (nverts < 1000) {
+				residual = 0.001;
+			} else {
+				residual = 1;
+			}
 			InputStream inputStream = null;
 			try {
 				WidgetDecoder decoder = new WidgetDecoder(

@@ -1310,8 +1310,21 @@ public class PolyMeshViewer extends MeshViewer {
 						continue;
 					if (!visible[vv1] || !visible[vv2])
 						continue;
-					if (frontSelect && normals[ref].dot(viewDir) > 0.0001) {
-						continue;
+					if (frontSelect) {
+						visibleEdge =false;
+						if (trueEdges[ref].face != -1) {
+							if (normals[trueEdges[ref].face].dot(viewDir) < 0.0001) {
+								visibleEdge = true;
+							}
+						}
+						if (trueEdges[trueEdges[ref].hedge].face != -1) {
+							if (normals[trueEdges[trueEdges[ref].hedge].face].dot(viewDir) < 0.0001) {
+								visibleEdge = true;
+							}
+						}
+						if (!visibleEdge) {
+							continue;
+						}
 					}
 					if (sel && !selected[ref])
 						continue;

@@ -1347,8 +1347,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				mesh.smoothingMethod = NO_SMOOTHING;
 				for (int i = 0; i < interactiveSmoothLevel; ++i)
 					mesh.smoothWholeMesh(i, true, smoothingMethod);
-				// cachedMesh = mesh.getRenderingMeshQuadCase();
-				cachedMesh = mesh.getRenderingMesh(tol, interactive, info);
+				cachedMesh = mesh.getRenderingMeshQuadCase();
+				//cachedMesh = mesh.getRenderingMesh(tol, interactive, info);
 				closed = mesh.isClosed();
 				subdividedMesh = mesh;
 				return cachedMesh;

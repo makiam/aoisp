@@ -3,18 +3,18 @@
 <script>
 	<name>PolyMesh</name>
 	<author>Francois Guillet</author>
-	<version>1.55</version>
-    <date>2007/03/10</date>
-    <beta>17</beta>
+	<version>1.6</version>
+    <date>2007/03/27</date>
     <description>
 A plugin which provides a polygonal mesh for AoI.
     </description>
     <history>
-        <log version="1.55b17" date="10 march 2007" author="Francois Guillet">
+        <log version="1.6" date="27 march 2007" author="Francois Guillet">
+	     Display properties
 	     Mesh Unfolding implemented (some features still to implement).
 	     Extrude Region bug corrected.
 	     Remove Edge bug corrected.					
-	     Seams.
+	     Seams added for mesh unfolding.
 	     Extrude several edge regions bug corrected.
 	     Scale mesh bug corrected.
 	     Bevel bug corrected.
