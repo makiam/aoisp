@@ -67,7 +67,7 @@ import buoy.widget.RowContainer;
 
 public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
-	private BoundingBox bounds;
+	private BoundingBox bounds; //the bounds enclosing the mesh
 
 	private int smoothingMethod;
 
@@ -75,7 +75,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	private WireframeMesh cachedWire;
 
-	private Vec3[] cachedNormals;
+	private Vec3[] cachedNormals; //vertices normals
 
 	private Vec3[] cachedEdgeNormals;
 
@@ -91,7 +91,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	private Skeleton skeleton;
 
-	private Vector v1;
+	private Vector v1; //vectors used to store triangulation information
+	//persistent data, must de declared as fields
 
 	private Vector v2;
 
@@ -103,33 +104,34 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	private Vector faceInfo;
 
-	private short mirrorState;
+	private short mirrorState; //live mirrors
 
 	private PolyMesh mirroredMesh;
 
 	private boolean controlledSmoothing;
 
-	private double minAngle, maxAngle;
+	private double minAngle, maxAngle; //data for auto smoothness
 
 	private float minSmoothness, maxSmoothness;
 
-	private boolean[] seams;
+	private boolean[] seams; //true if an edge is a seam
 
-	private int[] polyedge;
+	private int[] polyedge; //see getPolyEdge()
 
-	private TriangleMesh triangleMesh;
+	private TriangleMesh triangleMesh; //the triangulated mesh
 
 	private int interactiveSmoothLevel, renderingSmoothLevel;
+	//smoothnes levels applied before display (interactive) or triangular smoothing (rendering)
 
-	private boolean finalSmoothing;
+	private boolean finalSmoothing; //see getRenderingMesh()
 
-	private int[] projectedEdges;
+	private int[] projectedEdges; //original edges in the case of a smoothed mesh
 
-	private PolyMesh subdividedMesh;
+	private PolyMesh subdividedMesh; //the subdivided mesh when smoothed
 
-	protected int[] mirroredVerts;
+	protected int[] mirroredVerts; //vert
 
-	protected int[] mirroredFaces;
+	protected int[] mirroredFaces; //tables that relate mirrored mesh to original mesh
 
 	protected int[] mirroredEdges;
 
@@ -139,32 +141,33 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	protected int[] invMirroredEdges;
 
-	protected UVMappingData mappingData;
+	protected UVMappingData mappingData; //UV Mapping
 
-	private int mappingVerts, mappingEdges, mappingFaces;
+	private int mappingVerts, mappingEdges, mappingFaces; //markers to check if UVMapping data
+	//is still valid
 	
-	//colors
-	private Color vertColor;// = new Color(0, 0, 0);
+	//colors and preferences
+	private Color vertColor;
 	
-	private Color selectedVertColor; // = new Color(255, 0, 0);
+	private Color selectedVertColor;
 	
-	private Color edgeColor; // = new Color(0, 0, 0);
+	private Color edgeColor;
 	
-	private Color selectedEdgeColor; // = new Color(255, 0, 0);
+	private Color selectedEdgeColor;
 	
-	private Color meshColor; // = new Color(204, 204, 255);
+	private Color meshColor;
 
-	private Color selectedFaceColor; // = new Color(255, 127, 127);
+	private Color selectedFaceColor;
 	
-	private RGBColor meshRGBColor; // = new RGBColor(0.8f, 0.8f, 1.0f);
+	private RGBColor meshRGBColor;
 
-	private RGBColor selectedFaceRGBColor; // = new RGBColor(1.0f, 0.5f, 0.5f);
+	private RGBColor selectedFaceRGBColor;
 
-	private Color seamColor; // = new Color(0, 0, 255);
+	private Color seamColor;
 
-	private Color selectedSeamColor; // = new Color(0, 162, 255);
+	private Color selectedSeamColor;
 	
-	private int handleSize; // = 3;
+	private int handleSize;
 	
 	//preferences
 	
@@ -190,8 +193,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 * Action along Z axis
 	 */
 	public final static short Z = 3;
-
-	private final static short NOT_BEVELLED = 0;
+	
+	//Bevel markers
 
 	private final static short VERTEX_BEVEL = 1;
 
@@ -200,10 +203,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	private final static short ONE_BEVEL_NEXT = 3;
 
 	private final static short TWO_BEVEL = 4;
+	
+	//smoothing constants
 
-	private final static short APPROXIMATING_CM = 10;
-
-	private final static short APPROXIMATING_BLZ = 11;
+//	private final static short APPROXIMATING_CM = 10;
+//
+//	private final static short APPROXIMATING_BLZ = 11;
 
 	/**
 	 * Area under which faces are collapsed if applyEdgeLengthLimit is selected
