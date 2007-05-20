@@ -2,7 +2,7 @@
 <classpath>
 	<classpathentry kind="src" path=""/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/Users/Pims/Desktop/ArtOfIllusionSrc/ArtOfIllusion.jar"/>
-	<classpathentry kind="lib" path="/Users/Pims/Code/EclipseWorkspace/PolyMesh/mtj.jar"/>
+	<classpathentry kind="lib" path="/Users/Pims/Code/ArtOfIllusion/ArtOfIllusion.jar"/>
+	<classpathentry kind="lib" path="/Users/Pims/Code/ArtOfIllusion/PolyMesh/mtj.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

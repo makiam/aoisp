@@ -9,7 +9,7 @@
  */
 package artofillusion.polymesh;
 
-import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -64,12 +64,8 @@ import artofillusion.polymesh.PolyMesh.Wface;
 import artofillusion.polymesh.PolyMesh.Wvertex;
 import artofillusion.polymesh.ui.ColorButton;
 import artofillusion.texture.FaceParameterValue;
-import artofillusion.texture.LayeredMapping;
-import artofillusion.texture.LayeredTexture;
+
 import artofillusion.texture.ParameterValue;
-import artofillusion.texture.Texture;
-import artofillusion.texture.TextureMapping;
-import artofillusion.texture.UVMapping;
 import artofillusion.ui.ActionProcessor;
 import artofillusion.ui.ComponentsDialog;
 import artofillusion.ui.EditingTool;
@@ -112,7 +108,6 @@ import buoy.widget.GridContainer;
 import buoy.widget.LayoutInfo;
 import buoy.widget.MenuWidget;
 import buoy.widget.OverlayContainer;
-import buoy.widget.RadioButtonGroup;
 import buoy.widget.RowContainer;
 import buoy.widget.Shortcut;
 import buoy.widget.Widget;
@@ -187,7 +182,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	private OverlayContainer overlayVertexEdgeFace;
 
-	private BSpinner tensionSpin, ispin, rspin;
+	private BSpinner tensionSpin, ispin; // rspin;
 
 	private ValueSlider edgeSlider;
 
@@ -316,6 +311,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	private Shortcut singleNormalShortcut, groupNormalShortcut;
 
+	private static boolean selectVisible = false;
+
+	private static boolean looseSelect = false;
+
+	private static int looseSelectValue = 20;
+
 	private BCheckBox frontSelectCB;
 
 	private BCheckBox looseSelectCB;
@@ -360,10 +361,15 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		edgeContainer = new RowContainer();
 		faceContainer = new RowContainer();
 		meshContainer.add(looseSelectCB = new BCheckBox(PMTranslate
-				.text("looseSelect"), true));
-		meshContainer.add(looseSelectSpinner = new BSpinner(20, 1, 100, 1));
+				.text("looseSelect"), looseSelect));
+		looseSelectCB.addEventLink(ValueChangedEvent.class, this,
+				"doLooseSelectionChanged");
+		meshContainer.add(looseSelectSpinner = new BSpinner(looseSelectValue,
+				1, 100, 1));
+		looseSelectSpinner.addEventLink(ValueChangedEvent.class, this,
+				"doLooseSelectionValueChanged");
 		meshContainer.add(frontSelectCB = new BCheckBox(PMTranslate
-				.text("frontSelect"), false));
+				.text("frontSelect"), selectVisible));
 		frontSelectCB.addEventLink(ValueChangedEvent.class, this,
 				"doFrontSelectionChanged");
 		meshContainer.add(new BLabel(PMTranslate.text("meshTension") + ": "));
@@ -374,16 +380,16 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		meshContainer.add(tensionSpin);
 		levelContainer.add(new BLabel(PMTranslate.text("subdivisionLevels")
 				+ ": "));
-		levelContainer.add(new BLabel(PMTranslate.text("inter.")));
+		//levelContainer.add(new BLabel(PMTranslate.text("inter.")));
 		ispin = new BSpinner(1, 1, 6, 1);
 		levelContainer.add(ispin);
 		ispin.setValue(new Integer(mesh.getInteractiveSmoothLevel()));
 		ispin.addEventLink(ValueChangedEvent.class, this, "doInteractiveLevel");
-		levelContainer.add(new BLabel(PMTranslate.text("render")));
-		rspin = new BSpinner(1, 1, 6, 1);
-		rspin.setValue(new Integer(mesh.getRenderingSmoothLevel()));
-		levelContainer.add(rspin);
-		rspin.addEventLink(ValueChangedEvent.class, this, "doRenderingLevel");
+		//levelContainer.add(new BLabel(PMTranslate.text("render")));
+		//rspin = new BSpinner(1, 1, 6, 1);
+		//rspin.setValue(new Integer(mesh.getRenderingSmoothLevel()));
+		//levelContainer.add(rspin);
+		//rspin.addEventLink(ValueChangedEvent.class, this, "doRenderingLevel");
 		meshContainer.add(levelContainer);
 		cornerCB = new BCheckBox(PMTranslate.text("corner"), false);
 		cornerCB.addEventLink(ValueChangedEvent.class, this, "doCornerChanged");
@@ -535,8 +541,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"projectOntoSurface", this, "projectModeChanged",
 				lastProjectOntoSurface));
 		editMenu.addSeparator();
-		editMenu.add( PMTranslate.menuItem( "editDisplayProperties", this,
-		 "doEditProperties" ) );
+		editMenu.add(PMTranslate.menuItem("editDisplayProperties", this,
+				"doEditProperties"));
 		editMenu.addSeparator();
 		editMenu.add(editMenuItem[9] = Translate.menuItem("hideSelection",
 				this, "doHideSelection"));
@@ -662,11 +668,14 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		vertexMenu.addSeparator();
 		vertexMenu.add(vertexMenuItem[14] = Translate.menuItem("parameters",
 				this, "setParametersCommand"));
-		vertexMenu.add(vertexMenuItem[15] = PMTranslate.menu("normals"));
-		((BMenu) vertexMenuItem[15]).add(PMTranslate.menuItem("addNormal",
-				this, "doAddVertexNormal"));
-		((BMenu) vertexMenuItem[15]).add(PMTranslate.menuItem("removeNormal",
-				this, "doRemoveVertexNormal"));
+		vertexMenu.addSeparator();
+		vertexMenu.add(vertexMenuItem[15] = PMTranslate.menuItem(
+				"selectCorners", this, "doSelectCorners"));
+//		vertexMenu.add(vertexMenuItem[15] = PMTranslate.menu("normals"));
+//		((BMenu) vertexMenuItem[15]).add(PMTranslate.menuItem("addNormal",
+//				this, "doAddVertexNormal"));
+//		((BMenu) vertexMenuItem[15]).add(PMTranslate.menuItem("removeNormal",
+//				this, "doRemoveVertexNormal"));
 		vertexPopupMenu = new BPopupMenu();
 		vertexPopupMenuItem = new MenuWidget[16];
 		vertexPopupMenu.add(vertexPopupMenuItem[0] = PMTranslate.menuItem(
@@ -711,12 +720,16 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		vertexPopupMenu.addSeparator();
 		vertexPopupMenu.add(vertexPopupMenuItem[14] = Translate.menuItem(
 				"parameters", this, "setParametersCommand"));
-		vertexPopupMenu.add(vertexPopupMenuItem[15] = PMTranslate
-				.menu("normals"));
-		((BMenu) vertexPopupMenuItem[15]).add(PMTranslate.menuItem("addNormal",
-				this, "doAddVertexNormal"));
-		((BMenu) vertexPopupMenuItem[15]).add(PMTranslate.menuItem(
-				"removeNormal", this, "doRemoveVertexNormal"));
+		vertexPopupMenu.addSeparator();
+		vertexPopupMenu.add(vertexPopupMenuItem[15] = PMTranslate.menuItem(
+				"selectCorners", this, "doSelectCorners"));
+//		vertexPopupMenu.add(vertexPopupMenuItem[15] = PMTranslate
+//				.menu("normals"));
+//		((BMenu) vertexPopupMenuItem[15]).add(PMTranslate.menuItem("addNormal",
+//				this, "doAddVertexNormal"));
+//		((BMenu) vertexPopupMenuItem[15]).add(PMTranslate.menuItem(
+//				"removeNormal", this, "doRemoveVertexNormal"));
+		
 
 	}
 
@@ -727,7 +740,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	void createEdgeMenu() {
 		edgeMenu = PMTranslate.menu("edge");
 		menubar.add(edgeMenu);
-		edgeMenuItem = new MenuWidget[21];
+		edgeMenuItem = new MenuWidget[22];
 		edgeMenu.add(edgeMenuItem[0] = PMTranslate.menu("divide"));
 		divideMenuItem = new BMenuItem[5];
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[0] = PMTranslate.menuItem(
@@ -808,11 +821,14 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		edgeMenu.add(edgeMenuItem[19] = PMTranslate.menuItem("clearSeams",
 				this, "doClearSeams"));
 		edgeMenu.addSeparator();
-		edgeMenu.add(edgeMenuItem[20] = PMTranslate.menuItem("bevelProperties",
+		edgeMenu.add(edgeMenuItem[20] = PMTranslate.menuItem(
+				"selectSmoothnessRange", this, "doSelectEdgeSmoothnessRange"));
+		edgeMenu.addSeparator();
+		edgeMenu.add(edgeMenuItem[21] = PMTranslate.menuItem("bevelProperties",
 				this, "doBevelProperties"));
 
 		edgePopupMenu = new BPopupMenu();
-		edgePopupMenuItem = new MenuWidget[21];
+		edgePopupMenuItem = new MenuWidget[22];
 		edgePopupMenu.add(edgePopupMenuItem[0] = PMTranslate.menu("divide"));
 		popupDivideMenuItem = new BMenuItem[5];
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[0] = PMTranslate
@@ -864,7 +880,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		((BMenu) edgePopupMenuItem[3])
 				.add(popupExtrudeEdgeRegionItem[3] = PMTranslate.menuItem(
 						"zExtrude", this, "doExtrudeEdgeRegion"));
-		edgeMenu.addSeparator();
+		edgePopupMenu.addSeparator();
 		edgePopupMenu.add(edgePopupMenuItem[4] = PMTranslate.menuItem(
 				"collapse", this, "doCollapseEdges"));
 		edgePopupMenu.add(edgePopupMenuItem[5] = PMTranslate.menuItem("merge",
@@ -901,6 +917,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"clearSeams", this, "doClearSeams"));
 		edgePopupMenu.addSeparator();
 		edgePopupMenu.add(edgePopupMenuItem[20] = PMTranslate.menuItem(
+				"selectSmoothnessRange", this, "doSelectEdgeSmoothnessRange"));
+		edgePopupMenu.addSeparator();
+		edgePopupMenu.add(edgePopupMenuItem[21] = PMTranslate.menuItem(
 				"bevelProperties", this, "doBevelProperties"));
 	}
 
@@ -1061,26 +1080,44 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"editKeystrokes"));
 		prefsMenu.addSeparator();
 		prefsMenu.add(PMTranslate.menuItem("loadDefaults", this,
-			"doLoadDefaultProperties"));
+				"doLoadDefaultProperties"));
 		prefsMenu.add(PMTranslate.menuItem("storeDefaults", this,
-			"doStoreDefaultProperties"));
+				"doStoreDefaultProperties"));
 		prefsMenu.add(PMTranslate.menuItem("resetDefaults", this,
-			"doResetDefaultProperties"));
+				"doResetDefaultProperties"));
 	}
 	
+	@SuppressWarnings("unused")
+	private void doSelectCorners() {
+		if (selectMode != POINT_MODE) {
+			return;
+		}
+		PolyMesh mesh = (PolyMesh) objInfo.object;
+		Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
+		for (int i = 0; i < selected.length; i++) {
+			selected[i] |= (vertices[i].type == Wvertex.CORNER);
+		}
+		setSelection(selected);
+	}
+	
+	@SuppressWarnings("unused")
+	private void doSelectEdgeSmoothnessRange() {
+		EdgeSmoothnessRangeDialog dlg = new EdgeSmoothnessRangeDialog();
+	}
+
 	@SuppressWarnings("unused")
 	private void doLoadDefaultProperties() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		mesh.loadFromDisplayPropertiesPreferences();
 		updateImage();
 	}
-	
+
 	@SuppressWarnings("unused")
 	private void doStoreDefaultProperties() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		mesh.storeDisplayPropertiesAsReferences();
 	}
-	
+
 	@SuppressWarnings("unused")
 	private void doResetDefaultProperties() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
@@ -1088,7 +1125,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		updateImage();
 	}
 
-	
 	/**
 	 * Edits the mesh display properties like colors and handle size
 	 *
@@ -1096,35 +1132,33 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	public void doEditProperties() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		ColorButton vertColorButton = new ColorButton(mesh.getVertColor());
-		ColorButton selectedVertColorButton = new ColorButton(mesh.getSelectedVertColor());
+		ColorButton selectedVertColorButton = new ColorButton(mesh
+				.getSelectedVertColor());
 		ColorButton edgeColorButton = new ColorButton(mesh.getEdgeColor());
-		ColorButton selectedEdgeColorButton = new ColorButton(mesh.getSelectedEdgeColor());
+		ColorButton selectedEdgeColorButton = new ColorButton(mesh
+				.getSelectedEdgeColor());
 		ColorButton seamColorButton = new ColorButton(mesh.getSeamColor());
-		ColorButton selectedSeamColorButton = new ColorButton(mesh.getSelectedSeamColor());
+		ColorButton selectedSeamColorButton = new ColorButton(mesh
+				.getSelectedSeamColor());
 		ColorButton meshColorButton = new ColorButton(mesh.getMeshColor());
-		ColorButton selectedFaceColorButton = new ColorButton(mesh.getSelectedFaceColor());
+		ColorButton selectedFaceColorButton = new ColorButton(mesh
+				.getSelectedFaceColor());
 		BSpinner handleSpinner = new BSpinner(mesh.getHandleSize(), 2, 100, 1);
-		ComponentsDialog dlg = new ComponentsDialog(this, PMTranslate.text("setMeshProperties"),
-				new Widget [] {		vertColorButton,
-									selectedVertColorButton,
-									edgeColorButton,
-									selectedEdgeColorButton, 
-									seamColorButton,
-									selectedSeamColorButton, 
-									meshColorButton,
-									selectedFaceColorButton,
-									handleSpinner
-							  },
-		        new String [] { 	PMTranslate.text("vertColor"),
-									PMTranslate.text("selectedVertColor"),
-									PMTranslate.text("edgeColor"),
-									PMTranslate.text("selectedEdgeColor"),
-									PMTranslate.text("seamColor"),
-									PMTranslate.text("selectedSeamColor"),
-									PMTranslate.text("meshColor"),
-									PMTranslate.text("selectedFaceColor"),
-									PMTranslate.text("handleSize")
-							  });
+		ComponentsDialog dlg = new ComponentsDialog(this, PMTranslate
+				.text("setMeshProperties"), new Widget[] { vertColorButton,
+				selectedVertColorButton, edgeColorButton,
+				selectedEdgeColorButton, seamColorButton,
+				selectedSeamColorButton, meshColorButton,
+				selectedFaceColorButton, handleSpinner }, new String[] {
+				PMTranslate.text("vertColor"),
+				PMTranslate.text("selectedVertColor"),
+				PMTranslate.text("edgeColor"),
+				PMTranslate.text("selectedEdgeColor"),
+				PMTranslate.text("seamColor"),
+				PMTranslate.text("selectedSeamColor"),
+				PMTranslate.text("meshColor"),
+				PMTranslate.text("selectedFaceColor"),
+				PMTranslate.text("handleSize") });
 		if (dlg.clickedOk()) {
 			mesh.setVertColor(vertColorButton.getColor());
 			mesh.setSelectedVertColor(selectedVertColorButton.getColor());
@@ -1134,7 +1168,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			mesh.setSelectedSeamColor(selectedSeamColorButton.getColor());
 			mesh.setMeshColor(meshColorButton.getColor());
 			mesh.setSelectedFaceColor(selectedFaceColorButton.getColor());
-			mesh.setHandleSize(((Integer)handleSpinner.getValue()).intValue());
+			mesh.setHandleSize(((Integer) handleSpinner.getValue()).intValue());
 			updateImage();
 		}
 	}
@@ -1214,7 +1248,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 						new Integer(selectMode), selected.clone() }));
 		for (int i = 0; i < selected.length; i++)
 			selected[i] = true;
-		setSelection(selected, true);
+		setSelection(selected);
 	}
 
 	/**
@@ -1632,8 +1666,14 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			case POINT_MODE:
 				cornerCB.setState(false);
 				cornerCB.setEnabled(false);
+				((Widget) vertexMenuItem[15]).setEnabled(true);
+				((Widget) vertexPopupMenuItem[15]).setEnabled(true);
 				break;
 			case EDGE_MODE:
+				((Widget) edgeMenuItem[20]).setEnabled(true);
+				((Widget) edgeMenuItem[21]).setEnabled(true);
+				((Widget) edgePopupMenuItem[20]).setEnabled(true);
+				((Widget) edgePopupMenuItem[21]).setEnabled(true);
 				edgeSlider.setEnabled(false);
 				break;
 			case FACE_MODE:
@@ -2054,7 +2094,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doSmoothMesh() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		PolyMesh prevMesh = (PolyMesh) mesh.duplicate();
-		mesh.smoothWholeMesh(1, false, Mesh.APPROXIMATING);
+		mesh.smoothWholeMesh(1, false, Mesh.APPROXIMATING, false);
 		setUndoRecord(new UndoRecord(this, false, UndoRecord.COPY_OBJECT,
 				new Object[] { mesh, prevMesh }));
 		setMesh(mesh);
@@ -3463,9 +3503,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		updateImage();
 		repaint();
 	}
-
-	public void setSelection(boolean[] sel) {
-		setSelection(sel, false);
+	
+	public boolean selectOnlyVisible() {
+		return frontSelectCB.getState();
 	}
 
 	/**
@@ -3474,81 +3514,18 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	 * @param sel
 	 *                The new selection array
 	 */
-	public void setSelection(boolean sel[], boolean force) {
+	public void setSelection(boolean sel[]) {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
-		Wvertex[] verts = (Wvertex[])mesh.getVertices();
+		Wvertex[] verts = (Wvertex[]) mesh.getVertices();
 		Wedge[] edges = mesh.getEdges();
-		Vec3 viewDir = null;
-		Vec3[] normals = null;
-		if (!force) {
-			if (frontSelectCB.getState()) {
-				viewDir = getView().getCamera().getViewToWorld()
-						.timesDirection(Vec3.vz());
-				normals = mesh.getFaceNormals();
-			}
-		}
-		if (selectMode == POINT_MODE
-				&& sel.length == verts.length) {
+		if (selectMode == POINT_MODE && sel.length == verts.length) {
 			selected = sel;
-			if (frontSelectCB.getState() && !force) {
-				int edge, start, face;
-				boolean visibleVert;
-				for (int i = 0; i < verts.length; i++) {
-					if (!selected[i]) {
-						continue;
-					}
-					visibleVert = false;
-					start = verts[i].edge;
-					edge = start;
-					do {
-						face = edges[edge].face;
-						if (face != -1) {
-							if (normals[face].dot(viewDir) < 0.0001) {
-								visibleVert = true;
-							}
-						}
-						edge = edges[edges[edge].hedge].next;
-					} while (edge != start && !visibleVert);
-					selected[i] &= visibleVert;
-				}				
-			}
 		} else if (selectMode == EDGE_MODE
 				&& sel.length == mesh.getEdges().length / 2) {
 			selected = sel;
-			if (frontSelectCB.getState() && !force) {
-				boolean visibleEdge;
-				for (int i = 0; i < selected.length; i++) {
-					if (!selected[i]) {
-						continue;
-					}
-					visibleEdge = false;
-					if (edges[i].face != -1) {
-						if (normals[edges[i].face].dot(viewDir) < 0.0001) {
-							visibleEdge = true;
-						}
-					}
-					if (edges[edges[i].hedge].face != -1) {
-						if (normals[edges[edges[i].hedge].face]
-								.dot(viewDir) < 0.0001) {
-							visibleEdge = true;
-						}
-					}
-					selected[i] &= visibleEdge;
-				}				
-			}
 		} else if (selectMode == FACE_MODE
 				&& sel.length == mesh.getFaces().length) {
 			selected = sel;
-			if (frontSelectCB.getState() && !force) {
-				for (int i = 0; i < selected.length; i++) {
-					if (!selected[i]) {
-						continue;
-					}
-					if (normals[i].dot(viewDir) > 0.0001) {
-						selected[i] = false;
-					}
-				}
-			}
 		}
 		findSelectionDistance();
 		currentTool.getWindow().updateMenus();
@@ -4278,9 +4255,17 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 							.getState());
 	}
 
+	private void doLooseSelectionChanged() {
+		looseSelect = looseSelectCB.getState();
+	}
+
+	private void doLooseSelectionValueChanged() {
+		looseSelectValue = ((Integer) looseSelectSpinner.getValue()).intValue();
+	}
+
 	@SuppressWarnings("unused")
 	private void doFrontSelectionChanged() {
-		if (frontSelectCB.getState()) {
+		if (selectVisible = frontSelectCB.getState()) {
 			setSelection(selected);
 		}
 	}
@@ -4288,12 +4273,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	public boolean isFrontSelectionOn() {
 		return frontSelectCB.getState();
 	}
-	
+
 	public int getLooseSelectionRange() {
 		if (!looseSelectCB.getState()) {
 			return 0;
 		} else {
-			return ((Integer)looseSelectSpinner.getValue()).intValue();
+			return ((Integer) looseSelectSpinner.getValue()).intValue();
 		}
 	}
 
@@ -4494,9 +4479,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				for (int i = vertCount; i < newVertCount; i++) {
 					vertTable[i] = -1;
 				}
-			}
-			else if (vertTable != null && newVertCount != vertCount) {
-				int [] nVertTable = new int[newVertCount];
+			} else if (vertTable != null && newVertCount != vertCount) {
+				int[] nVertTable = new int[newVertCount];
 				for (int i = 0; i < vertCount; i++) {
 					nVertTable[i] = vertTable[i];
 				}
@@ -4506,8 +4490,8 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				vertTable = nVertTable;
 			}
 			int[] faceTable = mesh.getTriangleFaceIndex();
-			MeshUnfolder unfolder = new MeshUnfolder(mesh, triMesh,
-					vertTable, faceTable);
+			MeshUnfolder unfolder = new MeshUnfolder(mesh, triMesh, vertTable,
+					faceTable);
 			if (unfolder.unfold(dlg.textArea, dlg.residual)) {
 				UVMappingData data = new UVMappingData(unfolder
 						.getUnfoldedMeshes());
@@ -4554,11 +4538,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		new SubdivisionDialog(this);
 	}
 
-	@SuppressWarnings("unused")
-	private void doRenderingLevel(ValueChangedEvent ev) {
-		((PolyMesh) objInfo.object).setRenderingSmoothLevel(((Integer) rspin
-				.getValue()).intValue());
-	}
+//	@SuppressWarnings("unused")
+//	private void doRenderingLevel(ValueChangedEvent ev) {
+//		((PolyMesh) objInfo.object).setRenderingSmoothLevel(((Integer) rspin
+//				.getValue()).intValue());
+//	}
 
 	private void doInteractiveLevel(ValueChangedEvent ev) {
 		((PolyMesh) objInfo.object).setInteractiveSmoothLevel(((Integer) ispin
@@ -5696,6 +5680,131 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 		private void doResidualChanged() {
 			residual = residualVF.getValue();
+		}
+	}
+
+	private class EdgeSmoothnessRangeDialog extends BDialog {
+		private BorderContainer borderContainer1;
+
+		private BTextField minSmoothnessTF;
+		
+		private PMValueField minSmoothnessVF;
+
+		private BSlider minSmoothnessSlider;
+
+		private BTextField maxSmoothnessTF;
+		
+		private PMValueField maxSmoothnessVF;
+
+		private BSlider maxSmoothnessSlider;
+
+		private BButton addButton;
+
+		private BButton setButton;
+
+		private BButton cancelButton;
+		
+		private boolean[] orSel, newSel;
+
+		public EdgeSmoothnessRangeDialog() {
+			super(PolyMeshEditorWindow.this, PMTranslate
+					.text("smoothnessRange"), true);
+			orSel = new boolean[selected.length];
+			newSel = new boolean[selected.length];
+			for (int i = 0; i < selected.length; i++) {
+				orSel[i] = selected[i];
+			}
+			setSelection(newSel);
+			InputStream inputStream = null;
+			try {
+				WidgetDecoder decoder = new WidgetDecoder(
+						inputStream = getClass().getResource(
+								"interfaces/smothnessRange.xml").openStream(),
+								PMTranslate.getResources());
+				borderContainer1 = (BorderContainer) decoder.getRootObject();
+				minSmoothnessTF = ((BTextField) decoder
+						.getObject("minSmoothnessTF"));
+				minSmoothnessSlider = ((BSlider) decoder
+						.getObject("minSmoothnessSlider"));
+				maxSmoothnessTF = ((BTextField) decoder
+						.getObject("maxSmoothnessTF"));
+				maxSmoothnessSlider = ((BSlider) decoder
+						.getObject("maxSmoothnessSlider"));
+				minSmoothnessSlider.addEventLink(ValueChangedEvent.class, this, "doMinSliderChanged");
+				maxSmoothnessSlider.addEventLink(ValueChangedEvent.class, this, "doMaxSliderChanged");
+				addButton = ((BButton) decoder.getObject("addButton"));
+				addButton.addEventLink(CommandEvent.class, this, "doAdd");
+				setButton = ((BButton) decoder.getObject("setButton"));
+				setButton.addEventLink(CommandEvent.class, this, "doSet");
+				cancelButton = ((BButton) decoder.getObject("cancelButton"));
+				cancelButton.addEventLink(CommandEvent.class, this, "doCancel");
+				minSmoothnessVF = new PMValueField(0.0, ValueField.NONNEGATIVE);
+				minSmoothnessVF.setTextField(minSmoothnessTF);
+				minSmoothnessVF.setValue(0.0);
+				maxSmoothnessVF = new PMValueField(1.0, ValueField.POSITIVE);
+				maxSmoothnessVF.setTextField(maxSmoothnessTF);
+				maxSmoothnessVF.setValue(1.0);
+				maxSmoothnessSlider.setValue(100);
+				minSmoothnessVF.addEventLink(ValueChangedEvent.class, this, "doValuesChanged");
+				maxSmoothnessVF.addEventLink(ValueChangedEvent.class, this, "doValuesChanged");
+				setContent(borderContainer1);
+				addEventLink(WindowClosingEvent.class, this, "doCancel");
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			} finally {
+				try {
+					if (inputStream != null)
+						inputStream.close();
+				} catch (IOException ex) {
+					ex.printStackTrace();
+				}
+			}
+			updateSelection();
+			pack();
+			setVisible(true);
+		}
+		
+		private void doMinSliderChanged() {
+			minSmoothnessVF.setValue( ((Integer)minSmoothnessSlider.getValue()).intValue() /100.0);
+			updateSelection();
+		}
+		
+		private void doMaxSliderChanged() {
+			maxSmoothnessVF.setValue( ((Integer)maxSmoothnessSlider.getValue()).intValue() /100.0);
+			updateSelection();
+		}
+		
+		private void doValuesChanged() {
+			updateSelection();
+		}
+		
+		private void updateSelection() {
+			PolyMesh mesh = (PolyMesh) objInfo.object;
+			Wedge[] edges = mesh.getEdges();
+			double min = minSmoothnessVF.getValue();
+			double max = maxSmoothnessVF.getValue();
+			for (int i = 0; i < newSel.length; i++) {
+				newSel[i] = (edges[i].smoothness >= min) & (edges[i].smoothness <= max );
+			}
+			setSelection(newSel);
+		}
+
+		private void doAdd() {
+			for (int i = 0; i < orSel.length; i++) {
+				orSel[i] |= newSel[i];
+			}
+			setSelection(orSel);
+			dispose();
+		}
+		
+		private void doSet() {
+			setSelection(newSel);
+			dispose();
+		}
+		
+		private void doCancel() {
+			setSelection(orSel);
+			dispose();
 		}
 	}
 }

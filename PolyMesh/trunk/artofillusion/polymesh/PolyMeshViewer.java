@@ -962,7 +962,7 @@ public class PolyMeshViewer extends MeshViewer {
 					else
 						ref = i;
 					if (ref != -1 && !hideVert[i]
-							&& selectionRegionContains(screenVert[ref]))
+							&& selectionRegionContains(screenVert[ref]) && isVertexVisible(ref))
 						selected[i] = newsel;
 				}
 			} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE) {
@@ -975,7 +975,8 @@ public class PolyMeshViewer extends MeshViewer {
 						if (ref != -1
 								&& selectionRegionIntersects(
 										screenVert[ed[ref].vertex],
-										screenVert[ed[ed[ref].hedge].vertex]))
+										screenVert[ed[ed[ref].hedge].vertex])
+							    && isEdgeVisible(ref))
 							selected[i] = newsel;
 					}
 				} else {
@@ -986,7 +987,8 @@ public class PolyMeshViewer extends MeshViewer {
 							ref = i;
 						if (ref != -1
 								&& selectionRegionContains(screenVert[ed[ref].vertex])
-								&& selectionRegionContains(screenVert[ed[ed[ref].hedge].vertex]))
+								&& selectionRegionContains(screenVert[ed[ed[ref].hedge].vertex])
+								&& isEdgeVisible(ref))
 							selected[i] = newsel;
 					}
 				}
@@ -1005,8 +1007,8 @@ public class PolyMeshViewer extends MeshViewer {
 							boolean contains = false;
 							for (j = 0; j < vf.length; ++j)
 								contains |= selectionRegionContains(screenVert[vf[j]]);
-							if (contains)
-								selected[i] = newsel;
+							if (contains && isFaceVisible(ref))
+								selected[ref] = newsel;
 
 						}
 				}
@@ -1024,8 +1026,8 @@ public class PolyMeshViewer extends MeshViewer {
 							boolean contains = true;
 							for (j = 0; j < vf.length; ++j)
 								contains &= selectionRegionContains(screenVert[vf[j]]);
-							if (contains)
-								selected[i] = newsel;
+							if (contains && isFaceVisible(ref))
+								selected[ref] = newsel;
 
 						}
 				}
@@ -1047,8 +1049,10 @@ public class PolyMeshViewer extends MeshViewer {
 					if (manipulator.mouseReleased(e))
 						break;
 				}
-			} else
+			} else {
 				activeTool.mouseReleased(e, this);
+				repaint();
+			}
 		}
 
 		// If the user shift-clicked a selected point and released the mouse
@@ -1150,15 +1154,6 @@ public class PolyMeshViewer extends MeshViewer {
 		boolean selected[] = controller.getSelection();
 		boolean hideFace[] = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).hideFace
 				: new boolean[trueFaces.length]);
-		boolean frontSelect = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
-				.isFrontSelectionOn()
-				: false);
-		;
-		Vec3 viewDir = null;
-		if (frontSelect) {
-			viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
-			normals = polymesh.getFaceNormals();
-		}
 		if (controller.getSelectionMode() == MeshEditController.POINT_MODE) {
 			// System.out.println( screenVert.length + " / " +
 			// invVertTable.length);
@@ -1171,22 +1166,8 @@ public class PolyMeshViewer extends MeshViewer {
 					ref = invVertTable[i];
 				else
 					ref = i;
-				if (frontSelect) {
-					visibleVert =false;
-					start = trueVerts[ref].edge;
-					edge = start;
-					do {
-						face = trueEdges[edge].face;
-						if (face != -1) {
-							if (normals[face].dot(viewDir) < 0.0001) {
-								visibleVert = true;
-							}
-						}
-						edge = trueEdges[trueEdges[edge].hedge].next;
-					} while (edge != start && !visibleVert);
-					if (!visibleVert) {
-						continue;
-					}
+				if (!isVertexVisible(ref)) {
+					continue;
 				}
 				if (!visible[ref])
 					continue;
@@ -1275,21 +1256,8 @@ public class PolyMeshViewer extends MeshViewer {
 					}
 					if (!visible[vv1] || !visible[vv2])
 						continue;
-					if (frontSelect) {
-						visibleEdge =false;
-						if (trueEdges[ref].face != -1) {
-							if (normals[trueEdges[ref].face].dot(viewDir) < 0.0001) {
-								visibleEdge = true;
-							}
-						}
-						if (trueEdges[trueEdges[ref].hedge].face != -1) {
-							if (normals[trueEdges[trueEdges[ref].hedge].face].dot(viewDir) < 0.0001) {
-								visibleEdge = true;
-							}
-						}
-						if (!visibleEdge) {
-							continue;
-						}
+					if (!isEdgeVisible(ref)) {
+						continue;
 					}
 					if (sel && !selected[ref])
 						continue;
@@ -1310,21 +1278,8 @@ public class PolyMeshViewer extends MeshViewer {
 						continue;
 					if (!visible[vv1] || !visible[vv2])
 						continue;
-					if (frontSelect) {
-						visibleEdge =false;
-						if (trueEdges[ref].face != -1) {
-							if (normals[trueEdges[ref].face].dot(viewDir) < 0.0001) {
-								visibleEdge = true;
-							}
-						}
-						if (trueEdges[trueEdges[ref].hedge].face != -1) {
-							if (normals[trueEdges[trueEdges[ref].hedge].face].dot(viewDir) < 0.0001) {
-								visibleEdge = true;
-							}
-						}
-						if (!visibleEdge) {
-							continue;
-						}
+					if (!isEdgeVisible(ref)) {
+						continue;
 					}
 					if (sel && !selected[ref])
 						continue;
@@ -1403,7 +1358,7 @@ public class PolyMeshViewer extends MeshViewer {
 					ref = invFaceTable[i];
 				else
 					ref = i;
-				if (frontSelect && normals[ref].dot(viewDir) > 0.0001) {
+				if (!isFaceVisible(ref)) {
 					continue;
 				}
 				if (hideFace != null && hideFace[ref]) {
@@ -1485,4 +1440,72 @@ public class PolyMeshViewer extends MeshViewer {
 		hsb[1] *= 0.5;
 		return new Color(Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 	}
+	  
+	private boolean isVertexVisible(int index) {
+		boolean visibleOnly = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
+				.isFrontSelectionOn() : false);
+		if (!visibleOnly) {
+			return true;
+		}
+		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
+		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		Wvertex[] verts = (Wvertex[]) mesh.getVertices();
+		Wedge[] edges = mesh.getEdges();
+		Vec3[] normals = mesh.getFaceNormals();
+		int edge, start, face;
+		boolean visibleVert = false;
+		start = verts[index].edge;
+		edge = start;
+		do {
+			face = edges[edge].face;
+			if (face != -1) {
+				if (normals[face].dot(viewDir) < 0.0001) {
+					visibleVert = true;
+				}
+			}
+			edge = edges[edges[edge].hedge].next;
+		} while (edge != start && !visibleVert);
+		return visibleVert;
+	}
+	
+	private boolean isEdgeVisible(int index) {
+		boolean visibleOnly = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
+				.isFrontSelectionOn() : false);
+		if (!visibleOnly) {
+			return true;
+		}
+		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
+		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		Wedge[] edges = mesh.getEdges();
+		Vec3[] normals = mesh.getFaceNormals();
+		boolean visibleEdge = false;
+		if (edges[index].face != -1) {
+			if (normals[edges[index].face].dot(viewDir) < 0.0001) {
+				visibleEdge = true;
+			}
+		}
+		if (edges[edges[index].hedge].face != -1) {
+			if (normals[edges[edges[index].hedge].face].dot(viewDir) < 0.0001) {
+				visibleEdge = true;
+			}
+		}
+		return visibleEdge;
+	}
+	
+	private boolean isFaceVisible(int index) {
+		boolean visibleOnly = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
+				.isFrontSelectionOn() : false);
+		if (!visibleOnly) {
+			return true;
+		}
+		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
+		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		Vec3[] normals = mesh.getFaceNormals();
+		if (normals[index].dot(viewDir) > 0.0001) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
 }
