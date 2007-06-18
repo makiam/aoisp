@@ -127,11 +127,9 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	private int interactiveSmoothLevel, renderingSmoothLevel;
 	//smoothnes levels applied before display (interactive) or triangular smoothing (rendering)
 
-	private boolean finalSmoothing; //see getRenderingMesh()
-
 	private int[] projectedEdges; //original edges in the case of a smoothed mesh
 
-	private PolyMesh subdividedMesh; //the subdivided mesh when smoothed
+	private QuadMesh subdividedMesh; //the subdivided mesh when smoothed
 
 	protected int[] mirroredVerts; //vert
 
@@ -469,7 +467,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		maxSmoothness = 0.0f;
 		interactiveSmoothLevel = 1;
 		renderingSmoothLevel = 2;
-		finalSmoothing = false;
 		//display properties
 		loadFromDisplayPropertiesPreferences();	
 	}
@@ -1350,22 +1347,24 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				cachedMesh = rend;
 			return rend;
 		}
-		int tmpSmoothingMethod = smoothingMethod;
-		if (smoothingMethod == Mesh.APPROXIMATING && !finalSmoothing) {
+		//long time = new Date().getTime();
+		if (smoothingMethod == Mesh.APPROXIMATING) {
 			// long t = System.currentTimeMillis();
-			PolyMesh mesh = (PolyMesh) duplicate();
+			//PolyMesh mesh = (PolyMesh) duplicate();
 			// System.out.println(System.currentTimeMillis() - t);
 			// mesh.smoothingMethod = NO_SMOOTHING;
-			if (interactive && interactiveSmoothLevel > 0) {
+			if (interactive) {
 				//mesh.smoothingMethod = NO_SMOOTHING;
-				for (int i = 0; i < interactiveSmoothLevel; ++i)
-					mesh.smoothWholeMesh(i, true, smoothingMethod, false);
-				cachedMesh = mesh.getRenderingMeshQuadCase();
-				closed = mesh.isClosed();
-				subdividedMesh = mesh;
+//				for (int i = 0; i < interactiveSmoothLevel; ++i)
+//					mesh.smoothWholeMesh(i, true, smoothingMethod, false);
+//				cachedMesh = mesh.getRenderingMeshQuadCase();
+				QuadMesh qmesh = smoothWholeMesh(tol, true, interactiveSmoothLevel);
+				cachedMesh = qmesh.getRenderingMesh();
+				//System.out.println("polymesh smoothing : " + String.valueOf((new Date().getTime() - time)*1.0/1000.0));
+			    subdividedMesh = qmesh;
 				return cachedMesh;
-			} else if (!interactive && renderingSmoothLevel > 0) {
-//				long time = System.currentTimeMillis();
+			} else {
+//				long time = System.currentTimeMillis(); 
 //				mesh.printSize();
 //				for (int i = 0; i < 6/*renderingSmoothLevel*/; ++i) {
 //					mesh.smoothWholeMesh(i, false, smoothingMethod, false);
@@ -1373,15 +1372,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 //				}
 //				mesh.finalSmoothing = true;
 //				cachedMesh = mesh.getRenderingMesh(tol, interactive, info);
-				QuadMesh qmesh = mesh.smoothWholeMesh(0, false, smoothingMethod, true);
-				qmesh.smoothMesh(tol);
+				QuadMesh qmesh = smoothWholeMesh(tol, false, Integer.MAX_VALUE);
 				cachedMesh = qmesh.getRenderingMesh();
 //				time = System.currentTimeMillis() - time;
 //				System.out.println(time/1000.0 + " " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) + " out of " + Runtime.getRuntime().totalMemory() );
-				closed = mesh.isClosed();
 				return cachedMesh;
-			} else
-				tmpSmoothingMethod = Mesh.NO_SMOOTHING;
+			}
 		}
 		TextureMapping texMapping = getTextureMapping();
 		vert = new Vector();
@@ -1417,166 +1413,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		Vec3[] vertArray = new Vec3[vert.size()];
 		for (int i = 0; i < vertArray.length; ++i)
 			vertArray[i] = (Vec3) vert.elementAt(i);
-		if (tmpSmoothingMethod != Mesh.NO_SMOOTHING) {
-			try {
-				int[][] triFaces = new int[v1.size()][3];
-				for (int i = 0; i < v1.size(); ++i) {
-					triFaces[i][0] = ((Integer) v1.elementAt(i)).intValue();
-					triFaces[i][1] = ((Integer) v2.elementAt(i)).intValue();
-					triFaces[i][2] = ((Integer) v3.elementAt(i)).intValue();
-				}
-				TriangleMesh triMesh = new TriangleMesh(vertArray, triFaces);
-				ObjectInfo triInfo = info.duplicate();
-				triInfo.object = triMesh;
-				Vertex vertex[] = (Vertex[]) triMesh.getVertices();
-				Edge edge[] = triMesh.getEdges();
-				Face face[] = triMesh.getFaces();
-				polyedge = new int[edge.length];
-				for (int i = 0; i < vertices.length; i++) {
-					if (vertices[i].type == Wvertex.CORNER)
-						vertex[i].smoothness = 0.0f;
-					else
-						vertex[i].smoothness = 1.0f;
-				}
-				Edge ted;
-				int[] verticesEdges[] = new int[vertices.length][];
-				for (int i = 0; i < edge.length; ++i)
-					if (edge[i].v1 < vertices.length
-							&& verticesEdges[edge[i].v1] == null)
-						verticesEdges[edge[i].v1] = getVertexEdges(vertices[edge[i].v1]);
-				for (int i = 0; i < edge.length; ++i) {
-					polyedge[i] = -1;
-					ted = edge[i];
-					if (ted.v1 >= vertices.length || ted.v2 >= vertices.length) {
-						ted.smoothness = 1.0f;
-					} else {
-						int[] ve = verticesEdges[ted.v1];
-						for (int j = 0; j < ve.length; j++) {
-							if (edges[ve[j]].vertex == ted.v2) {
-								polyedge[i] = ve[j];
-								break;
-							}
-						}
-						if (polyedge[i] > -1)
-							ted.smoothness = edges[polyedge[i]].smoothness;
-						else
-							ted.smoothness = 1.0f;
-					}
-					if (polyedge[i] >= edges.length / 2)
-						polyedge[i] = edges[polyedge[i]].hedge;
-				}
-				triMesh.copyTextureAndMaterial(this);
-				// Compute the trimesh texture parameters.
-				ParameterValue oldParamVal[] = getParameterValues();
-				if (oldParamVal != null) {
-					ParameterValue newParamVal[] = new ParameterValue[oldParamVal.length];
-					for (int i = 0; i < oldParamVal.length; i++) {
-						if (oldParamVal[i] instanceof VertexParameterValue) {
-							double oldval[] = ((VertexParameterValue) oldParamVal[i])
-									.getValue();
-							double newval[] = new double[vert.size()];
-							for (int j = 0; j < vert.size(); ++j) {
-								int[] vf = ((VertexParamInfo) vertInfo
-										.elementAt(j)).vert;
-								double[] coef = ((VertexParamInfo) vertInfo
-										.elementAt(j)).coef;
-								for (int k = 0; k < vf.length; ++k)
-									newval[j] += coef[k] * oldval[vf[k]];
-							}
-							newParamVal[i] = new VertexParameterValue(newval);
 
-						} else if (oldParamVal[i] instanceof FaceParameterValue) {
-							double oldval[] = ((FaceParameterValue) oldParamVal[i])
-									.getValue();
-							double newval[] = new double[face.length];
-							for (int j = 0; j < face.length; ++j)
-								newval[j] = oldval[((Integer) faceInfo
-										.elementAt(j)).intValue()];
-							newParamVal[i] = new FaceParameterValue(newval);
-						} else if (oldParamVal[i] instanceof FaceVertexParameterValue) {
-							FaceVertexParameterValue fvpv = (FaceVertexParameterValue) oldParamVal[i];
-							double newval[][] = new double[face.length][3];
-							for (int j = 0; j < face.length; ++j) {
-								for (int k = 0; k < 3; k++) {
-									int pmeFace = ((Integer) faceInfo
-											.elementAt(j)).intValue();
-									int[] fv = getFaceVertices(faces[pmeFace]);
-									int[] vf = ((VertexParamInfo) vertInfo
-											.elementAt(triFaces[j][k])).vert;
-									double[] coef = ((VertexParamInfo) vertInfo
-											.elementAt(triFaces[j][k])).coef;
-									for (int l = 0; l < vf.length; ++l) {
-										int vv = -1;
-										for (int m = 0; m < fv.length; ++m) {
-											if (fv[m] == vf[l]) {
-												vv = m;
-												break;
-											}
-										}
-										if (vv == -1) {
-											System.out
-													.println("pb per face per vertex : point doesn't belong to face");
-											vv = 0;
-										}
-										newval[j][k] += coef[l]
-												* fvpv.getValue(pmeFace, vv);
-									}
-
-								}
-							}
-							newParamVal[i] = new FaceVertexParameterValue(
-									newval);
-						} else
-							newParamVal[i] = oldParamVal[i].duplicate();
-					}
-					triMesh.setParameterValues(newParamVal);
-				}
-				triMesh.setSmoothingMethod(tmpSmoothingMethod);
-				if (controlledSmoothing) {
-					Edge[] triedge = triMesh.getEdges();
-					Face[] triface = triMesh.getFaces();
-					MeshVertex[] trivert = triMesh.getVertices();
-					double mina = Math.cos(maxAngle * Math.PI / 180.0);
-					double maxa = Math.cos(minAngle * Math.PI / 180.0);
-					Edge ed;
-					Face f1, f2;
-					Vec3 norm1, norm2;
-					double dot;
-					for (int i = 0; i < edge.length; i++) {
-						ed = triedge[i];
-						if (ed.f2 == -1) {
-							ed.smoothness = 0.0f;
-							continue; // This is a boundary edge.
-						}
-						f1 = triface[ed.f1];
-						f2 = triface[ed.f2];
-						norm1 = trivert[f1.v1].r.minus(trivert[f1.v2].r).cross(
-								trivert[f1.v1].r.minus(trivert[f1.v3].r));
-						norm2 = trivert[f2.v1].r.minus(trivert[f2.v2].r).cross(
-								trivert[f2.v1].r.minus(trivert[f2.v3].r));
-						norm1.normalize();
-						norm2.normalize();
-						dot = norm1.dot(norm2);
-						if (dot <= mina)
-							ed.smoothness = maxSmoothness;
-						else if (dot >= maxa)
-							ed.smoothness = minSmoothness;
-						else
-							ed.smoothness = (float) ((dot - mina) / (maxa - mina))
-									* (minSmoothness - maxSmoothness)
-									+ maxSmoothness;
-					}
-				}
-				triangleMesh = triMesh;
-				rend = triMesh.getRenderingMesh(tol, interactive, triInfo);
-			} catch (Exception e) {
-				// e.printStackTrace();
-				if (triangleMesh != null) {
-					triangleMesh.setSmoothingMethod(NO_SMOOTHING);
-				}
-			}
-		}
-		if (rend == null) {
 			RenderingTriangle[] tri = new RenderingTriangle[v1.size()];
 			for (int i = 0; i < v1.size(); ++i)
 				tri[i] = texMapping.mapTriangle(((Integer) v1.elementAt(i))
@@ -1662,7 +1499,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				}
 				rend.setParameters(newParamVal);
 			}
-		}
+		
 		if (interactive)
 			cachedMesh = rend;
 		return rend;
@@ -1674,20 +1511,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 * 
 	 * @return Subdivided polymesh
 	 */
-	public PolyMesh getSubdividedMesh() {
-		if (subdividedMesh == null && smoothingMethod == Mesh.APPROXIMATING) {
-			PolyMesh mesh = (PolyMesh) duplicate();
-			if (interactiveSmoothLevel > 0) {
-				mesh.smoothingMethod = NO_SMOOTHING;
-				for (int i = 0; i < interactiveSmoothLevel; ++i)
-					mesh.smoothWholeMesh(i, true, smoothingMethod, false);
-				closed = mesh.isClosed();
-				subdividedMesh = mesh;
-			}
-		} else if (subdividedMesh == null) {
-			subdividedMesh = this;
+	public QuadMesh getSubdividedMesh() {
+		if (smoothingMethod == Mesh.APPROXIMATING) {
+			return subdividedMesh;
+		} else {
+			return null;
 		}
-		return subdividedMesh;
 	}
 
 	protected int[] getInvMirroredVerts() {
@@ -3193,22 +3022,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		v3 = new Vector();
 		vertInfo = new Vector();
 		faceInfo = new Vector();
-		// s1 = null;
-		// s2 = null;
-		// s3 = null;
 		polyedge = null;
-
-		/*
-		 * if ( smoothingMethod != Mesh.NO_SMOOTHING ) { //s1 = new Vector();
-		 * //s2 = new Vector(); //s3 = new Vector(); }
-		 */
 
 		for (int i = 0; i < vertices.length; ++i) {
 			vert.addElement(vertices[i].r);
 			vertInfo.add(new VertexParamInfo(new int[] { i },
 					new double[] { 1.0 }));
-			// if ( vs != null )
-			// vs.add( new Float( vertices[i].smoothness ) );
 		}
 		for (int i = 0; i < faces.length; ++i) {
 			int[] vf = getFaceVertices(faces[i]);
@@ -3218,9 +3037,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				v3.addElement(new Integer(vf[2]));
 				if (faceInfo != null)
 					faceInfo.add(new Integer(i));
-				// if ( s1 != null )
-				// addSmoothness( getFaceEdges( faces[i] ), s1, s2, s3, vf[0],
-				// vf[1], vf[2], 1.0f );
 			} else if (vf.length > 3) {
 				triangulate(vf, i, false);
 			}
@@ -3246,8 +3062,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 					vertex[i].smoothness = 0.0f;
 				else
 					vertex[i].smoothness = 1.0f;
-				// vertex[i].smoothness = ( (Float) vs.elementAt( i )
-				// ).floatValue();
 			}
 			Edge ted;
 			int[] verticesEdges[] = new int[vertices.length][];
@@ -3276,13 +3090,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				if (polyedge[i] >= edges.length / 2)
 					polyedge[i] = edges[polyedge[i]].hedge;
 			}
-			/*
-			 * for ( int i = 0; i < face.length; i++ ) {
-			 * edge[face[i].e1].smoothness = ( (Float) s1.elementAt( i )
-			 * ).floatValue(); edge[face[i].e2].smoothness = ( (Float)
-			 * s2.elementAt( i ) ).floatValue(); edge[face[i].e3].smoothness = (
-			 * (Float) s3.elementAt( i ) ).floatValue(); }
-			 */
 
 			if (controlledSmoothing) {
 				Edge[] triedge = mesh.getEdges();
@@ -3445,8 +3252,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *         and polymesh edges.
 	 */
 	public TriangleMesh getTriangleMesh() {
-		// if (triangleMesh == null)
-		// return convertToTriangleMesh(0);
 		return triangleMesh;
 	}
 
@@ -3460,8 +3265,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *         and polymesh edges.
 	 */
 	public int[] getPolyEdge() {
-		// if (polyedge == null)
-		// convertToTriangleMesh(0);
 		return polyedge;
 	}
 
@@ -4060,7 +3863,10 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		int count = edges.length / 2;
 		newVertices = new Wvertex[vertices.length + count];
 		newEdges = new Wedge[edges.length + 2 * count];
-		int[] newProjectEdges = new int[edges.length + 2 * count];
+//		int[] newProjectEdges = null;
+//		if (projectedEdges != null) {
+//			newProjectEdges = new int[edges.length / 2 + count];
+//		}
 		toVert = new int[count];
 		fromVert = new int[count];
 		translateMesh(newVertices, newEdges, faces);
@@ -4095,12 +3901,12 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			toVert[index] = to;
 			fromVert[index] = from;
 			newEdges[newEdges[ed].hedge].next = newEdges[el + index].hedge;
-			if (projectedEdges != null) {
-				newProjectEdges[i] = projectedEdges[i];
-				newProjectEdges[newEdges[i].hedge] = projectedEdges[i];
-				newProjectEdges[el + index] = projectedEdges[i];
-				newProjectEdges[newEdges[el + index].hedge] = projectedEdges[i];
-			}
+//			if (projectedEdges != null) {
+//				newProjectEdges[i] = projectedEdges[i];
+//				newProjectEdges[newEdges[i].hedge] = projectedEdges[i];
+//				newProjectEdges[el + index] = projectedEdges[i];
+//				newProjectEdges[newEdges[el + index].hedge] = projectedEdges[i];
+//			}
 			++index;
 		}
 		// Update the texture parameters.
@@ -4159,7 +3965,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		edges = newEdges;
 		vertices = newVertices;
 		resetMesh();
-		projectedEdges = newProjectEdges;
+		//projectedEdges = newProjectEdges;
 		//dumpFaceVertices();
 	}
 
@@ -5734,7 +5540,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			InvalidObjectException {
 
 		short version = in.readShort();
-		if (version < 0 || version > 8)
+		if (version < 0 || version > 9)
 			throw new InvalidObjectException("");
 		if (version > 0)
 			mirrorState = in.readShort();
@@ -5749,9 +5555,13 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			vertices[i].ikWeight = in.readDouble();
 			if (version > 4) {
 				vertices[i].type = in.readShort();
-				hasNormal = in.readBoolean();
-				if (hasNormal)
-					vertices[i].normal = new Vec3(in);
+				if (version < 9) {
+					hasNormal = in.readBoolean();
+					if (hasNormal)
+						new Vec3(in);
+//					if (hasNormal)
+//					vertices[i].normal = new Vec3(in);
+				}				
 			}
 		}
 		edges = new Wedge[in.readInt()];
@@ -5814,12 +5624,13 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	/**
 	 * Smooths the whole mesh according to Catmull-Clark or Biermann-Levin-Zorin
-	 * algorithm. Creasing according to Pixar/Blender algorithm
+	 * algorithm. Creasing according to Pixar/Blender algorithm. This method returns
+	 * a quad mesh smoothed to the specified tolerance, unless the tolerance is set to -1
+	 * in which case the polymesh is smoothed once.
 	 * 
 	 */
-	public QuadMesh smoothWholeMesh(int ns, boolean calcProjectedEdges,
-			int smoothingMethod, boolean computeQuad) {
-		if (computeQuad && mirrorState == NO_MIRROR) {
+	public QuadMesh smoothWholeMesh(double tol, boolean calcProjectedEdges, int maxNs) {
+		if (mirrorState == NO_MIRROR && tol > 0) {
 			//first, check if this is a quad mesh
 			boolean quad = true;
 			for (int i = 0; i < faces.length; i++) {
@@ -5830,15 +5641,50 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			}
 			if (quad) {
 				//System.out.println("quad mesh direct smoothing");
-				return getQuadMesh();
+				QuadMesh qmesh = getQuadMesh();
+				//long time = new Date().getTime();
+				qmesh.smoothMesh(tol, calcProjectedEdges, maxNs);
+				projectedEdges = qmesh.getProjectedEdges();
+				//System.out.println("only quad smoothing : " + String.valueOf((new Date().getTime() - time)*1.0/1000.0));
+				return qmesh;
 			}
-		}		
+		}
+		if (tol > 0) {
+			//long time = new Date().getTime();
+			PolyMesh smoothedMesh = (PolyMesh)this.duplicate();
+			smoothedMesh.smoothWholeMesh(-1, calcProjectedEdges, maxNs);
+			int[] pe = null;
+			if (calcProjectedEdges) {
+				int ne = smoothedMesh.getEdges().length/2;
+				pe = new int[ne];
+				for (int i = 0; i < edges.length / 2; i++) {
+					pe[i] = i;
+					pe[i + edges.length / 2] = i;
+				}
+				for (int i = edges.length; i < ne; i++) {
+					pe[i] = -1;
+				}
+			}
+			closed = smoothedMesh.isClosed();
+			QuadMesh qmesh = smoothedMesh.getQuadMesh();
+			//System.out.println("initial poly to quad smoothing : " + String.valueOf((new Date().getTime() - time)*1.0/1000.0));
+			//time = new Date().getTime();
+			if (maxNs > 1) {
+				qmesh.smoothMesh(tol, calcProjectedEdges, 1, pe, maxNs);
+				projectedEdges = qmesh.getProjectedEdges();
+			} else {
+				qmesh.setProjectedEdges(smoothedMesh.getProjectedEdges());
+			}
+			//System.out.println("quad smoothing : " + String.valueOf((new Date().getTime() - time)*1.0/1000.0));
+			return qmesh;
+		}
+		int ns = 0;
 		int originalVert = vertices.length;
 		int[] newProjectedEdges = null;
 		if (calcProjectedEdges) {
-			if (projectedEdges == null || projectedEdges.length != edges.length) {
+			if (projectedEdges == null || projectedEdges.length != edges.length / 2) {
 				projectedEdges = new int[edges.length];
-				for (int i = 0; i < edges.length; i++)
+				for (int i = 0; i < edges.length/2; i++)
 					projectedEdges[i] = i;
 			}
 		} else
@@ -5917,14 +5763,14 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		// BTW, now we know how many more edges and faces
 		Wedge[] newEdges = new Wedge[edges.length + count * 2];
 		if (calcProjectedEdges) {
-			newProjectedEdges = new int[edges.length + count * 2];
+			newProjectedEdges = new int[edges.length/2 + count];
 			for (int i = 0; i < edges.length / 2; i++) {
 				newProjectedEdges[i] = projectedEdges[i];
-				newProjectedEdges[i + newEdges.length / 2] = projectedEdges[i];
+//				newProjectedEdges[i + newEdges.length / 2] = projectedEdges[i];
 			}
 			for (int i = edges.length / 2; i < newEdges.length / 2; i++) {
 				newProjectedEdges[i] = -1;
-				newProjectedEdges[i + newEdges.length / 2] = -1;
+//				newProjectedEdges[i + newEdges.length / 2] = -1;
 			}
 			projectedEdges = newProjectedEdges;
 		}
@@ -5961,9 +5807,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		int v1;
 		int v2;
 		int sharp;
-		double weight, centralWeight, adjacentWeight;
-		int crease;
-		int maxHardIndex;
+		double weight;
 		double maxHard;
 		int[] hardEdge = new int[2];
 		int[] sharpEdge = new int[2];
@@ -5972,351 +5816,235 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		smoothEdgeValue[1] = smoothEdgeValue[0] = 1;
 		int hardnum;
 		Vec3 sharpPt;
-		if (smoothingMethod == Mesh.APPROXIMATING) {
-			// BLZ algorithm
-			for (int i = 0; i < originalVert; ++i) {
-				// adjacent polygons
-				int ve[] = getVertexEdges(vertices[i]);
-				if (ve.length > smoothEdgeValue.length) {
-					smoothEdgeValue = new double[ve.length];
-				}
-				hardnum = 0;
-				n = ve.length;
-				sharp = 0;
-				weight = 0;
-				pos = new Vec3();
-				count = 0;
-				crease = 0;
-				maxHardIndex = -1;
-				maxHard = 0.0;
-				for (int j = 0; j < ve.length; ++j) {
-					smoothEdgeValue[j] = 0.0;
-					face1 = edges[ve[j]].face;
-					face2 = edges[edges[ve[j]].hedge].face;
-					if (face1 != -1) {
-						pos.add(facePos[face1]);
-						pos
-								.subtract(vertices[edges[edges[ve[j]].next].vertex].r
-										.times(1.0 / 4.0));
-						pos
-								.subtract(vertices[edges[edges[edges[getPreviousEdge(ve[j])].hedge].next].vertex].r
-										.times(1.0 / 4.0));
-						pos.subtract(vertices[i].r.times(1.0 / 4.0));
-						++count;
-					}
-					pos.add(vertices[edges[edges[ve[j]].next].vertex].r
-							.times(3.0 / 2.0));
-					// pos.add(vertices[edges[ve[j]].vertex].r.times(adjacentWeight/ve.length));
-					if (mirrorState == NO_MIRROR)
-						smoothness = edges[ve[j]].smoothness;
-					else
-						smoothness = edgeSmoothness[ve[j]];
-					if (face1 != -1 && face2 != -1)
-						smoothness = (1.0 - smoothness) * 6;
-					else
-						smoothness = 6.0; // boundary edges are treated as
-					// hard edges.
-					if (ns + 1 <= smoothness) {
-						// weight += smoothness - ns;
-						if (sharp < 2)
-							sharpEdge[sharp] = ve[j];
-						++sharp;
-					} else if (ns < smoothness) {
-						weight += smoothness - ns;
-						smoothEdgeValue[j] = smoothness - ns;
-						if (smoothEdgeValue[j] > maxHard) {
-							maxHard = smoothEdgeValue[j];
-							maxHardIndex = ve[j];
-						}
-						if (hardnum < 2)
-							hardEdge[hardnum] = ve[j];
-						++hardnum;
-					}
-
-				}
-				pos.scale(1.0 / ((double) count * count));
-				pos.add(vertices[i].r.times(1.0 - 3.0 / (2.0 * count) - 1.0
-						/ (4.0 * count)));
-				//System.out.println(hardnum + " " + sharp);
-				if (vertices[i].type != Wvertex.CORNER) {
-					switch (sharp) {
-					case 0:
-						if (hardnum <= 1)
-							newVert[i].r = pos;
-						else if (hardnum == 2) {
-							weight /= 2;
-							//System.out.println("vertex: " + i);
-							//System.out.println(pos);
-							//System.out.println(weight);
-							sharpPt = new Vec3(newVert[i].r.times(0.75));
-							//System.out.println(sharpPt);
-							sharpPt
-									.add(vertices[edges[edges[hardEdge[0]].next].vertex].r
-											.times(0.125));
-							//System.out.println(sharpPt + " " + edges[edges[hardEdge[0]].next].vertex);
-							sharpPt
-									.add(vertices[edges[edges[hardEdge[1]].next].vertex].r
-											.times(0.125));
-							//System.out.println(sharpPt + " " + edges[edges[hardEdge[1]].next].vertex);
-							newVert[i].r = pos.times(1 - weight).plus(
-									sharpPt.times(weight));
-							//System.out.println(pos);
-						} else {
-							weight /= hardnum;
-							//System.out.println(weight + " " + hardnum);
-							//System.out.println(pos);
-							newVert[i].r = pos.times(1 - weight).plus(
-									newVert[i].r.times(weight));
-							//System.out.println(newVert[i].r);
-						}
-						break;
-					case 1:
-						if (hardnum == 0)
-							newVert[i].r = pos;
-						else if (hardnum == 1) {
-//							sharpPt = new Vec3(newVert[i].r.times(0.75));
-//							sharpPt
-//									.add(vertices[edges[edges[sharpEdge[0]].next].vertex].r
-//											.times(0.125));
-//							sharpPt
-//									.add(vertices[edges[edges[maxHardIndex].next].vertex].r
-//											.times(0.125));
-							newVert[i].r = pos.times(1 - maxHard).plus(
-									newVert[i].r.times(maxHard));
-						} else {
-							weight /= hardnum;
-							newVert[i].r = pos.times(1 - weight).plus(
-									newVert[i].r.times(weight));
-						}
-						break;
-					case 2:
-						sharpPt = new Vec3(newVert[i].r.times(0.75));
-						
-						sharpPt
-								.add(vertices[edges[edges[sharpEdge[0]].next].vertex].r
-										.times(0.125));
-						sharpPt
-								.add(vertices[edges[edges[sharpEdge[1]].next].vertex].r
-										.times(0.125));
-						//System.out.println(newVert[i].r + " " + edges[edges[sharpEdge[0]].next].vertex);
-						//System.out.println(sharpPt + " " + edges[edges[sharpEdge[1]].next].vertex);
-						if (hardnum == 0) {
-							newVert[i].r = sharpPt;
-						}
-						else {
-							weight /= hardnum;
-//							System.out.println(weight + " " + hardnum);
-							newVert[i].r = sharpPt.times(1 - weight).plus(
-									newVert[i].r.times(weight));
-//							System.out.println(newVert[i].r);
-						}
-						break;
-					default:
-						break;
-					}
-
-				}
+		// BLZ algorithm
+		for (int i = 0; i < originalVert; ++i) {
+			// adjacent polygons
+			int ve[] = getVertexEdges(vertices[i]);
+			if (ve.length > smoothEdgeValue.length) {
+				smoothEdgeValue = new double[ve.length];
 			}
-		} else {
-			for (int i = 0; i < originalVert; ++i) {
-
-				int ve[] = getVertexEdges(vertices[i]);
-				n = ve.length;
-				sharp = 0;
-				weight = 0;
-				pos = new Vec3();
-				count = 0;
-				crease = 0;
-				for (int j = 0; j < ve.length; ++j) {
-					face1 = edges[ve[j]].face;
-					face2 = edges[edges[ve[j]].hedge].face;
-					if (face1 != -1) {
-						pos.add(facePos[face1]);
-						++count;
-					}
-					if (face2 != -1) {
-						pos.add(facePos[face2]);
-						++count;
-					}
-					if (mirrorState == NO_MIRROR)
-						smoothness = edges[ve[j]].smoothness;
-					else
-						smoothness = edgeSmoothness[ve[j]];
-					smoothness = (1.0 - smoothness) * 6;
-					if (ns + 1 <= smoothness) {
-						weight += smoothness - ns;
-						if (sharp < 2)
-							sharpEdge[sharp] = ve[j];
-						++sharp;
-					} else if (ns < smoothness) {
-						weight += smoothness - ns;
-						if (sharp < 2)
-							sharpEdge[sharp] = ve[j];
-						++sharp;
-					}
-
+			hardnum = 0;
+			n = ve.length;
+			sharp = 0;
+			weight = 0;
+			pos = new Vec3();
+			count = 0;
+			maxHard = 0.0;
+			for (int j = 0; j < ve.length; ++j) {
+				smoothEdgeValue[j] = 0.0;
+				face1 = edges[ve[j]].face;
+				face2 = edges[edges[ve[j]].hedge].face;
+				if (face1 != -1) {
+					pos.add(facePos[face1]);
+					pos
+					.subtract(vertices[edges[edges[ve[j]].next].vertex].r
+							.times(1.0 / 4.0));
+					pos
+					.subtract(vertices[edges[edges[edges[getPreviousEdge(ve[j])].hedge].next].vertex].r
+							.times(1.0 / 4.0));
+					pos.subtract(vertices[i].r.times(1.0 / 4.0));
+					++count;
 				}
-				pos.scale(1.0 / (count * n));
-				pt = new Vec3();
-				for (int j = 0; j < ve.length; ++j)
-					pt.add(vertices[edges[ve[j]].vertex].r);
-				pt.scale(2.0 / ((double) n * n));
-				pos.add(pt);
-				pos.add(newVert[i].r.times((n * 1.0 - 3.0) / ((double) n)));
-				if (sharp <= 1) {
-					newVert[i].r = pos;
-				} else if (sharp == 2) {
-					sharpPt = new Vec3(newVert[i].r.times(2 * (n - 1)));
-					sharpPt.add(vertices[edges[sharpEdge[0]].vertex].r);
-					sharpPt.add(vertices[edges[sharpEdge[1]].vertex].r);
-					sharpPt.scale(1.0 / (2 * n));
-					if (weight <= 2) {
+				pos.add(vertices[edges[edges[ve[j]].next].vertex].r
+						.times(3.0 / 2.0));
+				// pos.add(vertices[edges[ve[j]].vertex].r.times(adjacentWeight/ve.length));
+				if (mirrorState == NO_MIRROR)
+					smoothness = edges[ve[j]].smoothness;
+				else
+					smoothness = edgeSmoothness[ve[j]];
+				if (face1 != -1 && face2 != -1)
+					smoothness = (1.0 - smoothness) * QuadMesh.MAX_SMOOTHNESS;
+				else
+					smoothness = QuadMesh.MAX_SMOOTHNESS; // boundary edges are treated as
+				// hard edges.
+				if (ns + 1 <= smoothness) {
+					// weight += smoothness - ns;
+					if (sharp < 2)
+						sharpEdge[sharp] = ve[j];
+					++sharp;
+				} else if (ns < smoothness) {
+					weight += smoothness - ns;
+					smoothEdgeValue[j] = smoothness - ns;
+					if (smoothEdgeValue[j] > maxHard) {
+						maxHard = smoothEdgeValue[j];
+					}
+					if (hardnum < 2)
+						hardEdge[hardnum] = ve[j];
+					++hardnum;
+				}
+
+			}
+			pos.scale(1.0 / ((double) count * count));
+			pos.add(vertices[i].r.times(1.0 - 3.0 / (2.0 * count) - 1.0
+					/ (4.0 * count)));
+			//System.out.println(hardnum + " " + sharp);
+			if (vertices[i].type != Wvertex.CORNER) {
+				switch (sharp) {
+				case 0:
+					if (hardnum <= 1)
+						newVert[i].r = pos;
+					else if (hardnum == 2) {
 						weight /= 2;
+						//System.out.println("vertex: " + i);
+						//System.out.println(pos);
+						//System.out.println(weight);
+						sharpPt = new Vec3(newVert[i].r.times(0.75));
+						//System.out.println(sharpPt);
+						sharpPt
+						.add(vertices[edges[edges[hardEdge[0]].next].vertex].r
+								.times(0.125));
+						//System.out.println(sharpPt + " " + edges[edges[hardEdge[0]].next].vertex);
+						sharpPt
+						.add(vertices[edges[edges[hardEdge[1]].next].vertex].r
+								.times(0.125));
+						//System.out.println(sharpPt + " " + edges[edges[hardEdge[1]].next].vertex);
 						newVert[i].r = pos.times(1 - weight).plus(
 								sharpPt.times(weight));
-					} else
-						newVert[i].r = sharpPt;
-
-				} else {
-					if (weight < sharp) {
-						weight /= sharp;
+						//System.out.println(pos);
+					} else {
+						weight /= hardnum;
+						//System.out.println(weight + " " + hardnum);
+						//System.out.println(pos);
+						newVert[i].r = pos.times(1 - weight).plus(
+								newVert[i].r.times(weight));
+						//System.out.println(newVert[i].r);
+					}
+					break;
+				case 1:
+					if (hardnum == 0)
+						newVert[i].r = pos;
+					else if (hardnum == 1) {
+//						sharpPt = new Vec3(newVert[i].r.times(0.75));
+//						sharpPt
+//						.add(vertices[edges[edges[sharpEdge[0]].next].vertex].r
+//						.times(0.125));
+//						sharpPt
+//						.add(vertices[edges[edges[maxHardIndex].next].vertex].r
+//						.times(0.125));
+						newVert[i].r = pos.times(1 - maxHard).plus(
+								newVert[i].r.times(maxHard));
+					} else {
+						weight /= hardnum;
 						newVert[i].r = pos.times(1 - weight).plus(
 								newVert[i].r.times(weight));
 					}
-				}
-			}
+					break;
+				case 2:
+					sharpPt = new Vec3(newVert[i].r.times(0.75));
 
-		}
-		// location of the new midpoints
-		if (smoothingMethod != Mesh.APPROXIMATING) {
-			for (int i = originalVert; i < addedVert; ++i) {
-				e = edges[vertices[i].edge];
-				if (mirrorState == NO_MIRROR)
-					smoothness = e.smoothness;
-				else
-					smoothness = edgeSmoothness[vertices[i].edge];
-				smoothness = (1.0 - smoothness) * 6;
-				face1 = e.face;
-				face2 = edges[e.hedge].face;
-				// System.out.println( i + " " + face1 + " " + face2 );
-				pt = null;
-				if (face1 == -1 || face2 == -1)
-					continue;
-				if (ns + 1 <= smoothness || (face1 == -1 || face2 == -1)) {
-					// hard edge
-					// pt2 = new Vec3(newVert[e.vertex].r);
-					// pt2.add( newVert[edges[edges[e.hedge].next].vertex].r
-					// );
-					// pt2.scale( 0.5 );
-					// newVert[i].r = pt2;
-				} else if (ns < smoothness) {
-					// in between position
-					pt = facePos[face1].plus(facePos[face2]);
-					pt2 = new Vec3(newVert[e.vertex].r);
-					pt2.add(newVert[edges[edges[e.hedge].next].vertex].r);
-					pt.add(pt2);
-					pt.scale(0.25);
-					pt2.scale(0.5);
-					// System.out.println( "1: " + (smoothness - ns) );
-					newVert[i].r = pt2.times(smoothness - ns).plus(
-							pt.times(1 - (smoothness - ns)));
-				} else {
-					pt = facePos[face1].plus(facePos[face2]);
-					pt2 = new Vec3(newVert[e.vertex].r);
-					pt2.add(newVert[edges[edges[e.hedge].next].vertex].r);
-					pt.add(pt2);
-					pt.scale(0.25);
-					newVert[i].r = pt;
+					sharpPt
+					.add(vertices[edges[edges[sharpEdge[0]].next].vertex].r
+							.times(0.125));
+					sharpPt
+					.add(vertices[edges[edges[sharpEdge[1]].next].vertex].r
+							.times(0.125));
+					//System.out.println(newVert[i].r + " " + edges[edges[sharpEdge[0]].next].vertex);
+					//System.out.println(sharpPt + " " + edges[edges[sharpEdge[1]].next].vertex);
+					if (hardnum == 0) {
+						newVert[i].r = sharpPt;
+					}
+					else {
+						weight /= hardnum;
+//						System.out.println(weight + " " + hardnum);
+						newVert[i].r = sharpPt.times(1 - weight).plus(
+								newVert[i].r.times(weight));
+//						System.out.println(newVert[i].r);
+					}
+					break;
+				default:
+					break;
 				}
+
 			}
-		} else {
-			int v3, v4, v5, v6;
-			Vec3 v1r, v2r, v3r, v4r, v5r, v6r;
-			int e1, e2, e1h, e2h;
-			double gamma;
-			for (int i = originalVert; i < addedVert; ++i) {
-				e1 = vertices[i].edge;
-				e1h = edges[e1].hedge;
-				e2 = edges[e1h].next;
-				e2h = edges[e2].hedge;
-				v1 = edges[e1].vertex;
-				v2 = edges[e2].vertex;
-				v3 = edges[edges[e1].next].vertex;
-				v4 = edges[edges[getPreviousEdge(e1h)].hedge].vertex;
-				v5 = edges[edges[getPreviousEdge(e2h)].hedge].vertex;
-				v6 = edges[edges[e2].next].vertex;
-				v1r = vertices[v1].r;
-				v2r = vertices[v2].r;
-				v3r = vertices[v3].r.minus(v1r).times(2).plus(v1r);
-				v4r = vertices[v4].r.minus(v1r).times(2).plus(v1r);
-				v5r = vertices[v5].r.minus(v2r).times(2).plus(v2r);
-				v6r = vertices[v6].r.minus(v2r).times(2).plus(v2r);
-				if (mirrorState == NO_MIRROR)
-					smoothness = edges[e1].smoothness;
-				else
-					smoothness = edgeSmoothness[e1];
-				smoothness = (1.0 - smoothness) * 6;
-				face1 = edges[e1].face;
-				face2 = edges[e2].face;
-				// System.out.println( i + " " + face1 + " " + face2 );
-				pt = null;
-				if (face1 == -1 || face2 == -1)
-					continue;
-				gamma = 3.0 / 8.0;
-				if (vertices[v1].type == Wvertex.CREASE) {
-					int k = getVertexEdges(vertices[v1]).length;
-					gamma = 3.0 / 8.0 - Math.cos(Math.PI / (double) k) / 4.0;
-					// System.out.println( gamma + " :1");
-				}
-				if (vertices[v2].type == Wvertex.CREASE) {
-					int k = getVertexEdges(vertices[v2]).length;
-					gamma = 3.0 / 8.0 + Math.cos(Math.PI / (double) k) / 4.0;
-					// System.out.println( gamma + " :2");
-				}
-				if (ns + 1 <= smoothness) {
-					// hard edge
-					// e = edges[vertices[i].edge];
-					// pt2 = new Vec3(newVert[e.vertex].r);
-					// pt2.add( newVert[edges[edges[e.hedge].next].vertex].r
-					// );
-					// pt2 = new Vec3(newVert[edges[e1].vertex].r);
-					// pt2.add( newVert[edges[e2].vertex].r );
-					// pt2.scale( 0.5 );
-					// newVert[i].r = pt2;
-				} else if (ns < smoothness) {
-					// in between position
-					pt = new Vec3(v1r);
-					pt.scale(3.0 / 4.0 - gamma);
-					pt.add(v2r.times(gamma));
-					pt2 = new Vec3(v3r);
-					pt2.add(v4r);
-					pt2.add(v5r);
-					pt2.add(v6r);
-					pt2.scale(1.0 / 16.0);
-					pt.add(pt2);
-					pt2 = newVert[i].r;
-					newVert[i].r = pt2.times(smoothness - ns).plus(
-							pt.times(1 - (smoothness - ns)));
-				} else {
-					pt = new Vec3(v1r);
-					pt.scale(3.0 / 4.0 - gamma);
-					pt.add(v2r.times(gamma));
-					pt2 = new Vec3(v3r);
-					pt2.add(v4r);
-					pt2.add(v5r);
-					pt2.add(v6r);
-					pt2.scale(1.0 / 16.0);
-					pt.add(pt2);
-					newVert[i].r = pt;
-				}
+		}
+
+		// location of the new midpoints
+		int v3, v4, v5, v6;
+		Vec3 v1r, v2r, v3r, v4r, v5r, v6r;
+		int e1, e2, e1h, e2h;
+		double gamma;
+		for (int i = originalVert; i < addedVert; ++i) {
+			e1 = vertices[i].edge;
+			e1h = edges[e1].hedge;
+			e2 = edges[e1h].next;
+			e2h = edges[e2].hedge;
+			v1 = edges[e1].vertex;
+			v2 = edges[e2].vertex;
+			v3 = edges[edges[e1].next].vertex;
+			v4 = edges[edges[getPreviousEdge(e1h)].hedge].vertex;
+			v5 = edges[edges[getPreviousEdge(e2h)].hedge].vertex;
+			v6 = edges[edges[e2].next].vertex;
+			v1r = vertices[v1].r;
+			v2r = vertices[v2].r;
+			v3r = vertices[v3].r.minus(v1r).times(2).plus(v1r);
+			v4r = vertices[v4].r.minus(v1r).times(2).plus(v1r);
+			v5r = vertices[v5].r.minus(v2r).times(2).plus(v2r);
+			v6r = vertices[v6].r.minus(v2r).times(2).plus(v2r);
+			if (mirrorState == NO_MIRROR)
+				smoothness = edges[e1].smoothness;
+			else
+				smoothness = edgeSmoothness[e1];
+			smoothness = (1.0 - smoothness) * QuadMesh.MAX_SMOOTHNESS;
+			face1 = edges[e1].face;
+			face2 = edges[e2].face;
+			// System.out.println( i + " " + face1 + " " + face2 );
+			pt = null;
+			if (face1 == -1 || face2 == -1)
+				continue;
+			gamma = 3.0 / 8.0;
+			if (vertices[v1].type == Wvertex.CREASE) {
+				int k = getVertexEdges(vertices[v1]).length;
+				gamma = 3.0 / 8.0 - Math.cos(Math.PI / (double) k) / 4.0;
+				// System.out.println( gamma + " :1");
+			}
+			if (vertices[v2].type == Wvertex.CREASE) {
+				int k = getVertexEdges(vertices[v2]).length;
+				gamma = 3.0 / 8.0 + Math.cos(Math.PI / (double) k) / 4.0;
+				// System.out.println( gamma + " :2");
+			}
+			if (ns + 1 <= smoothness) {
+				// hard edge
+				// e = edges[vertices[i].edge];
+				// pt2 = new Vec3(newVert[e.vertex].r);
+				// pt2.add( newVert[edges[edges[e.hedge].next].vertex].r
+				// );
+				// pt2 = new Vec3(newVert[edges[e1].vertex].r);
+				// pt2.add( newVert[edges[e2].vertex].r );
+				// pt2.scale( 0.5 );
+				// newVert[i].r = pt2;
+			} else if (ns < smoothness) {
+				// in between position
+				pt = new Vec3(v1r);
+				pt.scale(3.0 / 4.0 - gamma);
+				pt.add(v2r.times(gamma));
+				pt2 = new Vec3(v3r);
+				pt2.add(v4r);
+				pt2.add(v5r);
+				pt2.add(v6r);
+				pt2.scale(1.0 / 16.0);
+				pt.add(pt2);
+				pt2 = newVert[i].r;
+				newVert[i].r = pt2.times(smoothness - ns).plus(
+						pt.times(1 - (smoothness - ns)));
+			} else {
+				pt = new Vec3(v1r);
+				pt.scale(3.0 / 4.0 - gamma);
+				pt.add(v2r.times(gamma));
+				pt2 = new Vec3(v3r);
+				pt2.add(v4r);
+				pt2.add(v5r);
+				pt2.add(v6r);
+				pt2.scale(1.0 / 16.0);
+				pt.add(pt2);
+				newVert[i].r = pt;
 			}
 		}
 
 		// new edges
 		count = edges.length / 2;
 		int faceCount = faces.length - faceNum;
-		Wedge e1;
-		Wedge e2;
+		//Wedge e1w;
+		//Wedge e2w;
 		int ref1;
 		int ref2;
 		int next;
@@ -6503,9 +6231,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		faces = newFaces;
 		edges = newEdges;
 		resetMesh();
-		if (computeQuad) {
-			return getQuadMesh();
-		}
 		return null;
 	}
 	
@@ -12846,7 +12571,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		if (theScene != null)
 			super.writeToFile(out, theScene);
 
-		out.writeShort(8);
+		out.writeShort(9);
 		out.writeShort(mirrorState);
 		out.writeInt(smoothingMethod);
 		out.writeInt(vertices.length);
@@ -12857,11 +12582,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			out.writeInt(vertices[i].ikJoint);
 			out.writeDouble(vertices[i].ikWeight);
 			out.writeShort(vertices[i].type);
-			if (vertices[i].normal != null) {
-				out.writeBoolean(true);
-				vertices[i].normal.writeToFile(out);
-			} else
-				out.writeBoolean(false);
+//			if (vertices[i].normal != null) {
+//				out.writeBoolean(true);
+//				vertices[i].normal.writeToFile(out);
+//			} else
+//				out.writeBoolean(false);
 		}
 		out.writeInt(edges.length);
 		for (int i = 0; i < edges.length; i++) {
@@ -13468,7 +13193,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 		public short type;
 
-		public Vec3 normal;
+		//public Vec3 normal;
 
 		public final static short NONE = 0;
 
@@ -13501,8 +13226,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			super(vertex);
 			this.edge = vertex.edge;
 			type = vertex.type;
-			if (vertex.normal != null)
-				normal = new Vec3(vertex.normal);
+//			if (vertex.normal != null)
+//				normal = new Vec3(vertex.normal);
 			// this.smoothness = vertex.smoothness;
 		}
 	}

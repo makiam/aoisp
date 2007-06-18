@@ -22,6 +22,7 @@ import artofillusion.UndoRecord;
 import artofillusion.ViewerCanvas;
 import artofillusion.math.Vec2;
 import artofillusion.math.Vec3;
+import artofillusion.object.MeshVertex;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
@@ -93,7 +94,7 @@ public class PMCreateFaceTool extends EditingTool
     public void mouseReleased(WidgetMouseEvent ev, ViewerCanvas view)
     {    
         Point e = ev.getPoint();
-        PolyMesh mesh, subMesh, viewMesh;
+        PolyMesh mesh, viewMesh;
         viewMesh = mesh = (PolyMesh)controller.getObject().object;
         boolean mirror;
         int[] invVertTable = null;
@@ -105,11 +106,11 @@ public class PMCreateFaceTool extends EditingTool
             invVertTable = mesh.getInvMirroredVerts();
             length = invVertTable.length;
         }
-        subMesh = viewMesh;
+        QuadMesh subMesh = null;
         boolean project = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).getProjectOntoSurface() : false);
-        if (project && viewMesh.getSubdividedMesh() != null)
-            subMesh = viewMesh.getSubdividedMesh();
-        PolyMesh.Wvertex v[] = (PolyMesh.Wvertex[]) subMesh.getVertices();
+         if (project && viewMesh.getSubdividedMesh() != null)
+        	 subMesh = viewMesh.getSubdividedMesh();
+        MeshVertex[] v = subMesh.getVertices();
         pr = new Vec3[length];
         for (int i = 0; i < length; ++i)
             pr[i] = v[i].r;

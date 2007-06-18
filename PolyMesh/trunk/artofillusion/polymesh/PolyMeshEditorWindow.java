@@ -378,9 +378,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		tensionSpin.addEventLink(ValueChangedEvent.class, this,
 				"doTensionChanged");
 		meshContainer.add(tensionSpin);
-		levelContainer.add(new BLabel(PMTranslate.text("subdivisionLevels")
-				+ ": "));
-		//levelContainer.add(new BLabel(PMTranslate.text("inter.")));
+//		levelContainer.add(new BLabel(PMTranslate.text("subdivisionLevels")
+//				+ ": "));
+		levelContainer.add(new BLabel(PMTranslate.text("interactiveSubdiv")));
 		ispin = new BSpinner(1, 1, 6, 1);
 		levelContainer.add(ispin);
 		ispin.setValue(new Integer(mesh.getInteractiveSmoothLevel()));
@@ -1375,7 +1375,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		lastPreview = preview;
 
 		mesh = (PolyMesh) objInfo.object;
-		PolyMesh subdividedMesh = mesh.getSubdividedMesh();
+		QuadMesh subdividedMesh = mesh.getSubdividedMesh();
 		projectedEdge = subdividedMesh.getProjectedEdges();
 		if (projectedEdge == null)
 			System.out.println("null projected Edge");
@@ -1406,11 +1406,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	}
 
 	/**
-	 * Get the subdivided mesh which represents the surface. If the control
-	 * mesh is not being projected onto the surface, this returns null.
+	 * Get the subdivided mesh which represents the surface. If the
+	 * mesh is not subdivided, this returns null.
 	 */
 
-	PolyMesh getSubdividedPolyMesh() {
+	QuadMesh getSubdividedPolyMesh() {
 		return ((PolyMesh) objInfo.object).getSubdividedMesh();
 	}
 
@@ -2094,7 +2094,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doSmoothMesh() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		PolyMesh prevMesh = (PolyMesh) mesh.duplicate();
-		mesh.smoothWholeMesh(1, false, Mesh.APPROXIMATING, false);
+		mesh.smoothWholeMesh(-1, false, 1);
 		setUndoRecord(new UndoRecord(this, false, UndoRecord.COPY_OBJECT,
 				new Object[] { mesh, prevMesh }));
 		setMesh(mesh);
@@ -4564,26 +4564,26 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		updateImage();
 	}
 
-	private void doAddVertexNormal() {
-		PolyMesh mesh = (PolyMesh) objInfo.object;
-		Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
-		Vec3[] normals = mesh.getNormals();
-		for (int i = 0; i < selected.length; ++i)
-			if (selected[i])
-				vertices[i].normal = new Vec3(normals[i]);
-		objectChanged();
-		updateImage();
-	}
-
-	private void doRemoveVertexNormal() {
-		PolyMesh mesh = (PolyMesh) objInfo.object;
-		Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
-		for (int i = 0; i < selected.length; ++i)
-			if (selected[i])
-				vertices[i].normal = null;
-		objectChanged();
-		updateImage();
-	}
+//	private void doAddVertexNormal() {
+//		PolyMesh mesh = (PolyMesh) objInfo.object;
+//		Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
+//		Vec3[] normals = mesh.getNormals();
+//		for (int i = 0; i < selected.length; ++i)
+//			if (selected[i])
+//				vertices[i].normal = new Vec3(normals[i]);
+//		objectChanged();
+//		updateImage();
+//	}
+//
+//	private void doRemoveVertexNormal() {
+//		PolyMesh mesh = (PolyMesh) objInfo.object;
+//		Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
+////		for (int i = 0; i < selected.length; ++i)
+////			if (selected[i])
+////				vertices[i].normal = null;
+//		objectChanged();
+//		updateImage();
+//	}
 
 	public PolymeshValueWidget getValueWidget() {
 		return valueWidget;

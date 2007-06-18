@@ -102,7 +102,7 @@ public class PMSewTool extends EditingTool
                 projectedEdge = ((PolyMeshEditorWindow) controller).findProjectedEdges();
             if (projectedEdge != null)
             {
-                PolyMesh mesh = ((PolyMeshEditorWindow) controller).getSubdividedPolyMesh();
+                QuadMesh mesh = ((PolyMeshEditorWindow) controller).getSubdividedPolyMesh();
                 MeshVertex[] vs = mesh.getVertices();
                 for (int i = 0; i < pr.length; ++i)
                     pr[i] = vs[i].r;

@@ -4,15 +4,14 @@
 	<name>PolyMesh</name>
 	<author>Francois Guillet</author>
 	<version>1.61</version>
-	<beta>2</beta>
-    <date>2007/05/20</date>
+	<beta>6</beta>
+    <date>2007/06/15</date>
     <description>
 A plugin which provides a polygonal mesh for AoI.
     </description>
     <history>
-        <log version="1.61b2" date="20 may 2007" author="Francois Guillet">
-         Automatic (and faster) quad mesh smoothing for rendering
-	     Edge smoothness range selection, Corner vertices selection
+        <log version="1.61b6" date="15 june 2007" author="Francois Guillet">
+         Automatic (and faster) quad mesh smoothing for rendering, semi-auto for interactive view
 	     Bug fixes
         </log>
         <log version="1.6" date="27 march 2007" author="Francois Guillet">
