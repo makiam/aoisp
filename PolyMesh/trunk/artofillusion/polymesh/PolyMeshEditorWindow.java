@@ -2094,7 +2094,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doSmoothMesh() {
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		PolyMesh prevMesh = (PolyMesh) mesh.duplicate();
-		mesh.smoothWholeMesh(-1, false, 1);
+		mesh.smoothWholeMesh(-1, false, 1, true);
 		setUndoRecord(new UndoRecord(this, false, UndoRecord.COPY_OBJECT,
 				new Object[] { mesh, prevMesh }));
 		setMesh(mesh);
