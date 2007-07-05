@@ -107,10 +107,14 @@ public class PMCreateFaceTool extends EditingTool
             length = invVertTable.length;
         }
         QuadMesh subMesh = null;
+        MeshVertex[] v = null;
         boolean project = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).getProjectOntoSurface() : false);
-         if (project && viewMesh.getSubdividedMesh() != null)
-        	 subMesh = viewMesh.getSubdividedMesh();
-        MeshVertex[] v = subMesh.getVertices();
+        if (project && mesh.getSmoothingMethod() != PolyMesh.NO_SMOOTHING && viewMesh.getSubdividedMesh() != null) {
+        	subMesh = viewMesh.getSubdividedMesh();
+        	v = subMesh.getVertices();
+    	} else {
+    		v = mesh.getVertices();
+    	}
         pr = new Vec3[length];
         for (int i = 0; i < length; ++i)
             pr[i] = v[i].r;

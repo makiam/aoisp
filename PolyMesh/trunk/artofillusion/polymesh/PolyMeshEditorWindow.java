@@ -929,7 +929,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	 */
 	void createFaceMenu() {
 		faceMenu = PMTranslate.menu("face");
-		faceMenuItem = new MenuWidget[10];
+		faceMenuItem = new MenuWidget[11];
 		faceMenu.add(faceMenuItem[0] = PMTranslate.menu("moveAlong"));
 		((BMenu) faceMenuItem[0]).add(PMTranslate.menuItem("normal", this,
 				"doMoveFacesNormal"));
@@ -970,14 +970,16 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"doMergeFaces"));
 		faceMenu.add(faceMenuItem[7] = PMTranslate.menuItem("triangulate",
 				this, "doTriangulateFaces"));
+		faceMenu.add(faceMenuItem[8] = PMTranslate.menuItem(
+				"outlineFaces", this, "doOutlineFaces"));
 		faceMenu.addSeparator();
-		faceMenu.add(faceMenuItem[8] = Translate.menuItem("parameters", this,
+		faceMenu.add(faceMenuItem[9] = Translate.menuItem("parameters", this,
 				"setParametersCommand"));
-		faceMenu.add(faceMenuItem[9] = PMTranslate.menuItem("findSimilar",
+		faceMenu.add(faceMenuItem[10] = PMTranslate.menuItem("findSimilar",
 				this, "doFindSimilarFaces"));
 		menubar.add(faceMenu);
 		facePopupMenu = new BPopupMenu();
-		facePopupMenuItem = new MenuWidget[10];
+		facePopupMenuItem = new MenuWidget[11];
 		facePopupMenu.add(facePopupMenuItem[0] = PMTranslate.menu("moveAlong"));
 		((BMenu) facePopupMenuItem[0]).add(PMTranslate.menuItem("normal", this,
 				"doMoveFacesNormal"));
@@ -1023,10 +1025,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				this, "doMergeFaces"));
 		facePopupMenu.add(facePopupMenuItem[7] = PMTranslate.menuItem(
 				"triangulate", this, "doTriangulateFaces"));
+		facePopupMenu.add(facePopupMenuItem[8] = PMTranslate.menuItem(
+				"outlineFaces", this, "doOutlineFaces"));
 		facePopupMenu.addSeparator();
-		facePopupMenu.add(facePopupMenuItem[8] = Translate.menuItem(
+		facePopupMenu.add(facePopupMenuItem[9] = Translate.menuItem(
 				"parameters", this, "setParametersCommand"));
-		facePopupMenu.add(facePopupMenuItem[9] = PMTranslate.menuItem(
+		facePopupMenu.add(facePopupMenuItem[10] = PMTranslate.menuItem(
 				"findSimilar", this, "doFindSimilarFaces"));
 	}
 
@@ -1684,9 +1688,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			if (selCount == selected.length) {
 				editMenuItem[1].setEnabled(false);
 				editMenuItem[2].setEnabled(false);
-				((BMenuItem) faceMenuItem[9]).setEnabled(false);
+				((BMenuItem) faceMenuItem[10]).setEnabled(false);
 				((BMenuItem) edgeMenuItem[12]).setEnabled(false);
-				((BMenuItem) facePopupMenuItem[9]).setEnabled(false);
+				((BMenuItem) facePopupMenuItem[10]).setEnabled(false);
 				((BMenuItem) edgePopupMenuItem[12]).setEnabled(false);
 			} else {
 				editMenuItem[1].setEnabled(true);
@@ -2145,6 +2149,42 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		setMesh(mesh);
 		updateImage();
 
+	}
+	
+	/**
+	 * Selects edges surrounding face selection
+	 */
+	private void doOutlineFaces() {
+		PolyMesh mesh = (PolyMesh) objInfo.object;
+		Wedge[] edges = mesh.getEdges();
+		Wface[] faces = mesh.getFaces();
+		boolean[] edgeSel = new boolean[edges.length/2]; 
+		for (int i = 0; i < faces.length; i++) {
+			if (selected[i]) {
+				int[] fe = mesh.getFaceEdges(faces[i]);
+				for (int j = 0; j < fe.length; j++) {
+					if (edges[fe[j]].face == -1 || edges[edges[fe[j]].hedge].face == -1) {
+						continue;
+					}
+					if (selected[edges[fe[j]].face] && ! selected[ edges[edges[fe[j]].hedge].face] ) {
+						if (fe[j] < edges.length/2) {
+							edgeSel[fe[j]] = true;
+						} else {
+							edgeSel[edges[fe[j]].hedge] = true;
+						}
+					} else if (!selected[edges[fe[j]].face] && selected[ edges[edges[fe[j]].hedge].face] ) {
+						if (fe[j] < edges.length/2) {
+							edgeSel[fe[j]] = true;
+						} else {
+							edgeSel[edges[fe[j]].hedge] = true;
+						}
+					}
+				}
+			}
+		}
+		setSelectionMode(EDGE_MODE);
+		setSelection(edgeSel);
+		updateImage();
 	}
 
 	/**
@@ -4469,6 +4509,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		vertTable = mesh.openSeams();
 		int vertCount = mesh.getVertices().length;
 		try {
+			mesh.setSmoothingMethod(Mesh.NO_SMOOTHING);
 			TriangleMesh triMesh = mesh.convertToTriangleMesh(0);
 			int newVertCount = triMesh.getVertices().length;
 			if (vertTable == null && newVertCount != vertCount) {
