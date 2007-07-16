@@ -37,7 +37,6 @@ import buoy.widget.Widget;
 public class PMBevelExtrudeTool extends EditingTool
 {
     private boolean selected[], noSelection, separateFaces;
-    private static Image icon, selectedIcon;
     private PolyMesh origMesh;
     private Point clickPoint;
     private double width, height;
@@ -54,10 +53,7 @@ public class PMBevelExtrudeTool extends EditingTool
     {
         super( fr );
         this.controller = controller;
-        if ( icon == null )
-            icon = loadImage( "bevel.gif" );
-        if ( selectedIcon == null )
-            selectedIcon = loadImage( "selected/bevel.gif" );
+        initButton( "polymesh:bevel" );
     }
 
 
@@ -98,28 +94,6 @@ public class PMBevelExtrudeTool extends EditingTool
     public int whichClicks()
     {
         return ALL_CLICKS;
-    }
-
-
-    /**
-     *  Gets the icon attribute of the BevelExtrudeTool object
-     *
-     *@return    The icon value
-     */
-    public Image getIcon()
-    {
-        return icon;
-    }
-
-
-    /**
-     *  Gets the selectedIcon attribute of the BevelExtrudeTool object
-     *
-     *@return    The selectedIcon value
-     */
-    public Image getSelectedIcon()
-    {
-        return selectedIcon;
     }
 
 

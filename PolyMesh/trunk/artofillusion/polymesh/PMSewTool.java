@@ -28,6 +28,7 @@ import artofillusion.object.MeshVertex;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.Translate;
 import buoy.event.WidgetMouseEvent;
 
 /** PMKnifeTool is an EditingTool used fto divide edges of PolyMesh objects. */
@@ -42,23 +43,19 @@ public class PMSewTool extends EditingTool
     private Point dragPoint;
     private ViewerCanvas canvas;
     private Point screenVert[];
-    private static Image icon, selectedIcon;
     private boolean[] selection;
     
     public PMSewTool(EditingWindow fr, MeshEditController controller)
     {
         super(fr);
         this.controller = controller;
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/sew.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/sew.gif" ) ).getImage();
+        initButton("polymesh:sew");
     }
     
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("sewTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:sewTool.helpText"));
     }
     
     public int whichClicks()
@@ -66,19 +63,9 @@ public class PMSewTool extends EditingTool
         return ALL_CLICKS;
     }
     
-    public Image getIcon()
-    {
-        return icon;
-    }
-    
-    public Image getSelectedIcon()
-    {
-        return selectedIcon;
-    }
-    
     public String getToolTipText()
     {
-        return PMTranslate.text("sewTool.tipText");
+        return Translate.text("polymesh:sewTool.tipText");
     }
     
     public void mousePressed(WidgetMouseEvent e, ViewerCanvas view)
@@ -215,7 +202,7 @@ public class PMSewTool extends EditingTool
             if ( selection != null && sel != null)
                 controller.setSelection( sel );
             theWindow.updateImage();
-            theWindow.setHelpText(PMTranslate.text("sewTool.dragText") );
+            theWindow.setHelpText(Translate.text("polymesh:sewTool.dragText") );
         }
         else
         {
@@ -229,7 +216,7 @@ public class PMSewTool extends EditingTool
                 if ( selection != null && sel != null)
                     controller.setSelection( sel );
                 theWindow.updateImage();
-                theWindow.setHelpText(PMTranslate.text("sewTool.dragText") );
+                theWindow.setHelpText(Translate.text("polymesh:sewTool.dragText") );
             }
         }
     }
@@ -240,7 +227,7 @@ public class PMSewTool extends EditingTool
         dragging = false;
         controller.objectChanged();
         theWindow.updateImage();
-        theWindow.setHelpText(PMTranslate.text("sewTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:sewTool.helpText"));
         theWindow.setUndoRecord( new UndoRecord( theWindow, false, UndoRecord.COPY_OBJECT, new Object[]{mesh, originalMesh} ) );
         undo = null;
 

@@ -1466,8 +1466,8 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 		faces = nfaces;
 		projectedEdges = npe ;
 		resetMesh();
-//		System.out.println("subdivs: " + (ns + 1) + " " + maxDist);
-//		System.out.println("vertices : " + vertices.length);
+		System.out.println("subdivs: " + (ns + 1) + " " + maxDist);
+		System.out.println("vertices : " + vertices.length);
 
 		if (refine && ns < MAX_SMOOTHNESS - 1 && ns < maxNs) {
 			smoothMesh(tol, calcProjectedEdges, ns+1, maxNs);

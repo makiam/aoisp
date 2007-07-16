@@ -28,13 +28,12 @@
   <target name="dist" depends="compile">
     <!-- Copy all necessary files into ${build}, then create the jar file -->
   	<unjar src="${mtjjar}" dest="${build}" />
-    <copy file="${src}/PolyMesh.xml" todir="${build}" />
     <copy file="${src}/PMkeystrokes.xml" todir="${build}" />
-    <copy file="${src}/plugins" todir="${build}" />
+    <copy file="${src}/extensions.xml" todir="${build}" />
     <copy todir="${build}">
       <fileset dir="${src}" includes="*.properties" />
     </copy>
-    <copy todir="${build}/artofillusion/polymesh/Icons">
+  	<copy todir="${build}/polymesh">
       <fileset dir="${src}/artofillusion/polymesh/Icons" />
     </copy>
     <copy todir="${build}/artofillusion/polymesh/interfaces">

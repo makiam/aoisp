@@ -29,6 +29,7 @@ import artofillusion.object.TriangleMesh.Face;
 import artofillusion.polymesh.UVMappingCanvas.Range;
 import artofillusion.polymesh.UVMappingCanvas.SelectionCommand;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedEdge;
+import artofillusion.ui.ThemeManager;
 import buoy.event.MouseScrolledEvent;
 import buoy.event.WidgetMouseEvent;
 
@@ -156,17 +157,11 @@ public class UVMappingManipulator {
 	}
 	rotationHandle = new UVRotationHandle(64, new Point(), Color.orange);
 	if (centerhandle == null) {
-	    uvHandleImages[U_MOVE] = new ImageIcon(getClass().getResource(
-		    "/artofillusion/polymesh/Icons/uhandle.gif")).getImage();
-	    uvHandleImages[U_SCALE] = new ImageIcon(getClass().getResource(
-		    "/artofillusion/polymesh/Icons/uvscale.gif")).getImage();
-	    uvHandleImages[V_MOVE] = new ImageIcon(getClass().getResource(
-		    "/artofillusion/polymesh/Icons/vhandle.gif")).getImage();
-	    ghostscale = new ImageIcon(getClass().getResource(
-		    "/artofillusion/polymesh/Icons/ghostscale.gif")).getImage();
-	    centerhandle = new ImageIcon(getClass().getResource(
-		    "/artofillusion/polymesh/Icons/centerhandle.gif"))
-		    .getImage();
+	    uvHandleImages[U_MOVE] = ThemeManager.getIcon( "polymesh:uhandle").getImage();
+	    uvHandleImages[U_SCALE] = ThemeManager.getIcon( "polymesh:uvscale").getImage();
+	    uvHandleImages[V_MOVE] = ThemeManager.getIcon( "polymesh:vhandle").getImage();
+	    ghostscale = ThemeManager.getIcon( "polymesh:ghostscale").getImage();
+	    centerhandle = ThemeManager.getIcon( "polymesh:centerhandle").getImage();
 
 	}
 	anchor = -1;

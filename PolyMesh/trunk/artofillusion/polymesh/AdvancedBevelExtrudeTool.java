@@ -1,6 +1,5 @@
 package artofillusion.polymesh;
 
-import java.awt.Image;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -15,6 +14,7 @@ import artofillusion.math.Vec3;
 import artofillusion.ui.ComponentsDialog;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.ThemeManager;
 import artofillusion.ui.Translate;
 import buoy.widget.BComboBox;
 import buoy.widget.Widget;
@@ -26,7 +26,6 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
 {
     private Vec3 baseVertPos[];
     private UndoRecord undo;
-    private static Image icon, selectedIcon;
     private HashMap mouseDragManipHashMap;
     private boolean selected[], separateFaces;
     private PolyMesh origMesh;
@@ -39,15 +38,12 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
     public AdvancedBevelExtrudeTool(EditingWindow fr, MeshEditController controller)
     {
         super(fr, controller);
-        if ( icon == null )
-            icon = loadImage( "bevel.gif" );
-        if ( selectedIcon == null )
-            selectedIcon = loadImage( "selected/bevel.gif" );
+        initButton("polymesh:bevel" );
         if (AdvancedBevelExtrudeTool.bevelExtrudeFacesIcon == null)
         {
-            AdvancedBevelExtrudeTool.bevelExtrudeFacesIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/bevelextrudefaces.gif" ) );
-            AdvancedBevelExtrudeTool.bevelExtrudeEdgesIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/bevelextrudeedges.gif" ) );
-            AdvancedBevelExtrudeTool.bevelExtrudeVerticesIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/bevelextrudevertices.gif" ) );
+            AdvancedBevelExtrudeTool.bevelExtrudeFacesIcon = ThemeManager.getIcon( "polymesh:bevelextrudefaces" );
+            AdvancedBevelExtrudeTool.bevelExtrudeEdgesIcon = ThemeManager.getIcon( "polymesh:bevelextrudeedges" );
+            AdvancedBevelExtrudeTool.bevelExtrudeVerticesIcon = ThemeManager.getIcon( "polymesh:bevelextrudevertices" );
         }
        mouseDragManipHashMap = new HashMap();
     }
@@ -77,12 +73,13 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
     {
         super.activate();
         selectionModeChanged(controller.getSelectionMode());
-        theWindow.setHelpText(PMTranslate.text("advancedBevelExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedBevelExtrudeTool.helpText"));
     }
 
     public void deactivate()
     {
-        Iterator iter = mouseDragManipHashMap.keySet().iterator();
+        super.deactivate();
+    	Iterator iter = mouseDragManipHashMap.keySet().iterator();
         PolyMeshViewer view;
         while (iter.hasNext())
         {
@@ -96,19 +93,9 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
         return ALL_CLICKS;
     }
 
-    public Image getIcon()
-    {
-        return AdvancedBevelExtrudeTool.icon;
-    }
-
-    public Image getSelectedIcon()
-    {
-        return AdvancedBevelExtrudeTool.selectedIcon;
-    }
-
     public String getToolTipText()
     {
-        return PMTranslate.text("advancedBevelExtrudeTool.tipText");
+        return Translate.text("polymesh:advancedBevelExtrudeTool.tipText");
     }
 
     private void doManipulatorPrepareShapingMesh(Manipulator.ManipulatorEvent e)
@@ -130,7 +117,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
             controller.setMesh(origMesh);
         origMesh = null;
         baseVertPos = null;
-        theWindow.setHelpText(PMTranslate.text("advancedBevelExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedBevelExtrudeTool.helpText"));
         controller.objectChanged();
         theWindow.updateImage();
     }
@@ -142,7 +129,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
         theWindow.setUndoRecord(undo);
         baseVertPos = null;
         origMesh = null;
-        theWindow.setHelpText(PMTranslate.text("advancedBevelExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedBevelExtrudeTool.helpText"));
         theWindow.updateImage();
     }
 
@@ -178,7 +165,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
         {
             mesh = (PolyMesh)origMesh.duplicate();
             boolean[] sel = mesh.bevelVertices( selected, drag.y );
-            theWindow.setHelpText( PMTranslate.text( "advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
+            theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
             controller.setMesh( mesh );
@@ -188,7 +175,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
         {
             mesh = (PolyMesh)origMesh.duplicate();
             boolean[] sel = mesh.bevelEdges( selected, drag.y );
-            theWindow.setHelpText( PMTranslate.text( "advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
+            theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
             controller.setMesh( mesh );
@@ -204,7 +191,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
             boolean[] sel = new boolean[mesh.getFaces().length];
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
-            theWindow.setHelpText( PMTranslate.text( "advancedBevelExtrudeTool.faceDragText", new Double( 1.0 - drag.x ), new Double( drag.y ) ) );
+            theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.faceDragText", new Double( 1.0 - drag.x ), new Double( drag.y ) ) );
             controller.setMesh( mesh );
             controller.setSelection( sel );
         }

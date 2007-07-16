@@ -29,6 +29,7 @@ import artofillusion.object.MeshVertex;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.Translate;
 import buoy.event.WidgetMouseEvent;
 
 /** PMKnifeTool is an EditingTool used fto divide edges of PolyMesh objects. */
@@ -43,7 +44,6 @@ public class PMKnifeTool extends EditingTool
     private Point dragPoint;
     private ViewerCanvas canvas;
     private Point screenVert[];
-    private static Image icon, selectedIcon;
     private boolean[] selection, vertSelection;
     
     public PMKnifeTool(EditingWindow fr, MeshEditController controller)
@@ -51,16 +51,13 @@ public class PMKnifeTool extends EditingTool
         super(fr);
         clickPoints= new Vector();
         this.controller = controller;
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/knife.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/knife.gif" ) ).getImage();
+        initButton("polymesh:knife");
     }
     
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("knifeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:knifeTool.helpText"));
     }
     
     public int whichClicks()
@@ -68,19 +65,9 @@ public class PMKnifeTool extends EditingTool
         return ALL_CLICKS;
     }
     
-    public Image getIcon()
-    {
-        return icon;
-    }
-    
-    public Image getSelectedIcon()
-    {
-        return selectedIcon;
-    }
-    
     public String getToolTipText()
     {
-        return PMTranslate.text("knifeTool.tipText");
+        return Translate.text("polymesh:knifeTool.tipText");
     }
     
     public void mousePressed(WidgetMouseEvent e, ViewerCanvas view)
@@ -173,7 +160,7 @@ public class PMKnifeTool extends EditingTool
             sel[i] |= vertSelection[i];
         controller.setSelection( sel );
         theWindow.updateImage();
-        theWindow.setHelpText(PMTranslate.text("knifeTool.dragText") );
+        theWindow.setHelpText(Translate.text("polymesh:knifeTool.dragText") );
     }
     
     public void mouseReleased(WidgetMouseEvent e, ViewerCanvas view)
@@ -185,7 +172,7 @@ public class PMKnifeTool extends EditingTool
             dragging = false;
             controller.objectChanged();
             theWindow.updateImage();
-            theWindow.setHelpText(PMTranslate.text("knifeTool.helpText"));
+            theWindow.setHelpText(Translate.text("polymesh:knifeTool.helpText"));
             boolean[] sel = controller.getSelection();
             for (int i = 0; i < vertSelection.length; ++i)
                 sel[i] &= !vertSelection[i];

@@ -17,6 +17,7 @@ import artofillusion.object.MeshVertex;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.Translate;
 import buoy.event.KeyPressedEvent;
 import buoy.event.WidgetMouseEvent;
 
@@ -29,7 +30,6 @@ public class PMExtrudeCurveTool extends EditingTool
     private boolean[] orSel;
     private MeshEditController controller;
     private ViewerCanvas canvas;
-    private static Image icon, selectedIcon;
     private Vec3 fromPoint, currentPoint;
     Vec3[] pr;
     boolean constantSize;
@@ -43,16 +43,13 @@ public class PMExtrudeCurveTool extends EditingTool
         clickPoints= new Vector();
         fromPoint = null;
         this.controller = controller;
-        if ( PMExtrudeCurveTool.icon == null )
-            PMExtrudeCurveTool.icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/extrudecurve.gif" ) ).getImage();
-        if ( PMExtrudeCurveTool.selectedIcon == null )
-            PMExtrudeCurveTool.selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/extrudecurve.gif" ) ).getImage();
+        initButton("polymesh:extrudecurve");
     }
 
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("extrudeCurveTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:extrudeCurveTool.helpText"));
         clickPoints.clear();
         fromPoint = null;
     }
@@ -62,19 +59,9 @@ public class PMExtrudeCurveTool extends EditingTool
         return ALL_CLICKS;
     }
 
-    public Image getIcon()
-    {
-        return PMExtrudeCurveTool.icon;
-    }
-
-    public Image getSelectedIcon()
-    {
-        return PMExtrudeCurveTool.selectedIcon;
-    }
-
     public String getToolTipText()
     {
-        return PMTranslate.text("extrudeCurveTool.tipText");
+        return Translate.text("polymesh:extrudeCurveTool.tipText");
     }
 
     public void mousePressed(WidgetMouseEvent ev, ViewerCanvas view)

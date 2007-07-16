@@ -15,7 +15,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
-import artofillusion.polymesh.PMTranslate;
+import artofillusion.ui.Translate;
 import buoy.event.EventSource;
 import buoy.event.RepaintEvent;
 import buoy.widget.BButton;
@@ -75,12 +75,12 @@ public class ColorButton extends RowContainer{
 	public ColorButton(Color color) {
 		super();
 		add(colorWidget = new ColorWidget(color) );
-		add(button = PMTranslate.button("setColor", this, "doButtonClicked"));
+		add(button = Translate.button("polymesh:setColor", this, "doButtonClicked"));
 	}
 	
 	@SuppressWarnings("unused")
 	private void doButtonClicked() {
-		BColorChooser colorChooser = new BColorChooser(colorWidget.color, PMTranslate.text("chooseColor"));
+		BColorChooser colorChooser = new BColorChooser(colorWidget.color, Translate.text("polymesh:chooseColor"));
 		if (colorChooser.showDialog(this) ) {
 			colorWidget.color = colorChooser.getColor();
 			colorWidget.repaint();

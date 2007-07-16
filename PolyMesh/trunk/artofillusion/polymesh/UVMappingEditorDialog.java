@@ -411,13 +411,13 @@ public class UVMappingEditorDialog extends BDialog {
 			super(UVMappingEditorDialog.this, true);
 			this.width = width;
 			this.height = height;
-			setTitle(PMTranslate.text("exportImageFile"));
+			setTitle(Translate.text("polymesh:exportImageFile"));
 			InputStream inputStream = null;
 			try {
 				WidgetDecoder decoder = new WidgetDecoder(
 						inputStream = getClass().getResource(
 								"interfaces/exportImage.xml").openStream(),
-						PMTranslate.getResources());
+						PolyMeshPlugin.resources);
 				borderContainer1 = (BorderContainer) decoder.getRootObject();
 				widthSpinner = ((BSpinner) decoder.getObject("widthSpinner"));
 				widthSpinner.setValue(new Integer(width));
@@ -468,7 +468,7 @@ public class UVMappingEditorDialog extends BDialog {
 		@SuppressWarnings("unused")
 		private void doChooseFile() {
 			BFileChooser chooser = new BFileChooser(BFileChooser.SAVE_FILE,
-					PMTranslate.text("chooseExportImageFile"));
+					Translate.text("polymesh:chooseExportImageFile"));
 			if (file != null) {
 				chooser.setDirectory(file.getParentFile());
 			}
@@ -666,7 +666,7 @@ public class UVMappingEditorDialog extends BDialog {
 		try {
 			WidgetDecoder decoder = new WidgetDecoder(inputStream = getClass()
 					.getResource("interfaces/unfoldEditor.xml").openStream(),
-					PMTranslate.getResources());
+					PolyMeshPlugin.resources);
 			borderContainer1 = (BorderContainer) decoder.getRootObject();
 			uMinValue = ((BLabel) decoder.getObject("uMinValue"));
 			uMaxValue = ((BLabel) decoder.getObject("uMaxValue"));
@@ -765,44 +765,44 @@ public class UVMappingEditorDialog extends BDialog {
 				"processMouseScrolled");
 		manipulator = new UVMappingManipulator(mappingCanvas, this);
 		menuBar = new BMenuBar();
-		BMenu menu = PMTranslate.menu("edit");
+		BMenu menu = Translate.menu("polymesh:edit");
 		menu.add(undoMenuItem = Translate.menuItem("undo", this, "doUndo"));
 		menu.add(redoMenuItem = Translate.menuItem("redo", this, "doRedo"));
-		menu.add(PMTranslate.menuItem("undoLevels", this, "doSetUndoLevels"));
+		menu.add(Translate.menuItem("polymesh:undoLevels", this, "doSetUndoLevels"));
 		menu.addSeparator();
-		menu.add(PMTranslate.menuItem("selectAll", this, "doSelectAll"));
-		menu.add(PMTranslate.menuItem("pinSelection", this, "doPinSelection"));
-		menu.add(PMTranslate.menuItem("unpinSelection", this,
+		menu.add(Translate.menuItem("polymesh:selectAll", this, "doSelectAll"));
+		menu.add(Translate.menuItem("polymesh:pinSelection", this, "doPinSelection"));
+		menu.add(Translate.menuItem("polymesh:unpinSelection", this,
 				"doUnpinSelection"));
-		menu.add(PMTranslate.menuItem("renameSelectedPiece", this,
+		menu.add(Translate.menuItem("polymesh:renameSelectedPiece", this,
 				"doRenameSelectedPiece"));
 		menu.add(new BSeparator());
-		menu.add(PMTranslate.menuItem("exportImage", this, "doExportImage"));
+		menu.add(Translate.menuItem("polymesh:exportImage", this, "doExportImage"));
 		menuBar.add(menu);
-		menu = PMTranslate.menu("mapping");
-		menu.add(PMTranslate.menuItem("fitMappingToImage", this,
+		menu = Translate.menu("polymesh:mapping");
+		menu.add(Translate.menuItem("polymesh:fitMappingToImage", this,
 				"doFitMappingToImage"));
-		menu.add(PMTranslate.menuItem("addMapping", this, "doAddMapping"));
-		menu.add(PMTranslate.menuItem("duplicateMapping", this,
+		menu.add(Translate.menuItem("polymesh:addMapping", this, "doAddMapping"));
+		menu.add(Translate.menuItem("polymesh:duplicateMapping", this,
 				"doDuplicateMapping"));
-		removeMappingMenuItem = PMTranslate.menuItem("removeMapping", this,
+		removeMappingMenuItem = Translate.menuItem("polymesh:removeMapping", this,
 				"doRemoveMapping");
 		menu.add(removeMappingMenuItem);
-		menu.add(PMTranslate.menuItem("editMappingColor", this,
+		menu.add(Translate.menuItem("polymesh:editMappingColor", this,
 				"doEditMappingColor"));
 		menu.add(new BSeparator());
-		sendTexToMappingMenu = PMTranslate.menu("sendTexToMapping");
+		sendTexToMappingMenu = Translate.menu("polymesh:sendTexToMapping");
 		menu.add(sendTexToMappingMenu);
 		updateMappingMenu();
 		menuBar.add(menu);
-		menu = PMTranslate.menu("preferences");
-		BCheckBoxMenuItem cbitem = PMTranslate.checkboxMenuItem(
-				"showSelectionOnPreview", this, "doShowSelection", true);
+		menu = Translate.menu("polymesh:preferences");
+		BCheckBoxMenuItem cbitem = Translate.checkboxMenuItem(
+				"polymesh:showSelectionOnPreview", this, "doShowSelection", true);
 		menu.add(cbitem);
-		cbitem = PMTranslate.checkboxMenuItem("liveUpdate", this,
+		cbitem = Translate.checkboxMenuItem("polymesh:liveUpdate", this,
 				"doLiveUpdate", true);
 		menu.add(cbitem);
-		cbitem = PMTranslate.checkboxMenuItem("boldEdges", this, "doBoldEdges",
+		cbitem = Translate.checkboxMenuItem("polymesh:boldEdges", this, "doBoldEdges",
 				true);
 		menu.add(cbitem);
 		menuBar.add(menu);
@@ -822,9 +822,9 @@ public class UVMappingEditorDialog extends BDialog {
 	private void doSetUndoLevels() {
 		ValueField undoLevelsVF = new ValueField((double) undoLevels,
 				ValueField.POSITIVE + ValueField.INTEGER);
-		ComponentsDialog dlg = new ComponentsDialog(this, PMTranslate
-				.text("setUndoLevelsTitle"), new Widget[] { undoLevelsVF },
-				new String[] { PMTranslate.text("numberOfUndoLevels") });
+		ComponentsDialog dlg = new ComponentsDialog(this, Translate
+				.text("polymesh:setUndoLevelsTitle"), new Widget[] { undoLevelsVF },
+				new String[] { Translate.text("polymesh:numberOfUndoLevels") });
 		if (!dlg.clickedOk())
 			return;
 		if ((int) undoLevelsVF.getValue() == undoLevels) {
@@ -926,8 +926,8 @@ public class UVMappingEditorDialog extends BDialog {
 		}
 		String oldName = mappingData.meshes[index].getName();
 		BStandardDialog dlg = new BStandardDialog(
-				PMTranslate.text("pieceName"), PMTranslate
-						.text("enterPieceName"), BStandardDialog.QUESTION);
+				Translate.text("polymesh:pieceName"), Translate
+						.text("polymesh:enterPieceName"), BStandardDialog.QUESTION);
 		String res = dlg.showInputDialog(this, null, oldName);
 		if (res != null) {
 			addUndoCommand(new RenamePieceCommand(index, oldName, res));
@@ -1196,11 +1196,11 @@ public class UVMappingEditorDialog extends BDialog {
 	 *                mapping
 	 */
 	private void addMapping(boolean duplicate) {
-		BStandardDialog dlg = new BStandardDialog(PMTranslate
-				.text("addMapping"), PMTranslate.text("enterMappingName"),
+		BStandardDialog dlg = new BStandardDialog(Translate
+				.text("polymesh:addMapping"), Translate.text("polymesh:enterMappingName"),
 				BStandardDialog.QUESTION);
-		String res = dlg.showInputDialog(this, null, PMTranslate
-				.text("mapping")
+		String res = dlg.showInputDialog(this, null, Translate
+				.text("polymesh:mapping")
 				+ " #" + (mappingData.mappings.size() + 1));
 		if (res != null) {
 			UVMeshMapping mapping = null;

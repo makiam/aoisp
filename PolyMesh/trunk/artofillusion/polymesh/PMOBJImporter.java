@@ -346,7 +346,7 @@ public class PMOBJImporter
                     {
                         // Set the UV coordinates.
 
-                        UVMapping map = new UVMapping( tex );
+                    	UVMapping map = new UVMapping(info.object, tex);
                         info.setTexture( tex, map );
                         Vec2 uv[] = new Vec2[numVert];
                         boolean needPerFace = false;
@@ -367,7 +367,7 @@ public class PMOBJImporter
                         map.setTextureCoordinates( info.object, uv );
                     }
                     else
-                        info.setTexture( tex, tex.getDefaultMapping() );
+                    	info.setTexture(tex, tex.getDefaultMapping(info.object));
                 }
                 theScene.addObject( info, null );
             }

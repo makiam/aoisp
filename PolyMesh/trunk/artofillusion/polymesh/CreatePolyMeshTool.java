@@ -57,7 +57,6 @@ import buoy.xml.WidgetDecoder;
 public class CreatePolyMeshTool extends EditingTool
 {
     private EditingWindow edw;
-    private static Image icon, selectedIcon;
     private int counter = 1;
     private int shape = 0;
     private int usize =3;
@@ -72,10 +71,7 @@ public class CreatePolyMeshTool extends EditingTool
     {
         super(fr);
         edw = fr;
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/polymesh.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/polymesh.gif" ) ).getImage();
+        initButton("polymesh:polymesh");
     }
     
     public void activate()
@@ -114,15 +110,15 @@ public class CreatePolyMeshTool extends EditingTool
                 break; 
         }
         if ( "none".equals(smoothingDesc))
-            smoothingDesc = PMTranslate.text( "none" );
+            smoothingDesc = Translate.text("polymesh:none" );
         else
             smoothingDesc = Translate.text("menu."+smoothingDesc).toLowerCase();
         if ( shape <= 2 )
-            theWindow.setHelpText(PMTranslate.text("createPolyMeshTool.helpText1",
-                new Object [] { PMTranslate.text("createPolyMeshTool."+shapeDesc), smoothingDesc}));
+            theWindow.setHelpText(Translate.text("polymesh:createPolyMeshTool.helpText1",
+                new Object [] { Translate.text("polymesh:createPolyMeshTool."+shapeDesc), smoothingDesc}));
         else
-            theWindow.setHelpText(PMTranslate.text("createPolyMeshTool.helpText2",
-                new Object [] { PMTranslate.text("createPolyMeshTool."+shapeDesc),
+            theWindow.setHelpText(Translate.text("polymesh:createPolyMeshTool.helpText2",
+                new Object [] { Translate.text("polymesh:createPolyMeshTool."+shapeDesc),
                                 Integer.toString(usize), Integer.toString(vsize), smoothingDesc}));
     }
     
@@ -131,19 +127,9 @@ public class CreatePolyMeshTool extends EditingTool
         return ALL_CLICKS;
     }
     
-    public Image getIcon()
-    {
-        return icon;
-    }
-    
-    public Image getSelectedIcon()
-    {
-        return selectedIcon;
-    }
-    
     public String getToolTipText()
     {
-        return PMTranslate.text("createPolyMeshTool.tipText");
+        return Translate.text("polymesh:createPolyMeshTool.tipText");
     }
     
     public void mousePressed(WidgetMouseEvent e, ViewerCanvas view)
@@ -259,18 +245,18 @@ public class CreatePolyMeshTool extends EditingTool
          */
         public PolyMeshToolDialog( BFrame parent )
         {
-            super( parent, PMTranslate.text( "polyMeshToolDialogTitle" ), true );
+            super( parent, Translate.text("polymesh:polyMeshToolDialogTitle" ), true );
             InputStream is = null;
             try
             {
                 WidgetDecoder decoder = new WidgetDecoder( is = getClass().getResource( "interfaces/createTool.xml" ).openStream() );
                 setContent( (BorderContainer) decoder.getRootObject() );
                 typeCombo = ( (BComboBox) decoder.getObject( "typeCombo" ) );
-                typeCombo.add( PMTranslate.text( "cube" ) );
-                typeCombo.add( PMTranslate.text( "face" ) );
-                typeCombo.add( PMTranslate.text( "octahedron" ) );
-                typeCombo.add( PMTranslate.text( "cylinder" ) );
-                typeCombo.add( PMTranslate.text( "flatMesh" ) );
+                typeCombo.add( Translate.text("polymesh:cube" ) );
+                typeCombo.add( Translate.text("polymesh:face" ) );
+                typeCombo.add( Translate.text("polymesh:octahedron" ) );
+                typeCombo.add( Translate.text("polymesh:cylinder" ) );
+                typeCombo.add( Translate.text("polymesh:flatMesh" ) );
                 templateStart = 5;
                 File templateDir = new File( ModellingApp.PLUGIN_DIRECTORY + File.separator + "PolyMeshTemplates" + File.separator );
                 if ( templateDir.isDirectory() )
@@ -280,19 +266,19 @@ public class CreatePolyMeshTool extends EditingTool
                         typeCombo.add( files[i] );
                 }
                 sizeLabel = ( (BLabel) decoder.getObject( "sizeLabel" ) );
-                sizeLabel.setText( PMTranslate.text( sizeLabel.getText() ) );
+                sizeLabel.setText( Translate.text( "polymesh:" + sizeLabel.getText() ) );
                 xSpinner = ( (BSpinner) decoder.getObject( "xSpinner" ) );
                 xSpinner.setValue(new Integer(usize));
                 byLabel = ( (BLabel) decoder.getObject( "byLabel" ) );
-                byLabel.setText( PMTranslate.text( byLabel.getText() ) );
+                byLabel.setText( Translate.text("polymesh:" +  byLabel.getText() ) );
                 ySpinner = ( (BSpinner) decoder.getObject( "ySpinner" ) );
                 ySpinner.setValue(new Integer(vsize));
                 meshType = ( (BLabel) decoder.getObject( "meshType" ) );
-                meshType.setText( PMTranslate.text( meshType.getText() ) );
+                meshType.setText( Translate.text("polymesh:" +  meshType.getText() ) );
                 okButton = ( (BButton) decoder.getObject( "okButton" ) );
-                okButton.setText( PMTranslate.text( okButton.getText() ) );
+                okButton.setText( Translate.text("polymesh:" +  okButton.getText() ) );
                 cancelButton = ( (BButton) decoder.getObject( "cancelButton" ) );
-                cancelButton.setText( PMTranslate.text( cancelButton.getText() ) );
+                cancelButton.setText( Translate.text("polymesh:" +  cancelButton.getText() ) );
                 okButton.addEventLink( CommandEvent.class, this, "doOK" );
                 typeCombo.setSelectedIndex( shape );
                 typeCombo.addEventLink( ValueChangedEvent.class, this, "doComboChanged" );

@@ -8,6 +8,7 @@ import javax.swing.JToolTip;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 
+import artofillusion.ui.Translate;
 import buoy.widget.BToolTip;
 import buoy.widget.Widget;
 
@@ -74,7 +75,7 @@ public class PMToolTip extends BToolTip
 
     public static PMToolTip areaToolTip( String property, int columns )
     {
-        JTextArea area = new JTextArea( PMTranslate.text( property ) );
+        JTextArea area = new JTextArea( Translate.text( "polymesh:" + property ) );
         area.setColumns( columns );
         area.setLineWrap( true );
         area.setWrapStyleWord( true );

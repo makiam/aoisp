@@ -22,6 +22,8 @@ import artofillusion.math.Vec3;
 import artofillusion.object.Mesh;
 import artofillusion.object.MeshVertex;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.ThemeManager;
+import artofillusion.ui.Translate;
 import buoy.event.KeyPressedEvent;
 import buoy.event.ToolTipEvent;
 import buoy.event.WidgetMouseEvent;
@@ -95,28 +97,28 @@ extends SSMRManipulator
         MARGIN = HANDLE_SIZE;
         if (xyzHandleImages[0] == null)
         {
-            xyzHandleImages[X_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/xhandle.gif" ) ).getImage();
-            xyzHandleImages[X_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/xscale.gif" ) ).getImage();
-            xyzHandleImages[Y_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/yhandle.gif" ) ).getImage();
-            xyzHandleImages[Y_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/yscale.gif" ) ).getImage();
-            xyzHandleImages[Z_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/zhandle.gif" ) ).getImage();
-            xyzHandleImages[Z_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/zscale.gif" ) ).getImage();
-            uvHandleImages[X_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/uhandle.gif" ) ).getImage();
-            uvHandleImages[X_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/uvscale.gif" ) ).getImage();
-            uvHandleImages[Y_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/vhandle.gif" ) ).getImage();
-            uvHandleImages[Y_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/uvscale.gif" ) ).getImage();
-            ghostscale = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/ghostscale.gif" ) ).getImage();
-            centerhandle = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/centerhandle.gif" ) ).getImage();
-            specificHandleImages[X_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/phandle.gif" ) ).getImage();
-            specificHandleImages[X_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/xscale.gif" ) ).getImage();
-            specificHandleImages[Y_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/qhandle.gif" ) ).getImage();
-            specificHandleImages[Y_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/yscale.gif" ) ).getImage();
-            specificHandleImages[Z_MOVE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/nhandle.gif" ) ).getImage();
-            specificHandleImages[Z_SCALE] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/zscale.gif" ) ).getImage();
-            moveToolTip = PMToolTip.areaToolTip(PMTranslate.text("moveToolTip3d.tipText"),40);
-            scaleToolTip = PMToolTip.areaToolTip(PMTranslate.text("scaleToolTip3d.tipText"),40);
-            rotateToolTip = PMToolTip.areaToolTip(PMTranslate.text("rotateToolTip3d.tipText"),40);
-            centerToolTip = PMToolTip.areaToolTip(PMTranslate.text("centerToolTip3d.tipText"),40);
+            xyzHandleImages[X_MOVE] = ThemeManager.getIcon( "polymesh:xhandle" ).getImage();
+            xyzHandleImages[X_SCALE] = ThemeManager.getIcon( "polymesh:xscale" ).getImage();
+            xyzHandleImages[Y_MOVE] = ThemeManager.getIcon( "polymesh:yhandle" ).getImage();
+            xyzHandleImages[Y_SCALE] = ThemeManager.getIcon( "polymesh:yscale" ).getImage();
+            xyzHandleImages[Z_MOVE] = ThemeManager.getIcon( "polymesh:zhandle" ).getImage();
+            xyzHandleImages[Z_SCALE] = ThemeManager.getIcon( "polymesh:zscale" ).getImage();
+            uvHandleImages[X_MOVE] = ThemeManager.getIcon( "polymesh:uhandle" ).getImage();
+            uvHandleImages[X_SCALE] = ThemeManager.getIcon( "polymesh:uvscale" ).getImage();
+            uvHandleImages[Y_MOVE] = ThemeManager.getIcon( "polymesh:vhandle" ).getImage();
+            uvHandleImages[Y_SCALE] = ThemeManager.getIcon( "polymesh:uvscale" ).getImage();
+            ghostscale = ThemeManager.getIcon( "polymesh:ghostscale" ).getImage();
+            centerhandle = ThemeManager.getIcon( "polymesh:centerhandle" ).getImage();
+            specificHandleImages[X_MOVE] = ThemeManager.getIcon( "polymesh:phandle" ).getImage();
+            specificHandleImages[X_SCALE] = ThemeManager.getIcon( "polymesh:xscale" ).getImage();
+            specificHandleImages[Y_MOVE] = ThemeManager.getIcon( "polymesh:qhandle" ).getImage();
+            specificHandleImages[Y_SCALE] = ThemeManager.getIcon( "polymesh:yscale" ).getImage();
+            specificHandleImages[Z_MOVE] = ThemeManager.getIcon( "polymesh:nhandle" ).getImage();
+            specificHandleImages[Z_SCALE] = ThemeManager.getIcon( "polymesh:zscale" ).getImage();
+            moveToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:moveToolTip3d.tipText"),40);
+            scaleToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:scaleToolTip3d.tipText"),40);
+            rotateToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:rotateToolTip3d.tipText"),40);
+            centerToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:centerToolTip3d.tipText"),40);
         }
         xaxis = Vec3.vx();
         yaxis = Vec3.vy();
@@ -821,7 +823,7 @@ extends SSMRManipulator
             drag.z = Math.round(drag.z);
             drag.z /= gridSize;
         }
-        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
+        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
         dispatchEvent(new ManipulatorMovingEvent(this, drag, view) );
     }
 
@@ -888,7 +890,7 @@ extends SSMRManipulator
                 break;
 
         }
-        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("moveBy", new String[] { String.valueOf(Math.round(amplitude*1e5)/1e5) } ));
+        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:moveBy", new String[] { String.valueOf(Math.round(amplitude*1e5)/1e5) } ));
         dispatchEvent(new ManipulatorMovingEvent(this, drag, view) );
     }
 
@@ -956,9 +958,9 @@ extends SSMRManipulator
             Mat4 m = Mat4.scale(scaleX, scaleY, scaleZ).times(coords.toLocal());
             m = coords.fromLocal().times(m);
             if (handle != UV_EXTRA)
-                ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("scaleBy", new String[] { String.valueOf(Math.round(scale*1e5)/1e5) } ));
+                ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:scaleBy", new String[] { String.valueOf(Math.round(scale*1e5)/1e5) } ));
             else
-                ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("scaleUVBy", new String[] { String.valueOf(Math.round(scaleX*1e5)/1e5), String.valueOf(Math.round(scaleY*1e5)/1e5) } ));
+                ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:scaleUVBy", new String[] { String.valueOf(Math.round(scaleX*1e5)/1e5), String.valueOf(Math.round(scaleY*1e5)/1e5) } ));
 
             dispatchEvent(new ManipulatorScalingEvent(this, m, view) );
         }
@@ -989,7 +991,7 @@ extends SSMRManipulator
         //System.out.println("center: " + rotateCenter);
         //System.out.println("angle: " + ( rotAngle * 180 / Math.PI) );
         dispatchEvent(new ManipulatorRotatingEvent(this, mat, view) );
-        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("rotateBy", new String[] { String.valueOf(Math.round(rotAngle*180*1e5/Math.PI)/1e5) } ));
+        ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:rotateBy", new String[] { String.valueOf(Math.round(rotAngle*180*1e5/Math.PI)/1e5) } ));
         return true;
     }
 
@@ -1072,15 +1074,15 @@ extends SSMRManipulator
                             {
                                 case X_MOVE:
                                 case X_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_LEFT);
+                                    view.setOrientation(ViewerCanvas.VIEW_LEFT);
                                     break;
                                 case Y_MOVE:
                                 case Y_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_BOTTOM);
+                                    view.setOrientation(ViewerCanvas.VIEW_BOTTOM);
                                     break;
                                 case Z_MOVE:
                                 case Z_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_BACK);
+                                    view.setOrientation(ViewerCanvas.VIEW_BACK);
                                     break;
                             }
                             CoordinateSystem coords = camera.getCameraCoordinates();
@@ -1116,7 +1118,7 @@ extends SSMRManipulator
                                     break;
                             }
                             camera.setCameraCoordinates( new CoordinateSystem( orig, zdir, updir ) );
-                            view.orientationChanged();
+                            view.setOrientation(ViewerCanvas.VIEW_OTHER);
                             view.updateImage();
                         }
                     }
@@ -1128,15 +1130,15 @@ extends SSMRManipulator
                             {
                                 case X_MOVE:
                                 case X_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_RIGHT);
+                                    view.setOrientation(ViewerCanvas.VIEW_RIGHT);
                                     break;
                                 case Y_MOVE:
                                 case Y_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_TOP);
+                                    view.setOrientation(ViewerCanvas.VIEW_TOP);
                                     break;
                                 case Z_MOVE:
                                 case Z_SCALE:
-                                    view.selectOrientation(ViewerCanvas.VIEW_FRONT);
+                                    view.setOrientation(ViewerCanvas.VIEW_FRONT);
                                     break;
 
                             }
@@ -1173,7 +1175,7 @@ extends SSMRManipulator
                                     break;
                             }
                             camera.setCameraCoordinates( new CoordinateSystem( orig, zdir, updir ) );
-                            view.orientationChanged();
+                            view.setOrientation(ViewerCanvas.VIEW_OTHER);
                             view.updateImage();
                         }
                     }
@@ -1183,7 +1185,8 @@ extends SSMRManipulator
         }
         else if (e.getButton() == MouseEvent.BUTTON2)
         {
-            view.orientationChanged();
+        	view.setOrientation(ViewerCanvas.VIEW_OTHER);
+            view.updateImage();
         }
         /*else if (e.getButton() == MouseEvent.BUTTON3)
         {

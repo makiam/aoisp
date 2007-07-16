@@ -25,6 +25,7 @@ import artofillusion.object.TriangleMesh.Vertex;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedEdge;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedFace;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedVertex;
+import artofillusion.ui.Translate;
 import no.uib.cipr.matrix.*;
 import no.uib.cipr.matrix.sparse.*;
 
@@ -550,7 +551,7 @@ public class MeshUnfolder {
 		unfoldedMeshes = new UnfoldedMesh[unfoldedMeshesList.size()];
 		for (int i = 0; i < unfoldedMeshes.length; i++) {
 			unfoldedMeshes[i] = unfoldedMeshesList.get(i);
-			unfoldedMeshes[i].setName(PMTranslate.text("piece " + (i + 1)));
+			unfoldedMeshes[i].setName(Translate.text("polymesh:piece" + (i + 1)));
 		}
 		return true;
 	}

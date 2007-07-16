@@ -18,6 +18,8 @@ import artofillusion.math.CoordinateSystem;
 import artofillusion.math.Mat4;
 import artofillusion.math.Vec3;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.ThemeManager;
+import artofillusion.ui.Translate;
 import buoy.event.KeyPressedEvent;
 import buoy.event.ToolTipEvent;
 import buoy.event.WidgetMouseEvent;
@@ -69,11 +71,11 @@ extends SSMRManipulator
         MARGIN = HANDLE_SIZE;
         if (topleftIcon == null)
         {
-            topleftIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/scaletopleft.gif" ) ).getImage();
-            toprightIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/scaletopright.gif" ) ).getImage();
-            topbottomIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/scaletopbottom.gif" ) ).getImage();
-            leftrightIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/scaleleftright.gif" ) ).getImage();
-            centerIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/scalecenter.gif" ) ).getImage();
+            topleftIcon = ThemeManager.getIcon( "polymesh:scaletopleft" ).getImage();
+            toprightIcon = ThemeManager.getIcon( "polymesh:scaletopright" ).getImage();
+            topbottomIcon = ThemeManager.getIcon( "polymesh:scaletopbottom" ).getImage();
+            leftrightIcon = ThemeManager.getIcon( "polymesh:scaleleftright" ).getImage();
+            centerIcon = ThemeManager.getIcon( "polymesh:scalecenter" ).getImage();
             scaleHandleImages[TOP_LEFT] = topleftIcon;
             scaleHandleImages[BOTTOM_RIGHT] = topleftIcon;
             scaleHandleImages[TOP_RIGHT] = toprightIcon;
@@ -83,21 +85,21 @@ extends SSMRManipulator
             scaleHandleImages[RIGHT] = leftrightIcon;
             scaleHandleImages[LEFT] = leftrightIcon;
             scaleHandleImages[CENTER] = centerIcon;
-            topleftIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatetopleft.gif" ) ).getImage();
-            toprightIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatetopright.gif" ) ).getImage();
-            rotateHandleImages[TOP_LEFT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatetopleft.gif" ) ).getImage();
-            rotateHandleImages[BOTTOM_RIGHT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatebottomright.gif" ) ).getImage();
-            rotateHandleImages[TOP_RIGHT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatetopright.gif" ) ).getImage();
-            rotateHandleImages[BOTTOM_LEFT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatebottomleft.gif" ) ).getImage();
-            rotateHandleImages[TOP] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatetop.gif" ) ).getImage();
-            rotateHandleImages[BOTTOM] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatebottom.gif" ) ).getImage();
-            rotateHandleImages[RIGHT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotateright.gif" ) ).getImage();
-            rotateHandleImages[LEFT] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotateleft.gif" ) ).getImage();
-            rotateHandleImages[CENTER] = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/rotatecenter.gif" ) ).getImage();
-            moveToolTip = PMToolTip.areaToolTip(PMTranslate.text("moveToolTip2d.tipText"),40);
-            scaleToolTip = PMToolTip.areaToolTip(PMTranslate.text("scaleToolTip2d.tipText"),40);
-            rotateToolTip = PMToolTip.areaToolTip(PMTranslate.text("rotateToolTip2d.tipText"),40);
-            centerToolTip = PMToolTip.areaToolTip(PMTranslate.text("centerToolTip2d.tipText"),40);
+            topleftIcon = ThemeManager.getIcon( "polymesh:rotatetopleft" ).getImage();
+            toprightIcon = ThemeManager.getIcon( "polymesh:rotatetopright" ).getImage();
+            rotateHandleImages[TOP_LEFT] = ThemeManager.getIcon( "polymesh:rotatetopleft" ).getImage();
+            rotateHandleImages[BOTTOM_RIGHT] = ThemeManager.getIcon( "polymesh:rotatebottomright" ).getImage();
+            rotateHandleImages[TOP_RIGHT] = ThemeManager.getIcon( "polymesh:rotatetopright" ).getImage();
+            rotateHandleImages[BOTTOM_LEFT] = ThemeManager.getIcon( "polymesh:rotatebottomleft" ).getImage();
+            rotateHandleImages[TOP] = ThemeManager.getIcon( "polymesh:rotatetop" ).getImage();
+            rotateHandleImages[BOTTOM] = ThemeManager.getIcon( "polymesh:rotatebottom" ).getImage();
+            rotateHandleImages[RIGHT] = ThemeManager.getIcon( "polymesh:rotateright" ).getImage();
+            rotateHandleImages[LEFT] = ThemeManager.getIcon( "polymesh:rotateleft" ).getImage();
+            rotateHandleImages[CENTER] = ThemeManager.getIcon( "polymesh:rotatecenter" ).getImage();
+            moveToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:moveToolTip2d.tipText"),40);
+            scaleToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:scaleToolTip2d.tipText"),40);
+            rotateToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:rotateToolTip2d.tipText"),40);
+            centerToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:centerToolTip2d.tipText"),40);
         }
         boxes = new Rectangle[9];
         for (int i = 0; i < boxes.length; ++i)
@@ -568,7 +570,7 @@ extends SSMRManipulator
                         amplitude *= gridSize;
                     }
                     drag = view.getCamera().getCameraCoordinates().getZDirection().times(amplitude);
-                    ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
+                    ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
                     break;
             }
         }
@@ -664,7 +666,7 @@ extends SSMRManipulator
                         dragY = (int)Math.round( d*view.getScale() );
                     }
                     drag = view.getCamera().findDragVector(moveCenter, dragX, dragY);
-                    ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
+                    ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:moveCenterBy", new String[] { String.valueOf(Math.round(drag.x*1e5)/1e5), String.valueOf(Math.round(drag.y*1e5)/1e5), String.valueOf(Math.round(drag.z*1e5)/1e5) } ));
                     break;
             }
         }
@@ -738,7 +740,7 @@ extends SSMRManipulator
             m = Mat4.translation(scaleCenter.x, scaleCenter.y, scaleCenter.z).times(m);
             m = cam.getViewToWorld().times(m);
             m = ((MeshViewer)view).getDisplayCoordinates().toLocal().times(m);
-            ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("scaleUVBy", new String[] { String.valueOf(Math.round(scaleX*1e5)/1e5), String.valueOf(Math.round(scaleY*1e5)/1e5) } ));
+            ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:scaleUVBy", new String[] { String.valueOf(Math.round(scaleX*1e5)/1e5), String.valueOf(Math.round(scaleY*1e5)/1e5) } ));
             dispatchEvent(new ManipulatorScalingEvent(this, m, view) );
         }
         else
@@ -827,7 +829,7 @@ extends SSMRManipulator
         if (!move)
         {
             dispatchEvent(new ManipulatorRotatingEvent(this, m, view) );
-            ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(PMTranslate.text("rotateBy", new String[] { String.valueOf(Math.round(angle*180*1e5/Math.PI)/1e5) } ));
+            ((MeshEditorWindow)((MeshViewer)view).getController()).setHelpText(Translate.text("polymesh:rotateBy", new String[] { String.valueOf(Math.round(angle*180*1e5/Math.PI)/1e5) } ));
         }
         else
             view.repaint();

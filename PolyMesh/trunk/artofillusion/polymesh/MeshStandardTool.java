@@ -23,6 +23,7 @@ import artofillusion.math.Vec3;
 import artofillusion.object.Mesh;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.Translate;
 
 /** MeshStandardTool is the standard, default, editing tool. It can be used to move, scale and rotate selections.*/
 
@@ -37,10 +38,8 @@ public class MeshStandardTool extends AdvancedEditingTool
     public MeshStandardTool(EditingWindow fr, MeshEditController controller)
     {
         super(fr, controller);
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/movePoints.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/movePoints.gif" ) ).getImage();
+        
+        initButton("polymesh:movePoints");
         manip2dHashMap = new HashMap();
         manip3dHashMap = new HashMap();
     }
@@ -83,13 +82,14 @@ public class MeshStandardTool extends AdvancedEditingTool
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("meshStandardTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:meshStandardTool.helpText"));
         ViewerCanvas view = theWindow.getView();
     }
 
     public void deactivate()
     {
-        Iterator iter = manip2dHashMap.keySet().iterator();
+    	super.deactivate();
+    	Iterator iter = manip2dHashMap.keySet().iterator();
         PolyMeshViewer view;
         while (iter.hasNext())
         {
@@ -116,7 +116,7 @@ public class MeshStandardTool extends AdvancedEditingTool
 
     public String getToolTipText()
     {
-        return PMTranslate.text("meshStandardTool.tipText");
+        return Translate.text("polymesh:meshStandardTool.tipText");
     }
 
     private void doManipulatorPrepareShapingMesh(Manipulator.ManipulatorEvent e)
@@ -132,7 +132,7 @@ public class MeshStandardTool extends AdvancedEditingTool
         Mesh mesh = (Mesh) controller.getObject().object;
         mesh.setVertexPositions(baseVertPos);
         baseVertPos = null;
-        theWindow.setHelpText(PMTranslate.text("meshStandardTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:meshStandardTool.helpText"));
         controller.objectChanged();
         theWindow.updateImage();
     }
@@ -167,7 +167,7 @@ public class MeshStandardTool extends AdvancedEditingTool
             undo = null;
         }
         baseVertPos = null;
-        theWindow.setHelpText(PMTranslate.text("meshStandardTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:meshStandardTool.helpText"));
         controller.objectChanged();
         theWindow.updateImage();
     }

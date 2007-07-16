@@ -26,6 +26,7 @@ import artofillusion.object.MeshVertex;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.MeshEditController;
+import artofillusion.ui.Translate;
 import buoy.event.KeyPressedEvent;
 import buoy.event.WidgetMouseEvent;
 
@@ -41,7 +42,6 @@ public class PMCreateFaceTool extends EditingTool
     private Point dragPoint;
     private ViewerCanvas canvas;
     private Point screenVert[];
-    private static Image icon, selectedIcon;
     private boolean[] selection, vertSelection;
     private boolean eligible;
     private int boundaryEdge;
@@ -56,16 +56,13 @@ public class PMCreateFaceTool extends EditingTool
         from = to = -1;
         fromPoint = null;
         this.controller = controller;
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/createface.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/createface.gif" ) ).getImage();
+        initButton("polymesh:createface");
     }
     
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("createFaceTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:createFaceTool.helpText"));
         clickPoints.clear();
         from = to = -1;
         fromPoint = null;
@@ -76,19 +73,9 @@ public class PMCreateFaceTool extends EditingTool
         return ALL_CLICKS;
     }
     
-    public Image getIcon()
-    {
-        return icon;
-    }
-    
-    public Image getSelectedIcon()
-    {
-        return selectedIcon;
-    }
-    
     public String getToolTipText()
     {
-        return PMTranslate.text("createFaceTool.tipText");
+        return Translate.text("polymesh:createFaceTool.tipText");
     }
     
     public void mouseReleased(WidgetMouseEvent ev, ViewerCanvas view)

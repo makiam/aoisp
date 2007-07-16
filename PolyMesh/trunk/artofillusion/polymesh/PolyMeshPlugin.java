@@ -11,6 +11,8 @@
 package artofillusion.polymesh;
 
 import java.io.InputStream;
+import java.util.Locale;
+import java.util.ResourceBundle;
 
 import artofillusion.LayoutWindow;
 import artofillusion.ModellingApp;
@@ -23,6 +25,7 @@ import artofillusion.object.ObjectInfo;
 import artofillusion.object.SplineMesh;
 import artofillusion.object.TriangleMesh;
 import artofillusion.ui.ToolPalette;
+import artofillusion.ui.Translate;
 import buoy.widget.BMenu;
 import buoy.widget.BMenuBar;
 import buoy.widget.BMenuItem;
@@ -37,7 +40,9 @@ import buoy.widget.MenuWidget;
  */
 public class PolyMeshPlugin implements Plugin
 {
-    /**
+    public static ResourceBundle resources;
+	
+	/**
      *  Process messages sent to plugin by AoI (see AoI API description)
      *
      *@param  message  The message
@@ -47,8 +52,8 @@ public class PolyMeshPlugin implements Plugin
     {
         if ( message == Plugin.APPLICATION_STARTING )
         {
-            PMTranslate.setLocale(ModellingApp.getPreferences().getLocale());
-            KeystrokeRecord[] keys = KeystrokeManager.getAllRecords();
+        	resources = ResourceBundle.getBundle( "polymesh", ModellingApp.getPreferences().getLocale() );
+        	KeystrokeRecord[] keys = KeystrokeManager.getAllRecords();
             boolean keysImplemented = false;
             for (int i = 0; i  < keys.length; i++)
             {
@@ -80,7 +85,7 @@ public class PolyMeshPlugin implements Plugin
             palette.addTool( 8, new CreatePolyMeshTool( layout ));
             palette.toggleDefaultTool();
             palette.toggleDefaultTool();
-            BMenuItem menuItem = PMTranslate.menuItem( "convertToPolyMesh", new ConvertObject( layout ), "doConvert" );
+            BMenuItem menuItem = Translate.menuItem( "polymesh:convertToPolyMesh", new ConvertObject( layout ), "doConvert" );
             BMenuBar menuBar = layout.getMenuBar();
             BMenu toolsMenu = menuBar.getChild( 2 );
             int count = toolsMenu.getChildCount();
@@ -128,8 +133,8 @@ public class PolyMeshPlugin implements Plugin
                 }
                 else if (obj instanceof TriangleMesh)
                 {
-                    BStandardDialog dlg = new BStandardDialog(PMTranslate.text("triangleToPolymesh"), PMTranslate.text("convertToQuads"), BStandardDialog.QUESTION); 
-                    int r = dlg.showOptionDialog( window, new String[] { PMTranslate.text("findQuadsDistance"), PMTranslate.text("findQuadsAngular"), PMTranslate.text("keepTriangles") }, PMTranslate.text("convertToQuads") );
+                    BStandardDialog dlg = new BStandardDialog(Translate.text("polymesh:triangleToPolymesh"), Translate.text("polymesh:convertToQuads"), BStandardDialog.QUESTION); 
+                    int r = dlg.showOptionDialog( window, new String[] { Translate.text("polymesh:findQuadsDistance"), Translate.text("polymesh:findQuadsAngular"), Translate.text("polymesh:keepTriangles") }, Translate.text("polymesh:convertToQuads") );
                     mesh = new PolyMesh( (TriangleMesh) obj, r == 0 || r == 1, r == 1  );
                     if ( mesh != null )
                     {

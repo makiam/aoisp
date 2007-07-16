@@ -15,6 +15,7 @@ import artofillusion.ModellingApp;
 import artofillusion.RenderListener;
 import artofillusion.Renderer;
 import artofillusion.Scene;
+import artofillusion.WireframeMesh;
 import artofillusion.image.*;
 import artofillusion.material.*;
 import artofillusion.math.*;
@@ -29,10 +30,7 @@ import java.awt.event.*;
 import java.util.ArrayList;
 
 /**
- * MaterialPreviewer is a component used for renderering previews of Materials.
- * It displays a scene consisting of a Sphere with the desired Material applied
- * to it, a ground plane, and a single light. Optionally, an Object3D may be
- * specified which will then be used instead of a Sphere.
+ * MeshPreviewer is a component used for renderering previews of Mesh.
  */
 
 public class MeshPreviewer extends CustomWidget implements RenderListener {
@@ -94,9 +92,9 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
     private void initObject(Texture tex, Material mat, ObjectInfo objInfo) {
 	if (tex == null)
 	    tex = UniformTexture.invisibleTexture();
-	objInfo.setTexture(tex, tex.getDefaultMapping());
+	objInfo.setTexture(tex, tex.getDefaultMapping(objInfo.object));
 	if (mat != null)
-	    objInfo.setMaterial(mat, mat.getDefaultMapping());
+	    objInfo.setMaterial(mat, mat.getDefaultMapping(objInfo.object));
     }
 
     /** Initialize the MaterialPreviewer. */
@@ -127,7 +125,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
 	theScene
 		.addObject(tri = new TriangleMesh(vert, face), coords, "", null);
 	Texture tex = theScene.getDefaultTexture();
-	tri.setTexture(tex, tex.getDefaultMapping());
+	tri.setTexture(tex, tex.getDefaultMapping(tri));
 	info = obj;
 	objectCoords = info.coords = new CoordinateSystem();
 	theScene.addObject(info, null);
@@ -163,7 +161,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
 	theScene.addTexture(selTexture = new UniformTexture());
 	selTexture.diffuseColor = new RGBColor(255, 0, 0);
 	sphere = new Sphere(0.03, 0.03, 0.03);
-	sphere.setTexture(selTexture, selTexture.getDefaultMapping());
+	sphere.setTexture(selTexture, selTexture.getDefaultMapping(sphere));
 	spheresIndex = theScene.getNumObjects();
 	showSelection = true;
 	render();
@@ -184,7 +182,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
 	if (tex == null)
 	    tex = UniformTexture.invisibleTexture();
 	if (map == null)
-	    map = tex.getDefaultMapping();
+	    map = tex.getDefaultMapping(info.object);
 	info.setTexture(tex, map);
     }
 
@@ -244,15 +242,23 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
     }
 
     private void drawObject(Graphics g) {
-	g.setColor(Color.gray);
-	Vec3 origin = objectCoords.getOrigin();
-	Mat4 m = objectCoords.fromLocal();
-	m = Mat4.translation(-origin.x, -origin.y, -origin.z).times(m);
-	m = dragTransform.times(m);
-	m = Mat4.translation(origin.x, origin.y, origin.z).times(m);
-	theCamera.setObjectTransform(m);
-	Object3D.draw(g, theCamera, info.object.getWireframeMesh(), info.object
-		.getBounds());
+    	g.setColor(Color.gray);
+    	Vec3 origin = objectCoords.getOrigin();
+    	Mat4 m = objectCoords.fromLocal();
+    	m = Mat4.translation(-origin.x, -origin.y, -origin.z).times(m);
+    	m = dragTransform.times(m);
+    	m = Mat4.translation(origin.x, origin.y, origin.z).times(m);
+    	theCamera.setObjectTransform(m);
+    	WireframeMesh mesh = info.object.getWireframeMesh();
+    	int from[] = mesh.from, to[] = mesh.to, last = -1;
+    	Vec3 vert[] = mesh.vert;
+    	for (int i = 0; i < mesh.from.length; i++)
+    	{
+    		if (from[i] == last)
+    			theCamera.drawClippedLineTo(g, vert[(last=to[i])]);
+    		else
+    			theCamera.drawClippedLine(g, vert[from[i]], vert[(last=to[i])]);
+    	}
     }
 
     /** Rotate the object to show a specific side. */

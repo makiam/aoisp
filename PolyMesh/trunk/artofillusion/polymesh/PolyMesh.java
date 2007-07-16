@@ -246,8 +246,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	/* Properties */
 	private static final Property PROPERTIES[] = new Property[] {
-			new Property(PMTranslate.text("intersubdiv"), 1, 6, 1),
-			new Property(PMTranslate.text("rendersubdiv"), 1, 6, 2) };
+			new Property(Translate.text("polymesh:intersubdiv"), 1, 6, 1),
+			new Property(Translate.text("polymesh:rendersubdiv"), 1, 6, 2) };
 
 	/**
 	 * Constructor for the PolyMesh object
@@ -3457,7 +3457,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			if (deletedVertices[i])
 				++count;
 		if (vertices.length - count < 3) {
-			new BStandardDialog(PMTranslate.text("errorTitle"), UIUtilities
+			new BStandardDialog(Translate.text("polymesh:errorTitle"), UIUtilities
 					.breakString(Translate.text("illegalDelete")),
 					BStandardDialog.ERROR).showMessageDialog(null);
 			return null;
@@ -3476,7 +3476,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			if (deletedEdges[i])
 				++count;
 		if (edges.length / 2 - count < 3) {
-			new BStandardDialog(PMTranslate.text("errorTitle"), UIUtilities
+			new BStandardDialog(Translate.text("polymesh:errorTitle"), UIUtilities
 					.breakString(Translate.text("illegalDelete")),
 					BStandardDialog.ERROR).showMessageDialog(null);
 			return null;
@@ -3503,7 +3503,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			if (deletedFaces[i])
 				++count;
 		if (faces.length - count < 1) {
-			new BStandardDialog(PMTranslate.text("errorTitle"), UIUtilities
+			new BStandardDialog(Translate.text("polymesh:errorTitle"), UIUtilities
 					.breakString(Translate.text("illegalDelete")),
 					BStandardDialog.ERROR).showMessageDialog(null);
 			return null;
@@ -9236,9 +9236,9 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 					}
 					if (count > 1) {
 						// System.out.println( "pb with count" );
-						new BStandardDialog(PMTranslate.text("errorTitle"),
-								UIUtilities.breakString(PMTranslate
-										.text("illegalMeshStructure")),
+						new BStandardDialog(Translate.text("polymesh:errorTitle"),
+								UIUtilities.breakString(Translate
+										.text("polymesh:illegalMeshStructure")),
 								BStandardDialog.ERROR).showMessageDialog(null);
 						return selected;
 					}

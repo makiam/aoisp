@@ -24,6 +24,7 @@ import artofillusion.polymesh.UnfoldedMesh.UnfoldedFace;
 import artofillusion.polymesh.UnfoldedMesh.UnfoldedVertex;
 import artofillusion.texture.Texture;
 import artofillusion.texture.TextureMapping;
+import artofillusion.ui.Translate;
 
 /**
  * This class holds unfolded meshes and UV mapping editor information
@@ -178,7 +179,7 @@ public class UVMappingData {
 		super();
 		this.meshes = meshes;
 		mappings = new ArrayList<UVMeshMapping>();
-		addNewMapping(PMTranslate.text("mapping") + " #1", null);
+		addNewMapping(Translate.text("polymesh:mapping") + " #1", null);
 		sampling = 1;
 		setTables();
 	}

@@ -1410,7 +1410,7 @@ public class PolyMeshViewer extends MeshViewer {
 		Vec3 v;
 		Vec2 v2;
 
-		if (!snapToGrid || perspectiveChoice.getSelectedIndex() == 0)
+		if (!snapToGrid || isPerspective())
 			return;
 		v = theCamera.convertScreenToWorld(pos, theCamera.getDistToScreen());
 		v2 = theCamera.getWorldToScreen().timesXY(v);
@@ -1433,14 +1433,14 @@ public class PolyMeshViewer extends MeshViewer {
 		super.setPerspective(perspective);
 	}
 
-	protected void choiceChanged(WidgetEvent ev) {
-		super.choiceChanged(ev);
-		boolean perspective = isPerspective();
-		Iterator iter = manipulators.iterator();
-		while (iter.hasNext()) {
-			((Manipulator) iter.next()).setPerspective(perspective);
-		}
-	}
+//	protected void choiceChanged(WidgetEvent ev) {
+//		super.choiceChanged(ev);
+//		boolean perspective = isPerspective();
+//		Iterator iter = manipulators.iterator();
+//		while (iter.hasNext()) {
+//			((Manipulator) iter.next()).setPerspective(perspective);
+//		}
+//	}
 
 	protected static Color disableColor(Color color) {
 		float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color

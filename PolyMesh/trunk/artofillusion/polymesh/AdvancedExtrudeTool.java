@@ -25,7 +25,6 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
 {
     private Vec3 baseVertPos[];
     private UndoRecord undo;
-    private static Image icon, selectedIcon;
     private HashMap manip3dHashMap;
     private boolean selected[], separateFaces;
     private PolyMesh origMesh;
@@ -39,10 +38,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
     public AdvancedExtrudeTool(EditingWindow fr, MeshEditController controller)
     {
         super(fr, controller);
-        if ( icon == null )
-            icon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/extrude.gif" ) ).getImage();
-        if ( selectedIcon == null )
-            selectedIcon = new ImageIcon( getClass().getResource( "/artofillusion/polymesh/Icons/selected/extrude.gif" ) ).getImage();
+        initButton("polymesh:extrude");
         manip3dHashMap = new HashMap();
     }
 
@@ -74,13 +70,14 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
     public void activate()
     {
         super.activate();
-        theWindow.setHelpText(PMTranslate.text("advancedExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedExtrudeTool.helpText"));
         ViewerCanvas view = theWindow.getView();
     }
 
     public void deactivate()
     {
-        Iterator iter = manip3dHashMap.keySet().iterator();
+    	super.deactivate();
+    	Iterator iter = manip3dHashMap.keySet().iterator();
         PolyMeshViewer view;
         while (iter.hasNext())
         {
@@ -94,19 +91,9 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
         return ALL_CLICKS;
     }
 
-    public Image getIcon()
-    {
-        return AdvancedExtrudeTool.icon;
-    }
-
-    public Image getSelectedIcon()
-    {
-        return AdvancedExtrudeTool.selectedIcon;
-    }
-
     public String getToolTipText()
     {
-        return PMTranslate.text("advancedExtrudeTool.tipText");
+        return Translate.text("polymesh:advancedExtrudeTool.tipText");
     }
 
     private void doManipulatorPrepareShapingMesh(Manipulator.ManipulatorEvent e)
@@ -130,7 +117,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
             controller.setMesh(origMesh);
         origMesh = null;
         baseVertPos = null;
-        theWindow.setHelpText(PMTranslate.text("advancedExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedExtrudeTool.helpText"));
         controller.objectChanged();
         theWindow.updateImage();
     }
@@ -164,7 +151,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
         theWindow.setUndoRecord(undo);
         baseVertPos = null;
         origMesh = null;
-        theWindow.setHelpText(PMTranslate.text("advancedExtrudeTool.helpText"));
+        theWindow.setHelpText(Translate.text("polymesh:advancedExtrudeTool.helpText"));
         theWindow.updateImage();
     }
 
@@ -210,8 +197,8 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
     public void iconDoubleClicked()
     {
         BComboBox c = new BComboBox( new String[]{
-                PMTranslate.text( "selectionAsWhole" ),
-                PMTranslate.text( "individualFaces" )
+                Translate.text("polymesh:selectionAsWhole" ),
+                Translate.text("polymesh:individualFaces" )
                 } );
         c.setSelectedIndex( separateFaces ? 1 : 0 );
         ComponentsDialog dlg = new ComponentsDialog( theFrame, Translate.text( "applyExtrudeTo" ),
