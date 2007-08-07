@@ -27,6 +27,7 @@ import artofillusion.RenderingMesh;
 import artofillusion.RenderingTriangle;
 import artofillusion.Scene;
 import artofillusion.TextureParameter;
+import artofillusion.ViewerCanvas;
 import artofillusion.WireframeMesh;
 import artofillusion.animation.Actor;
 import artofillusion.animation.Joint;
@@ -124,7 +125,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	private TriangleMesh triangleMesh; //the triangulated mesh
 
-	private int interactiveSmoothLevel, renderingSmoothLevel;
+	private int interactiveSmoothLevel;
 	//smoothnes levels applied before display (interactive) or triangular smoothing (rendering)
 	
 	private boolean[] subdivideFaces;
@@ -151,6 +152,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	//is still valid
 	
 	//colors and preferences
+	private boolean useCustomColors;
+	
 	private Color vertColor;
 	
 	private Color selectedVertColor;
@@ -246,8 +249,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	/* Properties */
 	private static final Property PROPERTIES[] = new Property[] {
-			new Property(Translate.text("polymesh:intersubdiv"), 1, 6, 1),
-			new Property(Translate.text("polymesh:rendersubdiv"), 1, 6, 2) };
+			new Property(Translate.text("polymesh:intersubdiv"), 1, 6, 1) };
 
 	/**
 	 * Constructor for the PolyMesh object
@@ -468,7 +470,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		minSmoothness = 1.0f;
 		maxSmoothness = 0.0f;
 		interactiveSmoothLevel = 1;
-		renderingSmoothLevel = 2;
 		//display properties
 		loadFromDisplayPropertiesPreferences();	
 	}
@@ -478,33 +479,35 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *
 	 */
 	public void loadFromDisplayPropertiesPreferences() {
-		vertColor = new Color( preferences.getInt("vertColor_red", 0),
-				preferences.getInt("vertColor_green", 0),
-				preferences.getInt("vertColor_blue", 0));
-		selectedVertColor = new Color( preferences.getInt("selectedVertColor_red", 255),
-				preferences.getInt("selectedVertColor_green", 0),
-				preferences.getInt("selectedVertColor_blue", 0));
-		edgeColor = new Color( preferences.getInt("edgeColor_red", 0),
-				preferences.getInt("edgeColor_green", 0),
-				preferences.getInt("edgeColor_blue", 0));
-		selectedEdgeColor = new Color( preferences.getInt("selectedEdgeColor_red", 255),
-				preferences.getInt("selectedEdgeColor_green", 0),
-				preferences.getInt("selectedEdgeColor_blue", 0));
+		vertColor = new Color( preferences.getInt("vertColor_red", ViewerCanvas.lineColor.getRed()),
+				preferences.getInt("vertColor_green", ViewerCanvas.lineColor.getGreen()),
+				preferences.getInt("vertColor_blue", ViewerCanvas.lineColor.getBlue()));
+		selectedVertColor = new Color( preferences.getInt("selectedVertColor_red", ViewerCanvas.highlightColor.getRed()),
+				preferences.getInt("selectedVertColor_green", ViewerCanvas.highlightColor.getGreen()),
+				preferences.getInt("selectedVertColor_blue", ViewerCanvas.highlightColor.getBlue()));
+		edgeColor = new Color( preferences.getInt("edgeColor_red", ViewerCanvas.lineColor.getRed()),
+				preferences.getInt("edgeColor_green", ViewerCanvas.lineColor.getGreen()),
+				preferences.getInt("edgeColor_blue", ViewerCanvas.lineColor.getBlue()));
+		selectedEdgeColor = new Color( preferences.getInt("selectedEdgeColor_red", ViewerCanvas.highlightColor.getRed()),
+				preferences.getInt("selectedEdgeColor_green", ViewerCanvas.highlightColor.getGreen()),
+				preferences.getInt("selectedEdgeColor_blue", ViewerCanvas.highlightColor.getBlue()));
 		seamColor = new Color( preferences.getInt("seamColor_red", 0),
 				preferences.getInt("seamColor_green", 0),
 				preferences.getInt("seamColor_blue", 255));
 		selectedSeamColor = new Color( preferences.getInt("selectedSeamColor_red", 0),
 				preferences.getInt("selectedSeamColor_green", 162),
 				preferences.getInt("selectedSeamColor_blue", 255));
-		meshColor = new Color( preferences.getInt("meshColor_red", 204),
-				preferences.getInt("meshColor_green", 204),
-				preferences.getInt("meshColor_blue", 255));
+		Color transparent = ViewerCanvas.transparentColor.getColor();
+		meshColor = new Color( preferences.getInt("meshColor_red",transparent.getRed()),
+				preferences.getInt("meshColor_green", transparent.getGreen()),
+				preferences.getInt("meshColor_blue", transparent.getBlue()));
 		selectedFaceColor = new Color( preferences.getInt("selectedFaceColor_red", 255),
-				preferences.getInt("selectedFaceColor_green", 127),
-				preferences.getInt("selectedFaceColor_blue", 127));
+				preferences.getInt("selectedFaceColor_green", 102),
+				preferences.getInt("selectedFaceColor_blue", 255));
 		meshRGBColor = ColorToRGB(meshColor);
 		selectedFaceRGBColor = ColorToRGB(selectedFaceColor);
 		handleSize = preferences.getInt("handleSize", 3);
+		useCustomColors = preferences.getBoolean("useCustomColors", false);
 	}
 	
 	/**
@@ -512,34 +515,41 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *
 	 */
 	public void resetDisplayPropertiesPreferences() {
-		preferences.putInt("vertColor_red", 0);
-		preferences.putInt("vertColor_green", 0);
-		preferences.putInt("vertColor_blue", 0);
-		preferences.putInt("selectedVertColor_red", 255);
-		preferences.putInt("selectedVertColor_green", 0);
-		preferences.putInt("selectedVertColor_blue", 0);
-		preferences.putInt("edgeColor_red", 0);
-		preferences.putInt("edgeColor_green", 0);
-		preferences.putInt("edgeColor_blue", 0);
-		preferences.putInt("selectedEdgeColor_red", 255);
-		preferences.putInt("selectedEdgeColor_green", 0);
-		preferences.putInt("selectedEdgeColor_blue", 0);
+		
+		preferences.putInt("vertColor_red", ViewerCanvas.lineColor.getRed());
+		preferences.putInt("vertColor_green", ViewerCanvas.lineColor.getGreen());
+		preferences.putInt("vertColor_blue", ViewerCanvas.lineColor.getBlue());
+		preferences.putInt("selectedVertColor_red", ViewerCanvas.highlightColor.getRed());
+		preferences.putInt("selectedVertColor_green", ViewerCanvas.highlightColor.getGreen());
+		preferences.putInt("selectedVertColor_blue", ViewerCanvas.highlightColor.getBlue());
+		preferences.putInt("edgeColor_red", ViewerCanvas.lineColor.getRed());
+		preferences.putInt("edgeColor_green", ViewerCanvas.lineColor.getGreen());
+		preferences.putInt("edgeColor_blue", ViewerCanvas.lineColor.getBlue());
+		preferences.putInt("selectedEdgeColor_red", ViewerCanvas.highlightColor.getRed());
+		preferences.putInt("selectedEdgeColor_green", ViewerCanvas.highlightColor.getGreen());
+		preferences.putInt("selectedEdgeColor_blue", ViewerCanvas.highlightColor.getBlue());
 		preferences.putInt("seamColor_red", 0);
 		preferences.putInt("seamColor_green", 0);
 		preferences.putInt("seamColor_blue", 255);
 		preferences.putInt("selectedSeamColor_red", 0);
 		preferences.putInt("selectedSeamColor_green", 162);
 		preferences.putInt("selectedSeamColor_blue", 255);
-		preferences.putInt("meshColor_red",204);
-		preferences.putInt("meshColor_green", 204);
-		preferences.putInt("meshColor_blue", 255);
+		Color transparent = ViewerCanvas.transparentColor.getColor();
+		preferences.putInt("meshColor_red",transparent.getRed());
+		preferences.putInt("meshColor_green", transparent.getGreen());
+		preferences.putInt("meshColor_blue", transparent.getBlue());
 		preferences.putInt("selectedFaceColor_red", 255);
-		preferences.putInt("selectedFaceColor_green", 127);
-		preferences.putInt("selectedFaceColor_blue", 127);
+		preferences.putInt("selectedFaceColor_green", 102);
+		preferences.putInt("selectedFaceColor_blue", 255);
 		preferences.putInt("handleSize", 3);
+		preferences.putBoolean("useCustomColors", false);
 		loadFromDisplayPropertiesPreferences();
 	}
 	
+	/**
+	 * Uses current display properties to store them as new default properties
+	 *
+	 */
 	public void storeDisplayPropertiesAsReferences() {
 		preferences.putInt("vertColor_red", vertColor.getRed());
 		preferences.putInt("vertColor_green", vertColor.getGreen());
@@ -566,6 +576,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		preferences.putInt("selectedFaceColor_green", selectedFaceColor.getGreen());
 		preferences.putInt("selectedFaceColor_blue", selectedFaceColor.getBlue());
 		preferences.putInt("handleSize", handleSize);
+		preferences.putBoolean("useCutomColors", useCustomColors);
 	}
 
 	/**
@@ -1233,7 +1244,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		minSmoothness = mesh.minSmoothness;
 		maxSmoothness = mesh.maxSmoothness;
 		interactiveSmoothLevel = mesh.interactiveSmoothLevel;
-		renderingSmoothLevel = mesh.renderingSmoothLevel;
 		projectedEdges = null;
 		if (mesh.mappingData != null) {
 			mappingData = mesh.mappingData.duplicate();
@@ -1248,6 +1258,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			for (int i = 0; i < seams.length; i++)
 				seams[i] = mesh.seams[i];
 		}
+		useCustomColors = mesh.useCustomColors;
 		vertColor = mesh.vertColor;
 		selectedVertColor = mesh.selectedVertColor;
 		edgeColor = mesh.edgeColor;
@@ -3311,14 +3322,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 
 	public int getInteractiveSmoothLevel() {
 		return interactiveSmoothLevel;
-	}
-
-	public void setRenderingSmoothLevel(int smooth) {
-		renderingSmoothLevel = smooth;
-	}
-
-	public int getRenderingSmoothLevel() {
-		return renderingSmoothLevel;
 	}
 
 	/**
@@ -5556,7 +5559,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			InvalidObjectException {
 
 		short version = in.readShort();
-		if (version < 0 || version > 9)
+		if (version < 0 || version > 10)
 			throw new InvalidObjectException("");
 		if (version > 0)
 			mirrorState = in.readShort();
@@ -5605,7 +5608,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		}
 		if (version > 2) {
 			interactiveSmoothLevel = in.readInt();
-			renderingSmoothLevel = in.readInt();
+			//former renderingSmoothLevel
+			in.readInt();
 		}
 		if (version > 5) {
 			if (in.readBoolean()) {
@@ -5624,6 +5628,9 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			}
 		}
 		if (version > 7) {
+			if (version > 9) {
+				useCustomColors = in.readBoolean();
+			}
 			vertColor = new Color(in.readInt(), in.readInt(), in.readInt());
 			selectedVertColor = new Color(in.readInt(), in.readInt(), in.readInt());
 			edgeColor = new Color(in.readInt(), in.readInt(), in.readInt());
@@ -6055,10 +6062,10 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 				newVert[i].r = pt;
 			}
 			if (tol > 0 && !onePass) {
-//				v1r = normals[v1].plus(normals[v2]);
-//				v1r.normalize();
-//				dist = Math.abs(newVert[i].r.minus(oldPos).dot(v1r));
-				dist = newVert[i].r.distance(oldPos);
+				v1r = normals[v1].plus(normals[v2]);
+				v1r.normalize();
+				dist = Math.abs(newVert[i].r.minus(oldPos).dot(v1r));
+				//dist = newVert[i].r.distance(oldPos);
 				if (dist > tol) {
 					movedVert[i] = true;
 				}
@@ -6123,14 +6130,19 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			}
 			newVert[addedVert + i].edge = count + n - 1 + newEdges.length / 2;
 			count += n;
-			if (movedVert != null) {
-				for (int j = 0; j < vf.length; j++) {
-					if (movedVert[vf[j]]) {
-						subdivideFaces[i] = true;
-						break;
-					}
-				}
-			}			
+//			if (movedVert != null) {
+//				for (int j = 0; j < vf.length; j++) {
+//					if (movedVert[vf[j]]) {
+//						subdivideFaces[i] = true;
+//						break;
+//					}
+//				}
+//			}			
+		}
+		if (subdivideFaces != null) {
+			for (int i = 0; i < newFaces.length; i++) {
+				subdivideFaces[i] = true;
+			}
 		}
 		// Update the texture parameters.
 		// per face per vertex texture
@@ -12571,18 +12583,15 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		switch (index) {
 		case 0:
 			return new Integer(interactiveSmoothLevel);
-		case 1:
-			return new Integer(renderingSmoothLevel);
+		default:
+			return null;
 		}
-		return null;
 	}
 
 	public void setPropertyValue(int index, Object value) {
 		int val = ((Integer) value).intValue();
 		if (index == 0)
 			setInteractiveSmoothLevel(val);
-		else if (index == 1)
-			setRenderingSmoothLevel(val);
 	}
 
 	/**
@@ -12600,7 +12609,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		if (theScene != null)
 			super.writeToFile(out, theScene);
 
-		out.writeShort(9);
+		out.writeShort(10);
 		out.writeShort(mirrorState);
 		out.writeInt(smoothingMethod);
 		out.writeInt(vertices.length);
@@ -12638,7 +12647,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		out.writeFloat(minSmoothness);
 		out.writeFloat(maxSmoothness);
 		out.writeInt(interactiveSmoothLevel);
-		out.writeInt(renderingSmoothLevel);
+		out.writeInt(0); //former renderingSmoothLevel
 		if (seams == null) {
 			out.writeBoolean(false);
 		} else {
@@ -12653,6 +12662,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		} else {
 			out.writeBoolean(false);
 		}
+		out.writeBoolean(useCustomColors);
 		out.writeInt(vertColor.getRed());
 		out.writeInt(vertColor.getGreen());
 		out.writeInt(vertColor.getBlue());
@@ -13438,7 +13448,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getEdgeColor() {
-		return edgeColor;
+		if (useCustomColors) {
+			return edgeColor;
+		} else {
+			return ViewerCanvas.lineColor;
+		}
 	}
 
 	public void setEdgeColor(Color edgeColor) {
@@ -13446,7 +13460,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getMeshColor() {
-		return meshColor;
+		if (useCustomColors) {
+			return meshColor;
+		} else {
+			return ViewerCanvas.surfaceColor;
+		}
 	}
 
 	public void setMeshColor(Color meshColor) {
@@ -13455,7 +13473,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getSelectedFaceColor() {
-		return selectedFaceColor;
+		if (useCustomColors) {
+			return selectedFaceColor;
+		} else {
+			return new Color(255, 102, 255);
+		}
 	}
 
 	public void setSelectedFaceColor(Color selectedFaceColor) {
@@ -13464,7 +13486,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public int getHandleSize() {
-		return handleSize;
+		if (useCustomColors) {
+			return handleSize;
+		} else {
+			return 3;
+		}
 	}
 
 	public void setHandleSize(int handleSize) {
@@ -13472,7 +13498,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getSelectedEdgeColor() {
-		return selectedEdgeColor;
+		if (useCustomColors) {
+			return selectedEdgeColor;
+		} else {
+			return ViewerCanvas.highlightColor;
+		}
 	}
 
 	public void setSelectedEdgeColor(Color selectedEdgeColor) {
@@ -13480,7 +13510,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getSelectedSeamColor() {
-		return selectedSeamColor;
+		if (useCustomColors) {
+			return selectedSeamColor;
+		} else {
+			return new Color(0, 162, 255);
+		}
 	}
 
 	public void setSelectedSeamColor(Color selectedSeamColor) {
@@ -13488,7 +13522,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getSelectedVertColor() {
-		return selectedVertColor;
+		if (useCustomColors) {
+			return selectedVertColor;
+		} else {
+			return ViewerCanvas.highlightColor;
+		}
 	}
 
 	public void setSelectedVertColor(Color selectedVertColor) {
@@ -13496,7 +13534,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getVertColor() {
-		return vertColor;
+		if (useCustomColors) {
+			return vertColor;
+		} else {
+			return ViewerCanvas.lineColor;
+		}
 	}
 
 	public void setVertColor(Color vertColor) {
@@ -13504,7 +13546,11 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public Color getSeamColor() {
-		return seamColor;
+		if (useCustomColors) {
+			return vertColor;
+		} else {
+			return new Color(0,0,255);
+		}
 	}
 
 	public void setSeamColor(Color seamColor) {
@@ -13512,13 +13558,27 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	}
 
 	public RGBColor getMeshRGBColor() {
-		return meshRGBColor;
+		if (useCustomColors) {
+			return meshRGBColor;
+		} else {
+			return ViewerCanvas.surfaceRGBColor;
+		}
 	}
 
 	public RGBColor getSelectedFaceRGBColor() {
 		return selectedFaceRGBColor;
 	}
 	
+	
+	
+	public boolean useCustomColors() {
+		return useCustomColors;
+	}
+
+	public void setUseCustomColors(boolean useCustomColors) {
+		this.useCustomColors = useCustomColors;
+	}
+
 	public RGBColor ColorToRGB(Color color) {
 		return new RGBColor(((float) color.getRed()) / 255.0f, ((float) color
 				.getGreen()) / 255.0f, ((float) color.getBlue()) / 255.0f);

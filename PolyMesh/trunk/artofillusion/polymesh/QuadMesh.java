@@ -373,30 +373,30 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 		Vec3 vert[];
 		int i;
 
-		if (cachedMesh != null)
-			vert = cachedMesh.vert;
-		else if (cachedWire != null)
-			vert = cachedWire.vert;
-		else {
-			getWireframeMesh();
-			vert = cachedWire.vert;
-		}
-		minx = maxx = vert[0].x;
-		miny = maxy = vert[0].y;
-		minz = maxz = vert[0].z;
-		for (i = 1; i < vert.length; i++) {
-			if (vert[i].x < minx)
-				minx = vert[i].x;
-			if (vert[i].x > maxx)
-				maxx = vert[i].x;
-			if (vert[i].y < miny)
-				miny = vert[i].y;
-			if (vert[i].y > maxy)
-				maxy = vert[i].y;
-			if (vert[i].z < minz)
-				minz = vert[i].z;
-			if (vert[i].z > maxz)
-				maxz = vert[i].z;
+//		if (cachedMesh != null)
+//			vert = cachedMesh.vert;
+//		else if (cachedWire != null)
+//			vert = cachedWire.vert;
+//		else {
+//			getWireframeMesh();
+//			vert = cachedWire.vert;
+//		}
+		minx = maxx = vertices[0].r.x;
+		miny = maxy = vertices[0].r.y;
+		minz = maxz = vertices[0].r.z;
+		for (i = 1; i < vertices.length; i++) {
+			if (vertices[i].r.x < minx)
+				minx = vertices[i].r.x;
+			if (vertices[i].r.x > maxx)
+				maxx = vertices[i].r.x;
+			if (vertices[i].r.y < miny)
+				miny = vertices[i].r.y;
+			if (vertices[i].r.y > maxy)
+				maxy = vertices[i].r.y;
+			if (vertices[i].r.z < minz)
+				minz = vertices[i].r.z;
+			if (vertices[i].r.z > maxz)
+				maxz = vertices[i].r.z;
 		}
 		bounds = new BoundingBox(minx, maxx, miny, maxy, minz, maxz);
 	}
@@ -614,9 +614,9 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 						newval[2*j][0] = fvpv.getValue(j, 0);
 						newval[2*j][1] = fvpv.getValue(j, 1);
 						newval[2*j][2] = fvpv.getValue(j, 2);
-						newval[2*j][0] = fvpv.getValue(j, 1);
-						newval[2*j][2] = fvpv.getValue(j, 2);
-						newval[2*j][3] = fvpv.getValue(j, 3);
+						newval[2*j+1][0] = fvpv.getValue(j, 0);
+						newval[2*j+1][1] = fvpv.getValue(j, 2);
+						newval[2*j+1][2] = fvpv.getValue(j, 3);
 					}	
 					newParamVal[i] = new FaceVertexParameterValue(newval);
 				} else
@@ -645,11 +645,19 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 	private void smoothMesh(double tol, boolean calcProjectedEdges, int ns, int maxNs) {
 		//debug
 		//dumpMesh();
-		//System.out.println(vertices.length);
+//		System.out.println("smoothing: " + ns);
 //		long time1 = System.currentTimeMillis();
 		Vec3[] normals = getNormals();
 		//first, let's find which faces are subdivided, which are not and which
 		//bear Ys in between subdivivided and still faces.
+//		for (int i = 0; i < faces.length; i++) {
+//			if (! (faces[i].mark == QuadFace.SUBDIVIDE)) {
+//				System.out.println("face: " + i + " non sub");
+//			} else {
+//				System.out.println("face: " + i + " sub");
+//			}
+//				
+//		}
 		for (int i = 0; i < edges.length; i++) {
 			edges[i].mark = false;
 		}
@@ -1466,9 +1474,9 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 		faces = nfaces;
 		projectedEdges = npe ;
 		resetMesh();
-		System.out.println("subdivs: " + (ns + 1) + " " + maxDist);
-		System.out.println("vertices : " + vertices.length);
-
+//		System.out.println("subdivs: " + (ns + 1) + " " + maxDist);
+//		System.out.println("vertices : " + vertices.length);
+		//maxNs = 0;
 		if (refine && ns < MAX_SMOOTHNESS - 1 && ns < maxNs) {
 			smoothMesh(tol, calcProjectedEdges, ns+1, maxNs);
 		}

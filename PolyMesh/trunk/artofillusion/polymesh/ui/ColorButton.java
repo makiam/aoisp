@@ -41,7 +41,11 @@ public class ColorButton extends RowContainer{
 		private void doPaint(RepaintEvent ev) {
 			Graphics2D g = ev.getGraphics();
 			Rectangle r = new Rectangle(5, 5, 30, 20);
-			g.setColor(color) ;
+			if (isEnabled()) {
+				g.setColor(color) ;
+			} else {
+				g.setColor(Color.LIGHT_GRAY) ;
+			}
 			g.fill(r);
 		}
 		
@@ -95,4 +99,9 @@ public class ColorButton extends RowContainer{
 		return colorWidget.color;
 	}
 	
+	public void setEnabled(boolean enabled) {
+		super.setEnabled(enabled);
+		button.setEnabled(enabled);
+		colorWidget.setEnabled(enabled);
+	}
 }

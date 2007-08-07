@@ -327,7 +327,6 @@ public class CreatePolyMeshTool extends EditingTool
             }
             pack();
             ModellingApp.centerWindow( (Window) getComponent() );
-            disableSize();
             setVisible( true );
         }
         

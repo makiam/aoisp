@@ -402,7 +402,7 @@ public class PolyMeshViewer extends MeshViewer {
 		Point divScreenVert[] = null;
 		double divScreenZ[] = null;
 		Vec2 divPos[] = null;
-
+		boolean hideFace[] = ((PolyMeshEditorWindow) controller).hideFace;
 		PolyMesh mesh = (PolyMesh) getController().getObject().object;
 		Color seamColor = mesh.getSeamColor();
 		Color selectedSeamColor = seamColor;
@@ -429,6 +429,7 @@ public class PolyMeshViewer extends MeshViewer {
 			mirror = true;
 			viewMesh = mesh.getMirroredMesh();
 		}
+		Wedge[] ore = mesh.getEdges();
 		Wedge[] e = viewMesh.getEdges();
 		Wedge[] trueEdges = mesh.getEdges();
 		Wface[] trueFaces = mesh.getFaces();
@@ -468,7 +469,7 @@ public class PolyMeshViewer extends MeshViewer {
 			}
 		}
 		int index;
-		int v1, v2;
+		int f1, f2, v1, v2;
 		boolean isVisible = true;
 		int loop = e.length / 2;
 		if (mirror)
@@ -488,19 +489,35 @@ public class PolyMeshViewer extends MeshViewer {
 				ref = invEdgeTable[index];
 				v1 = e[index].vertex;
 				v2 = e[e[index].hedge].vertex;
+				f1 = ore[ref].face;
+				f2 = ore[ore[ref].hedge].face;
 			} else {
 				ref = index;
 				v1 = e[ref].vertex;
 				v2 = e[e[ref].hedge].vertex;
+				f1 = e[ref].face;
+				f2 = e[e[ref].hedge].face;
 			}
 //			if (projectedEdge != null) {
 //				
 //			}
-			if (v1 >= visible.length || v2 >= visible.length) {
-				System.out.println("pb visible " + v1 + " " + v2 + " " + visible.length + " " + mesh.getVertices().length);
-			} else {
-				isVisible = visible[v1] && visible[v2];
+//			if (v1 >= visible.length || v2 >= visible.length) {
+//				System.out.println("pb visible " + v1 + " " + v2 + " " + visible.length + " " + mesh.getVertices().length);
+//			} else {
+			if (hideFace != null) {
+				isVisible = false;
+				if (f1 != -1)
+				if (!hideFace[f1]) {
+					isVisible = true;
+				}
+				if (!hideFace[f2]) {
+					isVisible = true;
+				}
+				if (!isVisible) {
+					continue;
+				}
 			}
+//			}
 			if (renderMode == RENDER_WIREFRAME
 					|| renderMode == RENDER_TRANSPARENT) {
 				if (selectionMode == MeshEditController.POINT_MODE) {
@@ -1203,42 +1220,6 @@ public class PolyMeshViewer extends MeshViewer {
 					found = true;
 				}
 			}
-//			if (!found && screenVertNormals != null) {
-//				loop = screenVertNormals.length;
-//				for (i = 0; i < loop; i++) {
-//					if (mirror)
-//						ref = invVertTable[i];
-//					else
-//						ref = i;
-//					if (!visible[i])
-//						continue;
-//					if (sel && !selected[ref])
-//						continue;
-//					v1 = screenVertNormals[i];
-//					if (v1 == null)
-//						continue;
-//					if (pos.x < v1.x - handleSize / 2 - loose
-//							|| pos.x > v1.x + handleSize / 2 + loose
-//							|| pos.y < v1.y - handleSize / 2 - loose
-//							|| pos.y > v1.y + handleSize / 2 + loose)
-//						continue;
-//					distance = (pos.x - v1.x) * (pos.x - v1.x) + (pos.y - v1.y)
-//							* (pos.y - v1.y);
-//					z = theCamera.getObjectToView().timesZ(pv[i].r);
-//					if (distance < maxDistance) {
-//						maxDistance = distance;
-//						which = ref;
-//						closestz = z;
-//						sel = selected[ref];
-//						found = true;
-//					} else if (distance == maxDistance && z < closestz) {
-//						which = ref;
-//						closestz = z;
-//						sel = selected[ref];
-//						found = true;
-//					}
-//				}
-//			}
 		} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE) {
 			int loop;
 			if (mirror)
@@ -1432,16 +1413,7 @@ public class PolyMeshViewer extends MeshViewer {
 		}
 		super.setPerspective(perspective);
 	}
-
-//	protected void choiceChanged(WidgetEvent ev) {
-//		super.choiceChanged(ev);
-//		boolean perspective = isPerspective();
-//		Iterator iter = manipulators.iterator();
-//		while (iter.hasNext()) {
-//			((Manipulator) iter.next()).setPerspective(perspective);
-//		}
-//	}
-
+	
 	protected static Color disableColor(Color color) {
 		float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color
 				.getBlue(), null);
