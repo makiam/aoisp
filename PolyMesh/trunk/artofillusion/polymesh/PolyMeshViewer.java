@@ -69,7 +69,9 @@ public class PolyMeshViewer extends MeshViewer {
 
 	boolean visible[];
 
-	private ArrayList manipulators;
+	private ArrayList<Manipulator> manipulators;
+	
+	private Manipulator[] manipulatorArray;
 
 	/**
 	 * Constructor for the PolyMeshViewer object
@@ -83,7 +85,8 @@ public class PolyMeshViewer extends MeshViewer {
 		super(window, p);
 		PolyMesh mesh = (PolyMesh) window.getObject().object;
 		visible = new boolean[mesh.getVertices().length];
-		manipulators = new ArrayList();
+		manipulators = new ArrayList<Manipulator>();
+		manipulatorArray = new Manipulator[0];
 		addEventLink(MouseMovedEvent.class, this, "mouseMoved");
 		addEventLink(MouseClickedEvent.class, this, "mouseClicked");
 	}
@@ -96,6 +99,7 @@ public class PolyMeshViewer extends MeshViewer {
 	 */
 	public void addManipulator(Manipulator manipulator) {
 		manipulators.add(manipulator);
+		updateManipulatorArray();
 	}
 
 	/**
@@ -108,14 +112,21 @@ public class PolyMeshViewer extends MeshViewer {
 	public void setManipulator(Manipulator manipulator) {
 		manipulators.clear();
 		manipulators.add(manipulator);
+		updateManipulatorArray();
 	}
 
-	public ArrayList getManipulators() {
+	public ArrayList<Manipulator> getManipulators() {
 		return manipulators;
 	}
 
 	public void removeManipulator(Manipulator manipulator) {
 		manipulators.remove(manipulator);
+		updateManipulatorArray();
+	}
+	
+	private void updateManipulatorArray() {
+		manipulatorArray = new Manipulator[manipulators.size()];
+		manipulators.toArray(manipulatorArray);
 	}
 
 	/**
@@ -193,8 +204,8 @@ public class PolyMeshViewer extends MeshViewer {
 			if (showSkeleton && mesh.getSkeleton() != null)
 				mesh.getSkeleton().draw(this, true);
 		// Now draw manipulators
-		for (int i = 0; i < manipulators.size(); i++)
-			((Manipulator) manipulators.get(i)).draw();
+		for (int i = 0; i < manipulatorArray.length; i++)
+			manipulatorArray[i].draw();
 	}
 
 	/**
@@ -506,11 +517,10 @@ public class PolyMeshViewer extends MeshViewer {
 //			} else {
 			if (hideFace != null) {
 				isVisible = false;
-				if (f1 != -1)
-				if (!hideFace[f1]) {
+				if ( f1 != -1 && !hideFace[f1]) {
 					isVisible = true;
 				}
-				if (!hideFace[f2]) {
+				if ( f2 != -1 && !hideFace[f2]) {
 					isVisible = true;
 				}
 				if (!isVisible) {
@@ -699,9 +709,8 @@ public class PolyMeshViewer extends MeshViewer {
 	protected void mouseMoved(WidgetMouseEvent e) {
 		activeTool = currentTool;
 		if (activeTool instanceof AdvancedEditingTool) {
-			Iterator iter = manipulators.iterator();
-			while (iter.hasNext()) {
-				if (((Manipulator) iter.next()).mouseMoved(e))
+			for (int i = 0; i < manipulatorArray.length; i++) {
+				if (manipulatorArray[i].mouseMoved(e))
 					return;
 			}
 		}
@@ -757,14 +766,12 @@ public class PolyMeshViewer extends MeshViewer {
 				return;
 			}
 		} else {
-			Iterator iter = manipulators.iterator();
-			if (e.getButton() != MouseEvent.BUTTON3)
-				while (iter.hasNext()) {
-					if (((Manipulator) iter.next()).mousePressed(e)) {
-						dragging = true;
-						return;
-					}
+			for (i = 0; i < manipulatorArray.length; i++) {
+				if (manipulatorArray[i].mousePressed(e)) {
+					dragging = true;
+					return;
 				}
+			}
 			// forward to alternate tools
 			// Determine which tool is active.
 			if (metaTool != null && e.isMetaDown())
@@ -846,10 +853,10 @@ public class PolyMeshViewer extends MeshViewer {
 			}
 			if (e.isShiftDown())
 				deselect = i;
-			Iterator iter = manipulators.iterator();
-			while (iter.hasNext()) {
-				if (((Manipulator) iter.next()).mousePressedOnHandle(e, j, pos))
+			for (i = 0; i < manipulatorArray.length; i++) {
+				if (manipulatorArray[i].mousePressedOnHandle(e, j, pos)) {
 					return;
+				}
 			}
 			if (!(activeTool instanceof AdvancedEditingTool))
 				activeTool.mousePressedOnHandle(e, this, 0, j);
@@ -888,10 +895,10 @@ public class PolyMeshViewer extends MeshViewer {
 				pos = mesh.getFacePosition(i);
 				break;
 			}
-			Iterator iter = manipulators.iterator();
-			while (iter.hasNext()) {
-				if (((Manipulator) iter.next()).mousePressedOnHandle(e, j, pos))
+			for (i = 0; i < manipulatorArray.length; i++) {
+				if (manipulatorArray[i].mousePressedOnHandle(e, j, pos)) {
 					return;
+				}
 			}
 			if (!(activeTool instanceof AdvancedEditingTool))
 				activeTool.mousePressedOnHandle(e, this, 0, j);
@@ -899,10 +906,10 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	protected void mouseClicked(WidgetMouseEvent ev) {
-		Iterator iter = manipulators.iterator();
-		while (iter.hasNext()) {
-			if (((Manipulator) iter.next()).mouseClicked(ev))
-				break;
+		for (int i = 0; i < manipulatorArray.length; i++) {
+			if (manipulatorArray[i].mouseClicked(ev)) {
+				return;
+			}
 		}
 	}
 
@@ -915,10 +922,10 @@ public class PolyMeshViewer extends MeshViewer {
 	protected void mouseDragged(WidgetMouseEvent e) {
 		if (!dragging && clickPoint == null)
 			return;
-		Iterator iter = manipulators.iterator();
-		while (iter.hasNext()) {
-			if (((Manipulator) iter.next()).mouseDragged(e))
+		for (int i = 0; i < manipulatorArray.length; i++) {
+			if (manipulatorArray[i].mouseDragged(e)) {
 				return;
+			}
 		}
 		if (!dragging) {
 			Point p = e.getPoint();
@@ -1069,11 +1076,10 @@ public class PolyMeshViewer extends MeshViewer {
 				e.translatePoint(clickPoint.x - p.x, clickPoint.y - p.y);
 			}
 			if (activeTool instanceof AdvancedEditingTool) {
-				Iterator iter = manipulators.iterator();
-				while (iter.hasNext()) {
-					Manipulator manipulator = ((Manipulator) iter.next());
-					if (manipulator.mouseReleased(e))
-						break;
+				for (i = 0; i < manipulatorArray.length; i++) {
+					if (manipulatorArray[i].mouseReleased(e)) {
+						return;
+					}
 				}
 			} else {
 				activeTool.mouseReleased(e, this);
@@ -1106,6 +1112,7 @@ public class PolyMeshViewer extends MeshViewer {
 
 	public void setTool(EditingTool tool) {
 		manipulators.clear();
+		manipulatorArray = new Manipulator[0];
 		if (tool instanceof AdvancedEditingTool)
 			((AdvancedEditingTool) tool).activateManipulators(this);
 		super.setTool(tool);
@@ -1138,13 +1145,15 @@ public class PolyMeshViewer extends MeshViewer {
 		// First, draw any unselected portions of the object.
 		int ref = 0;
 		boolean mirror = false;
-		int[] invEdgeTable = polymesh.invMirroredEdges;
-		int[] invVertTable = polymesh.getInvMirroredVerts();
-		int[] invFaceTable = polymesh.getInvMirroredFaces();
-		Vec3[] normals = null;
+		int[] invEdgeTable = null;
+		int[] invVertTable = null;
+		int[] invFaceTable = null;
 		if (polymesh.getMirrorState() != PolyMesh.NO_MIRROR) {
 			mirror = true;
 			viewMesh = polymesh.getMirroredMesh();
+			invEdgeTable = polymesh.invMirroredEdges;
+			invVertTable = polymesh.invMirroredVerts;
+			invFaceTable = polymesh.invMirroredFaces;
 		}
 		MeshVertex pv[] = viewMesh.getVertices();
 		Wedge[] ed = viewMesh.getEdges();
@@ -1157,7 +1166,6 @@ public class PolyMeshViewer extends MeshViewer {
 			submesh = ((PolyMeshEditorWindow) controller).getSubdividedPolyMesh();
 			sed = submesh.getEdges();
 		}
-		Wvertex[] trueVerts = (Wvertex[])polymesh.getVertices();
 		Wedge[] trueEdges = polymesh.getEdges();
 		Wface[] trueFaces = polymesh.getFaces();
 		MeshVertex vt[] = pv;
@@ -1180,21 +1188,15 @@ public class PolyMeshViewer extends MeshViewer {
 		boolean hideFace[] = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).hideFace
 				: new boolean[trueFaces.length]);
 		if (controller.getSelectionMode() == MeshEditController.POINT_MODE) {
-			// System.out.println( screenVert.length + " / " +
-			// invVertTable.length);
-			int loop = screenVert.length;
-			boolean found = false;
-			int edge, start, face;
-			boolean visibleVert;
-			for (i = 0; i < loop; i++) {
-//				if (mirror)
-//					ref = invVertTable[i];
-//				else
+			for (i = 0; i < screenVert.length; i++) {
+				if (mirror)
+					ref = invVertTable[i];
+				else
 					ref = i;
 				if (!isVertexVisible(ref)) {
 					continue;
 				}
-				if (!visible[ref])
+				if (!visible[i])
 					continue;
 				if (sel && !selected[ref])
 					continue;
@@ -1212,12 +1214,10 @@ public class PolyMeshViewer extends MeshViewer {
 					which = ref;
 					closestz = z;
 					sel = selected[ref];
-					found = true;
 				} else if (distance == maxDistance && z < closestz) {
 					which = ref;
 					closestz = z;
 					sel = selected[ref];
-					found = true;
 				}
 			}
 		} else if (controller.getSelectionMode() == MeshEditController.EDGE_MODE) {
@@ -1229,20 +1229,17 @@ public class PolyMeshViewer extends MeshViewer {
 			if (projectedEdge != null)
 				loop = submesh.getEdges().length / 2;
 			int vv1, vv2;// orv1, orv2;
-			boolean visibleEdge;
 			for (i = 0; i < loop; i++) {
 				int orig;
 				vv1 = vv2 = 0;
 				if (projectedEdge == null) {
 					if (mirror) {
 						ref = invEdgeTable[i];
-						vv1 = ed[i].vertex;
-						vv2 = ed[ed[i].hedge].vertex;
 					} else {
 						ref = i;
-						vv1 = ed[i].vertex;
-						vv2 = ed[ed[i].hedge].vertex;
 					}
+					vv1 = ed[i].vertex;
+					vv2 = ed[ed[i].hedge].vertex;
 					if (!visible[vv1] || !visible[vv2])
 						continue;
 					if (!isEdgeVisible(ref)) {
@@ -1399,17 +1396,16 @@ public class PolyMeshViewer extends MeshViewer {
 	}
 
 	protected void keyPressed(KeyPressedEvent e) {
-		Iterator iter = manipulators.iterator();
-		while (iter.hasNext()) {
-			if (((Manipulator) iter.next()).keyPressed(e))
+		for (int i = 0; i < manipulatorArray.length; i++) {
+			if (manipulatorArray[i].keyPressed(e)) {
 				return;
+			}
 		}
 	}
 
 	public void setPerspective(boolean perspective) {
-		Iterator iter = manipulators.iterator();
-		while (iter.hasNext()) {
-			((Manipulator) iter.next()).setPerspective(perspective);
+		for (int i = 0; i < manipulatorArray.length; i++) {
+			manipulatorArray[i].setPerspective(perspective);
 		}
 		super.setPerspective(perspective);
 	}

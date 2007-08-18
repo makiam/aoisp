@@ -507,7 +507,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		meshRGBColor = ColorToRGB(meshColor);
 		selectedFaceRGBColor = ColorToRGB(selectedFaceColor);
 		handleSize = preferences.getInt("handleSize", 3);
-		useCustomColors = preferences.getBoolean("useCustomColors", false);
+		String useCustom = preferences.get("useCustomColors", "true");
+		useCustomColors = Boolean.parseBoolean(useCustom);
 	}
 	
 	/**
@@ -542,7 +543,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		preferences.putInt("selectedFaceColor_green", 102);
 		preferences.putInt("selectedFaceColor_blue", 255);
 		preferences.putInt("handleSize", 3);
-		preferences.putBoolean("useCustomColors", false);
+		preferences.put("useCustomColors", "false");
 		loadFromDisplayPropertiesPreferences();
 	}
 	
@@ -576,7 +577,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		preferences.putInt("selectedFaceColor_green", selectedFaceColor.getGreen());
 		preferences.putInt("selectedFaceColor_blue", selectedFaceColor.getBlue());
 		preferences.putInt("handleSize", handleSize);
-		preferences.putBoolean("useCutomColors", useCustomColors);
+		preferences.put("useCustomColors", Boolean.toString(useCustomColors));
 	}
 
 	/**
@@ -5388,14 +5389,16 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *         strip could be found
 	 */
 
-	private boolean[] findSingleEdgeStrip(int startEdge) {
+	private boolean[] findSingleEdgeStrip(int startEdge, int every) {
 		boolean[] sel = new boolean[edges.length];
 		int next = edges[edges[edges[startEdge].next].next].hedge;
 		sel[next] = true;
 		int count = 1;
 		while (next != startEdge && count < edges.length / 2) {
 			next = edges[edges[edges[next].next].next].hedge;
-			sel[next] = true;
+			if (count % every == 0) {
+				sel[next] = true;
+			}
 			++count;
 		}
 		if (count < edges.length / 2)
@@ -5413,17 +5416,17 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 	 *         strip could be found for one or more edges
 	 */
 
-	public boolean[] findEdgeStrips(boolean selection[]) {
+	public boolean[] findEdgeStrips(boolean selection[], int every) {
 		boolean newSel[] = new boolean[selection.length];
 		if (mirrorState != NO_MIRROR) {
 			getMirroredMesh();
 			boolean[] mirrorSel = getMirroredSelection(mirroredMesh, selection);
-			boolean[] newMirrorSel = mirroredMesh.findEdgeStrips(mirrorSel);
+			boolean[] newMirrorSel = mirroredMesh.findEdgeStrips(mirrorSel, every);
 			newSel = getSelectionFromMirror(mirroredMesh, newMirrorSel);
 		} else {
 			for (int i = 0; i < selection.length; i++)
 				if (selection[i]) {
-					boolean loop[] = findSingleEdgeStrip(i);
+					boolean loop[] = findSingleEdgeStrip(i, every);
 					if (loop != null)
 						for (int j = 0; j < loop.length / 2; j++) {
 							newSel[j] |= loop[j];
@@ -5703,10 +5706,10 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			//time = new Date().getTime();
 			if (maxNs > 1) {
 				qmesh.smoothMesh(tol, calcProjectedEdges, 1, pe, maxNs);
-				projectedEdges = qmesh.getProjectedEdges();
-			} else {
-				qmesh.setProjectedEdges(smoothedMesh.getProjectedEdges());
+			} else  {
+				qmesh.setProjectedEdges(pe);
 			}
+			projectedEdges = qmesh.getProjectedEdges();
 			//System.out.println("quad smoothing : " + String.valueOf((new Date().getTime() - time)*1.0/1000.0));
 			return qmesh;
 		}
@@ -10685,7 +10688,6 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 		mirroredEdges = mesh.mirroredEdges;
 		mirroredFaces = mesh.mirroredFaces;
 		invMirroredVerts = mesh.invMirroredVerts;
-		// System.out.println( invMirroredVerts );
 		invMirroredEdges = mesh.invMirroredEdges;
 		invMirroredFaces = mesh.invMirroredFaces;
 		mirroredMesh = mesh;

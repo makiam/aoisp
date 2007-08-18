@@ -332,6 +332,10 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	private boolean unseenValueWidgetDialog;
 
+	private BMenuItem[] ringMenuItem;
+
+	private BMenuItem[] popupRingMenuItem;
+
 	/**
 	 * Constructor for the PolyMeshEditorWindow object
 	 * 
@@ -743,13 +747,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		edgeMenu.add(edgeMenuItem[0] = Translate.menu("polymesh:divide"));
 		divideMenuItem = new BMenuItem[5];
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[0] = Translate.menuItem(
-				"polymesh:2", this, "doDivideEdges"));
+				"polymesh:two", this, "doDivideEdges"));
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[1] = Translate.menuItem(
-				"polymesh:3", this, "doDivideEdges"));
+				"polymesh:three", this, "doDivideEdges"));
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[2] = Translate.menuItem(
-				"polymesh:4", this, "doDivideEdges"));
+				"polymesh:four", this, "doDivideEdges"));
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[3] = Translate.menuItem(
-				"polymesh:5", this, "doDivideEdges"));
+				"polymesh:five", this, "doDivideEdges"));
 		((BMenu) edgeMenuItem[0]).add(divideMenuItem[4] = Translate.menuItem(
 				"polymesh:specify", this, "doDivideEdges"));
 		edgeMenu.add(edgeMenuItem[1] = Translate.menu("polymesh:moveAlong"));
@@ -794,8 +798,20 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		edgeMenu.addSeparator();
 		edgeMenu.add(edgeMenuItem[7] = Translate.menuItem("polymesh:selectLoop", this,
 				"doSelectLoop"));
-		edgeMenu.add(edgeMenuItem[8] = Translate.menuItem("polymesh:selectRing", this,
-				"doSelectRing"));
+		edgeMenu.add(edgeMenuItem[8] = Translate.menu("polymesh:selectRing"));
+		ringMenuItem = new BMenuItem[6];
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[0] = Translate.menuItem(
+				"polymesh:all", this, "doSelectRing"));
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[1] = Translate.menuItem(
+				"polymesh:two", this, "doSelectRing"));
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[2] = Translate.menuItem(
+				"polymesh:three", this, "doSelectRing"));
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[3] = Translate.menuItem(
+				"polymesh:four", this, "doSelectRing"));
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[4] = Translate.menuItem(
+				"polymesh:five", this, "doSelectRing"));
+		((BMenu) edgeMenuItem[8]).add(ringMenuItem[5] = Translate.menuItem(
+				"polymesh:specify", this, "doSelectRing"));
 		edgeMenu.add(edgeMenuItem[9] = Translate.menuItem("polymesh:insertLoops",
 				this, "doInsertLoops"));
 		edgeMenu.add(edgeMenuItem[10] = Translate.menuItem("polymesh:selectBoundary",
@@ -831,13 +847,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		edgePopupMenu.add(edgePopupMenuItem[0] = Translate.menu("polymesh:divide"));
 		popupDivideMenuItem = new BMenuItem[5];
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[0] = Translate
-				.menuItem("polymesh:2", this, "doDivideEdges"));
+				.menuItem("polymesh:two", this, "doDivideEdges"));
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[1] = Translate
-				.menuItem("polymesh:3", this, "doDivideEdges"));
+				.menuItem("polymesh:three", this, "doDivideEdges"));
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[2] = Translate
-				.menuItem("polymesh:4", this, "doDivideEdges"));
+				.menuItem("polymesh:four", this, "doDivideEdges"));
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[3] = Translate
-				.menuItem("polymesh:5", this, "doDivideEdges"));
+				.menuItem("polymesh:five", this, "doDivideEdges"));
 		((BMenu) edgePopupMenuItem[0]).add(popupDivideMenuItem[4] = Translate
 				.menuItem("polymesh:specify", this, "doDivideEdges"));
 		edgePopupMenu.add(edgePopupMenuItem[1] = Translate.menu("polymesh:moveAlong"));
@@ -886,11 +902,24 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				this, "doMergeEdges"));
 		edgePopupMenu.add(edgePopupMenuItem[6] = Translate.menuItem("polymesh:bevel",
 				this, "doBevelEdges"));
+		
 		edgePopupMenu.addSeparator();
 		edgePopupMenu.add(edgePopupMenuItem[7] = Translate.menuItem(
 				"polymesh:selectLoop", this, "doSelectLoop"));
-		edgePopupMenu.add(edgePopupMenuItem[8] = Translate.menuItem(
-				"polymesh:selectRing", this, "doSelectRing"));
+		edgePopupMenu.add(edgePopupMenuItem[8] = Translate.menu("polymesh:selectRing"));
+		popupRingMenuItem = new BMenuItem[6];
+		((BMenu) edgePopupMenuItem[8]).add(ringMenuItem[0] = Translate.menuItem(
+				"polymesh:all", this, "doSelectRing"));
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[1] = Translate.menuItem(
+				"polymesh:two", this, "doSelectRing"));
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[2] = Translate.menuItem(
+				"polymesh:three", this, "doSelectRing"));
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[3] = Translate.menuItem(
+				"polymesh:four", this, "doSelectRing"));
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[4] = Translate.menuItem(
+				"polymesh:five", this, "doSelectRing"));
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[5] = Translate.menuItem(
+				"polymesh:specify", this, "doSelectRing"));
 		edgePopupMenu.add(edgePopupMenuItem[9] = Translate.menuItem(
 				"polymesh:insertLoops", this, "doInsertLoops"));
 		edgePopupMenu.add(edgePopupMenuItem[10] = Translate.menuItem(
@@ -1359,9 +1388,32 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	/**
 	 * Selects edge rings from current selection
 	 */
-	public void doSelectRing() {
+	public void doSelectRing(CommandEvent ev) {
+		
 		PolyMesh mesh = (PolyMesh) objInfo.object;
-		boolean[] ring = mesh.findEdgeStrips(selected);
+		boolean[] ring = null;
+		if (ev.getWidget() == ringMenuItem[0]
+				|| ev.getWidget() == popupRingMenuItem[0]) {
+			ring = mesh.findEdgeStrips(selected, 1);
+		} else if (ev.getWidget() == ringMenuItem[1]
+				|| ev.getWidget() == popupRingMenuItem[1]) {
+			ring = mesh.findEdgeStrips(selected, 2);
+		} else if (ev.getWidget() == ringMenuItem[2]
+				|| ev.getWidget() == popupRingMenuItem[2]) {
+			ring = mesh.findEdgeStrips(selected, 3);
+		} else if (ev.getWidget() == ringMenuItem[3]
+				|| ev.getWidget() == popupRingMenuItem[3]) {
+			ring = mesh.findEdgeStrips(selected, 4);
+		} else if (ev.getWidget() == ringMenuItem[4]
+				|| ev.getWidget() == popupRingMenuItem[4]) {
+			ring = mesh.findEdgeStrips(selected, 5);
+		} else if (ev.getWidget() == ringMenuItem[5]
+				|| ev.getWidget() == popupRingMenuItem[5]) {
+			DivideDialog dlg = new DivideDialog();
+			int num = dlg.getNumber();
+			if (num > 0)
+				ring = mesh.findEdgeStrips(selected, num);
+		}
 		if (ring != null)
 			setSelection(ring);
 	}

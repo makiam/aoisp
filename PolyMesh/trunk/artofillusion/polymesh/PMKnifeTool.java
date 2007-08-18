@@ -154,8 +154,8 @@ public class PMKnifeTool extends EditingTool
         }
         mesh.copyObject( originalMesh );
         boolean[] sel = mesh.divideEdges(fraction);
-        controller.objectChanged();
         mesh.connectVertices( sel );
+        controller.objectChanged();
         for (int i = 0; i < vertSelection.length; ++i)
             sel[i] |= vertSelection[i];
         controller.setSelection( sel );
