@@ -46,7 +46,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
     {
         if (! manip3dHashMap.containsKey(view))
         {
-            PolymeshValueWidget valueWidget = null;
+            PolyMeshValueWidget valueWidget = null;
             if (controller instanceof PolyMeshEditorWindow)
                 valueWidget = ((PolyMeshEditorWindow)controller).getValueWidget();
             Manipulator manip3d = new SSMR3DManipulator(this, view, valueWidget);

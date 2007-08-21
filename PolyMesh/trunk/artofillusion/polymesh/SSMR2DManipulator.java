@@ -65,7 +65,7 @@ extends SSMRManipulator
 
     short state;
 
-    public SSMR2DManipulator(AdvancedEditingTool tool, ViewerCanvas view, PolymeshValueWidget valueWidget)
+    public SSMR2DManipulator(AdvancedEditingTool tool, ViewerCanvas view, PolyMeshValueWidget valueWidget)
     {
         super(tool, view, valueWidget);
         MARGIN = HANDLE_SIZE;
@@ -853,12 +853,12 @@ extends SSMRManipulator
                     if (state == ROTATE)
                     {
                         valueWidget.setTempValueRange(-180, 180);
-                        valueWidget.activate( valueWidgetCallback, validateWidgetValue, abortWidgetValue);
+                        valueWidget.activate( valueWidgetCallback);
                     }
                     else
                     {
                         valueWidget.setTempValueRange(0, valueWidget.getValueMax());
-                        valueWidget.activate( 1.0, valueWidgetCallback, validateWidgetValue, abortWidgetValue);
+                        valueWidget.activate( 1.0, valueWidgetCallback);
                     }
                     dragging = false;
                     return true;

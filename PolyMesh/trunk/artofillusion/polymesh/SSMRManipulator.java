@@ -25,7 +25,7 @@ public abstract class SSMRManipulator extends Manipulator
     public final static short ANCHOR_BOTTOM = 3;
     public final static short ANCHOR_CENTER = 4;
 
-    public SSMRManipulator(AdvancedEditingTool tool, ViewerCanvas view, PolymeshValueWidget valueWidget)
+    public SSMRManipulator(AdvancedEditingTool tool, ViewerCanvas view, PolyMeshValueWidget valueWidget)
     {
         super(tool, view, valueWidget);
     }

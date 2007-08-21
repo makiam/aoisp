@@ -65,6 +65,7 @@ import artofillusion.object.TriangleMesh;
 import artofillusion.polymesh.PolyMesh.Wedge;
 import artofillusion.polymesh.PolyMesh.Wface;
 import artofillusion.polymesh.PolyMesh.Wvertex;
+import artofillusion.polymesh.PolyMeshValueWidget.ValueWidgetOwner;
 import artofillusion.polymesh.ui.ColorButton;
 import artofillusion.texture.FaceParameterValue;
 
@@ -124,7 +125,7 @@ import buoy.xml.WidgetDecoder;
  */
 
 public class PolyMeshEditorWindow extends MeshEditorWindow implements
-		EditingWindow, PopupMenuManager {
+		EditingWindow, PopupMenuManager, ValueWidgetOwner {
 	private Scene scene;
 
 	private ToolPalette modes;
@@ -251,7 +252,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	private BButton okButton;
 
-	private PolymeshValueWidget valueWidget;
+	private PolyMeshValueWidget valueWidget;
 	
 	private BDialog valueWidgetDialog;
 
@@ -363,7 +364,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		FormContainer content = new FormContainer(new double[] { 0, 1, 0 },
 				new double[] { 1, 0, 0, 0 });
 		setContent(content);
-		valueWidget = new PolymeshValueWidget();
+		valueWidget = new PolyMeshValueWidget(this);
 		valueWidgetDialog = new BDialog(this,  "choose value", true);
 		valueWidgetDialog.setContent(valueWidget);
 		valueWidgetDialog.pack();
@@ -986,7 +987,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		((BMenu) faceMenuItem[2]).add(extrudeRegionItem[2] = Translate
 				.menuItem("polymesh:yExtrude", this, "doExtrudeRegion"));
 		((BMenu) faceMenuItem[2]).add(extrudeRegionItem[3] = Translate
-				.menuItem("polymesh:rude", this, "doExtrudeRegion"));
+				.menuItem("polymesh:zExtrude", this, "doExtrudeRegion"));
 		faceMenu.addSeparator();
 		faceMenu.add(faceMenuItem[3] = Translate.menuItem("polymesh:smoothFaces",
 				this, "doSmoothFaces"));
@@ -2378,17 +2379,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		if (valueWidget.isActivated())
 			return;
 		moveDirection = direction;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doMoveCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doMoveCallback();
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2421,17 +2418,12 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doBevelEdges() {
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 			public void run() {
 				doBevelEdgesCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doBevelEdgesCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2452,18 +2444,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doBevelVertices() {
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doBevelVerticesCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doBevelVerticesCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2481,10 +2468,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	/**
 	 * Validate button selected
 	 */
-	private void doValueWidgetValidate() {
+	public void doValueWidgetValidate() {
 		valueWidgetDialog.setVisible(false);
 		PolyMesh mesh = (PolyMesh) objInfo.object;
-		enableNormalFunction();
 		setUndoRecord(new UndoRecord(this, false, UndoRecord.COPY_OBJECT,
 				new Object[] { mesh, priorValueMesh }));
 	}
@@ -2492,22 +2478,21 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	/**
 	 * Cancel button selected
 	 */
-	private void doValueWidgetAbort() {
+	public void doValueWidgetAbort() {
 		valueWidgetDialog.setVisible(false);
-		enableNormalFunction();
 		setMesh(priorValueMesh);
 		PolyMesh valueMesh = null;
 		priorValueMesh = null;
 		setSelection(valueSelection);
 		updateImage();
 	}
-	
-	public void doActivateValueWidget(Runnable runCallback, Runnable validateCallback, Runnable abortCallback) {
-		doActivateValueWidget( 0.0, runCallback, validateCallback, abortCallback );
-    }
 
+	public void prepareToShowValueWidget() {
+		priorValueMesh = (PolyMesh)((PolyMesh) objInfo.object).duplicate();
+		valueSelection = selected;
+	}
 	
-	private void doActivateValueWidget( double val, Runnable runCallback, Runnable validateCallback, Runnable abortCallback) {
+	public void showValueWidget() {
 		if (unseenValueWidgetDialog) {
 			Window main = (Window) this.getComponent();
 			Window dlg = (Window) valueWidgetDialog.getComponent();
@@ -2523,9 +2508,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			dlg.setLocation(dp);
 			unseenValueWidgetDialog = false;
 		}
-		valueWidget.activate(val, runCallback, validateCallback,
-				abortCallback);
 		valueWidgetDialog.setVisible(true);
+	}
+	
+	public void hideValueWidget() {
+		valueWidgetDialog.setVisible(false);
 	}
 
 	/**
@@ -2547,18 +2534,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			direction = Vec3.vy();
 		else if (w == extrudeItem[3] || w == popupExtrudeItem[3])
 			direction = Vec3.vz();
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doExtrudeCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doExtrudeCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2580,18 +2562,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			direction = Vec3.vy();
 		else if (w == extrudeEdgeItem[3] || w == popupExtrudeEdgeItem[3])
 			direction = Vec3.vz();
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doExtrudeEdgeCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doExtrudeEdgeCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2613,18 +2590,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			direction = Vec3.vy();
 		else if (w == extrudeRegionItem[3] || w == popupExtrudeRegionItem[3])
 			direction = Vec3.vz();
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doExtrudeRegionCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doExtrudeRegionCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2649,18 +2621,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		else if (w == extrudeEdgeRegionItem[3]
 				|| w == popupExtrudeEdgeRegionItem[3])
 			direction = Vec3.vz();
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doExtrudeEdgeRegionCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doExtrudeEdgeRegionCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2704,18 +2671,13 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			thickenFaces = true;
 		else
 			thickenFaces = false;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
 				doThickenMeshCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doThickenMeshCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2767,9 +2729,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		// doSelectRing();
-		valueSelection = selected;
 		Runnable callback = new Runnable() {
 
 			public void run() {
@@ -2777,11 +2736,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			}
 		};
 		valueWidget.setTempValueRange(0, 1.0);
-		doActivateValueWidget(0.5, callback, validateWidgetValue,
-				abortWidgetValue);
-		disableNormalFunction();
-		doInsertLoopsCallback();
-
+		valueWidget.activate(0.5, callback);
 	}
 
 	/**
@@ -2809,8 +2764,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			return;
 		Vec3 origin;
 		double radius;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		MeshVertex[] vert = priorValueMesh.getVertices();
 		Vec3[] normals = priorValueMesh.getNormals();
 		int count = 0;
@@ -2847,11 +2800,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				doBringCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		;
-		disableNormalFunction();
-		doBringCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -2891,8 +2840,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		MeshVertex[] vert = priorValueMesh.getVertices();
 		Vec3[] normals = priorValueMesh.getNormals();
 		int count = 0;
@@ -2988,11 +2935,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				doBringCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		;
-		disableNormalFunction();
-		doBringCallback();
-
+		valueWidget.activate(callback);
 	}
 
 	/**
@@ -3024,8 +2967,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			return;
 		Vec3 origin;
 		double radius;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		MeshVertex[] vert = priorValueMesh.getVertices();
 		Vec3[] normals = priorValueMesh.getNormals();
 		Vec3 norm = new Vec3();
@@ -3063,42 +3004,38 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				doBringCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		;
-		disableNormalFunction();
-		doBringCallback();
-
+		valueWidget.activate(callback);
 	}
 
-	/**
-	 * Description of the Method
-	 */
-	private void enableNormalFunction() {
-//		editMenu.setEnabled(true);
-//		vertexMenu.setEnabled(true);
-//		vertexPopupMenu.setEnabled(true);
-//		edgeMenu.setEnabled(true);
-//		faceMenu.setEnabled(true);
-//		skeletonMenu.setEnabled(true);
-//		okButton.setEnabled(true);
-//		tools.selectTool(defaultTool);
-//		activateTools();
-	}
-
-	/**
-	 * Description of the Method
-	 */
-	private void disableNormalFunction() {
-//		editMenu.setEnabled(false);
-//		vertexMenu.setEnabled(false);
-//		vertexPopupMenu.setEnabled(false);
-//		edgeMenu.setEnabled(false);
-//		faceMenu.setEnabled(false);
-//		skeletonMenu.setEnabled(false);
-//		okButton.setEnabled(false);
-//		tools.selectTool(altTool);
-//		deactivateTools();
-	}
+//	/**
+//	 * Description of the Method
+//	 */
+//	private void enableNormalFunction() {
+////		editMenu.setEnabled(true);
+////		vertexMenu.setEnabled(true);
+////		vertexPopupMenu.setEnabled(true);
+////		edgeMenu.setEnabled(true);
+////		faceMenu.setEnabled(true);
+////		skeletonMenu.setEnabled(true);
+////		okButton.setEnabled(true);
+////		tools.selectTool(defaultTool);
+////		activateTools();
+//	}
+//
+//	/**
+//	 * Description of the Method
+//	 */
+//	private void disableNormalFunction() {
+////		editMenu.setEnabled(false);
+////		vertexMenu.setEnabled(false);
+////		vertexPopupMenu.setEnabled(false);
+////		edgeMenu.setEnabled(false);
+////		faceMenu.setEnabled(false);
+////		skeletonMenu.setEnabled(false);
+////		okButton.setEnabled(false);
+////		tools.selectTool(altTool);
+////		deactivateTools();
+//	}
 
 	/**
 	 * Brings normal to current selection
@@ -4146,8 +4083,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	void scaleSelectionCommand() {
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		initSelPoints();
 		Runnable callback = new Runnable() {
 
@@ -4155,10 +4090,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				doScaleSelectionCallback();
 			}
 		};
-		doActivateValueWidget(1.0, callback, validateWidgetValue,
-				abortWidgetValue);
-		disableNormalFunction();
-		doScaleSelectionCallback();
+		valueWidget.activate(1.0, callback);
 	}
 
 	/**
@@ -4167,8 +4099,6 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	void scaleNormalSelectionCommand() {
 		if (valueWidget.isActivated())
 			return;
-		priorValueMesh = (PolyMesh) objInfo.object;
-		valueSelection = selected;
 		initSelPoints();
 		Runnable callback = new Runnable() {
 
@@ -4176,9 +4106,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				doScaleNormalSelectionCallback();
 			}
 		};
-		doActivateValueWidget(callback, validateWidgetValue, abortWidgetValue);
-		disableNormalFunction();
-		doScaleNormalSelectionCallback();
+		valueWidget.activate(callback);
 	}
 
 	private void initSelPoints() {
@@ -4664,7 +4592,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 //		updateImage();
 //	}
 
-	public PolymeshValueWidget getValueWidget() {
+	public PolyMeshValueWidget getValueWidget() {
 		return valueWidget;
 	}
 

@@ -48,7 +48,7 @@ public class MeshStandardTool extends AdvancedEditingTool
     {
         if (! manip2dHashMap.containsKey(view))
         {
-            PolymeshValueWidget valueWidget = null;
+            PolyMeshValueWidget valueWidget = null;
             if (controller instanceof PolyMeshEditorWindow)
                 valueWidget = ((PolyMeshEditorWindow)controller).getValueWidget();
             Manipulator manip2d = new SSMR2DManipulator(this, view, valueWidget);

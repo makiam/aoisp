@@ -22,7 +22,7 @@ public abstract class Manipulator extends EventSource
     protected Rectangle bounds, originalBounds;
     protected AdvancedEditingTool.SelectionProperties selectionBounds;
     protected int MARGIN = 50;
-    protected PolymeshValueWidget valueWidget;
+    protected PolyMeshValueWidget valueWidget;
     protected ViewerCanvas view;
     protected boolean active;
     protected static boolean helpModeOn;
@@ -33,7 +33,7 @@ public abstract class Manipulator extends EventSource
      * @param view  The view in which the manipulators are displayed
      * @param valueWidget The value widget the manipualtors should use
      */
-    public Manipulator(AdvancedEditingTool tool, ViewerCanvas view, PolymeshValueWidget valueWidget)
+    public Manipulator(AdvancedEditingTool tool, ViewerCanvas view, PolyMeshValueWidget valueWidget)
     {
         this.tool = tool;
         this.valueWidget = valueWidget;
@@ -220,7 +220,7 @@ public abstract class Manipulator extends EventSource
      * Returns the value widget associated to the manipulator, if any
      * @return The value widget associated to the manipulator
      */
-    public PolymeshValueWidget getValueWidget()
+    public PolyMeshValueWidget getValueWidget()
     {
         return valueWidget;
     }
@@ -229,7 +229,7 @@ public abstract class Manipulator extends EventSource
      * Sets the value widget to use in conjunction with the manipulator
      * @param valueWidget
      */
-    public void setValueWidget(PolymeshValueWidget valueWidget)
+    public void setValueWidget(PolyMeshValueWidget valueWidget)
     {
         this.valueWidget = valueWidget;
     }

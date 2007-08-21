@@ -413,7 +413,7 @@ public class PolyMeshViewer extends MeshViewer {
 		Point divScreenVert[] = null;
 		double divScreenZ[] = null;
 		Vec2 divPos[] = null;
-		boolean hideFace[] = ((PolyMeshEditorWindow) controller).hideFace;
+		boolean hideFace[] = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).hideFace : null);
 		PolyMesh mesh = (PolyMesh) getController().getObject().object;
 		Color seamColor = mesh.getSeamColor();
 		Color selectedSeamColor = seamColor;

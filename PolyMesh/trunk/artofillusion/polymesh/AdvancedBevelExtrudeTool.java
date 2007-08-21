@@ -52,7 +52,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
     {
         if (! mouseDragManipHashMap.containsKey(view))
         {
-            PolymeshValueWidget valueWidget = null;
+            PolyMeshValueWidget valueWidget = null;
             Manipulator mouseDragManip = new MouseDragManipulator(this, view, AdvancedBevelExtrudeTool.bevelExtrudeFacesIcon);
             mouseDragManip.addEventLink(Manipulator.ManipulatorPrepareChangingEvent.class, this, "doManipulatorPrepareShapingMesh");
             mouseDragManip.addEventLink(Manipulator.ManipulatorCompletedEvent.class, this, "doManipulatorShapedMesh");

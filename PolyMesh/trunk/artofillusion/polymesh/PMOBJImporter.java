@@ -44,7 +44,7 @@ import buoy.widget.BStandardDialog;
 /**
  *  PMOBJImporter imports .OBJ files to Polymeshes.
  *
- *@author     pims
+ *@author     François Guillet
  *@created    13 juin 2005
  */
 
@@ -734,7 +734,7 @@ public class PMOBJImporter
     /**
      *  Inner class for storing information about a texture in a .mtl file.
      *
-     *@author     pims
+     *@author     François Guillet
      *@created    13 juin 2005
      */
 
