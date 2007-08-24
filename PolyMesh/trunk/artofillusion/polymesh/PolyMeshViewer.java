@@ -851,8 +851,9 @@ public class PolyMeshViewer extends MeshViewer {
 				pos = mesh.getFacePosition(i);
 				break;
 			}
-			if (e.isShiftDown())
+			if (e.isShiftDown()) {
 				deselect = i;
+			}
 			for (i = 0; i < manipulatorArray.length; i++) {
 				if (manipulatorArray[i].mousePressedOnHandle(e, j, pos)) {
 					return;
@@ -1078,7 +1079,7 @@ public class PolyMeshViewer extends MeshViewer {
 			if (activeTool instanceof AdvancedEditingTool) {
 				for (i = 0; i < manipulatorArray.length; i++) {
 					if (manipulatorArray[i].mouseReleased(e)) {
-						return;
+						break;
 					}
 				}
 			} else {
@@ -1090,7 +1091,6 @@ public class PolyMeshViewer extends MeshViewer {
 		// If the user shift-clicked a selected point and released the mouse
 		// without dragging,
 		// then deselect the point.
-
 		if (deselect > -1)
 			selected[deselect] = false;
 		for (int k = 0; k < selected.length; k++)

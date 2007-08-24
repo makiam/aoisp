@@ -812,6 +812,7 @@ public class UVMappingEditorDialog extends BDialog {
 			textureCB.setSelectedIndex(0);
 		}
 		updateState();
+		
 		pack();
 		pieceList.addEventLink(SelectionChangedEvent.class, this,
 				"doPieceListSelection");
