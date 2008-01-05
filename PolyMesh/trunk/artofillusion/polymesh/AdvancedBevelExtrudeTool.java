@@ -1,3 +1,13 @@
+/* Copyright (C) 2006-2007 by Francois Guillet
+
+ This program is free software; you can redistribute it and/or modify it under the
+ terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 2 of the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
+ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+ PARTICULAR PURPOSE.  See the GNU General Public License for more details. */
+
 package artofillusion.polymesh;
 
 import java.util.HashMap;
@@ -113,8 +123,11 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
 
     private void doAbortChangingMesh()
     {
-        if (origMesh != null)
-            controller.setMesh(origMesh);
+        if (origMesh != null) {
+        	PolyMesh mesh = (PolyMesh) controller.getObject().object;
+        	mesh.copyObject(origMesh);
+        	controller.objectChanged();
+        }
         origMesh = null;
         baseVertPos = null;
         theWindow.setHelpText(Translate.text("polymesh:advancedBevelExtrudeTool.helpText"));
@@ -163,27 +176,27 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
 
         if ( selectMode == PolyMeshEditorWindow.POINT_MODE )
         {
-            mesh = (PolyMesh)origMesh.duplicate();
+            mesh.copyObject(origMesh);
             boolean[] sel = mesh.bevelVertices( selected, drag.y );
             theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
-            controller.setMesh( mesh );
+            controller.objectChanged();
             controller.setSelection( sel );
         }
         else if ( selectMode == PolyMeshEditorWindow.EDGE_MODE )
         {
-            mesh = (PolyMesh)origMesh.duplicate();
+            mesh.copyObject(origMesh);
             boolean[] sel = mesh.bevelEdges( selected, drag.y );
             theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.pointEdgeDragText", new Double( drag.y ) ) );
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
-            controller.setMesh( mesh );
+            controller.objectChanged();
             controller.setSelection( sel );
         }
         else
         {
-            mesh = (PolyMesh)origMesh.duplicate();
+        	mesh.copyObject(origMesh);
             if ( mode == EXTRUDE_FACES )
                 mesh.extrudeRegion( selected, drag.y, (Vec3) null, Math.abs( 1.0 - drag.x ), camZ, ctrlMod, shiftMod  );
             else
@@ -192,7 +205,7 @@ public class AdvancedBevelExtrudeTool extends AdvancedEditingTool
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
             theWindow.setHelpText( Translate.text( "polymesh:advancedBevelExtrudeTool.faceDragText", new Double( 1.0 - drag.x ), new Double( drag.y ) ) );
-            controller.setMesh( mesh );
+            controller.objectChanged();
             controller.setSelection( sel );
         }
         controller.objectChanged();

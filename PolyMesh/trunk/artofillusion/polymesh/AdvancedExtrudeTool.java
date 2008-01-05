@@ -1,3 +1,13 @@
+/* Copyright (C) 2006-2007 by Francois Guillet
+
+ This program is free software; you can redistribute it and/or modify it under the
+ terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 2 of the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
+ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
+ PARTICULAR PURPOSE.  See the GNU General Public License for more details. */
+
 package artofillusion.polymesh;
 
 import java.awt.Image;
@@ -114,7 +124,11 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
     private void doAbortChangingMesh()
     {
         if (origMesh != null)
-            controller.setMesh(origMesh);
+        {
+        	PolyMesh mesh = (PolyMesh) controller.getObject().object;
+        	mesh.copyObject(origMesh);
+        	controller.objectChanged();
+        }
         origMesh = null;
         baseVertPos = null;
         theWindow.setHelpText(Translate.text("polymesh:advancedExtrudeTool.helpText"));
@@ -165,7 +179,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
         {
             double value = drag.length();
             drag.normalize();
-            mesh = (PolyMesh)origMesh.duplicate();
+            mesh.copyObject(origMesh);
             if ( mode == EXTRUDE_FACES )
                 mesh.extrudeFaces( selected, value, drag );
             else if (mode == EXTRUDE_FACE_GROUPS)
@@ -174,7 +188,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
                 mesh.extrudeEdges( selected, value, drag );
             else if (mode == EXTRUDE_EDGE_GROUPS)
                 mesh.extrudeEdgeRegion( selected, value, drag );
-            undo = new UndoRecord(theWindow, false, UndoRecord.COPY_OBJECT, new Object [] {mesh, origMesh});
+            //undo = new UndoRecord(theWindow, false, UndoRecord.COPY_OBJECT, new Object [] {mesh, origMesh});
             boolean[] sel = null;
             if (mode == EXTRUDE_FACES || mode == EXTRUDE_FACE_GROUPS)
                 sel = new boolean[mesh.getFaces().length];
@@ -182,7 +196,7 @@ public class AdvancedExtrudeTool extends AdvancedEditingTool
                 sel = new boolean[mesh.getEdges().length/2];
             for ( int i = 0; i < selected.length; ++i )
                 sel[i] = selected[i];
-            controller.setMesh( mesh );
+            controller.objectChanged();
             controller.setSelection( sel );
         }
         else

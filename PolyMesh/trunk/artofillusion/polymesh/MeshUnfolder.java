@@ -145,8 +145,8 @@ public class MeshUnfolder {
 	}
 	
 	public boolean unfold(BTextArea textArea, double res) {
-		return unfoldAbf(textArea, res);
-		//return unfoldLinearAbf(textArea);
+		//return unfoldAbf(textArea, res);
+		return unfoldLinearAbf(textArea);
 	}
 
 	/**
@@ -565,17 +565,9 @@ public class MeshUnfolder {
 		}
 		return true;
 	}
-
-	/**
-	 * Unfolds the mesh using the ABF++ algorithm
-	 * 
-	 * @param res
-	 *                The residual to reach
-	 * @param textArea
-	 *                The text area to print results to
-	 * 
-	 */
+	
 	public boolean unfoldLinearAbf(BTextArea textArea) {
+		textArea.append("Unfolding mesh...\n");
 		// dump mesh;
 		TriangleMesh.Edge[] edges = trimesh.getEdges();
 		int nedges = edges.length;
@@ -583,219 +575,147 @@ public class MeshUnfolder {
 		QMR qmr = null;
 		
 		totaltime = new Date().getTime();
-//		nangles = 3 * ntri;
-//		TriangleMesh.Vertex[] vertices = (Vertex[]) trimesh.getVertices();
-//		TriangleMesh.Face[] faces = trimesh.getFaces();
-//		angles = new double[nangles];
-//		Vec3 v1, v2, v3;
-//		for (int i = 0; i < ntri; i++) {
-//			v1 = vertices[faces[i].v3].r.minus(vertices[faces[i].v1].r);
-//			v2 = vertices[faces[i].v2].r.minus(vertices[faces[i].v1].r);
-//			v3 = vertices[faces[i].v3].r.minus(vertices[faces[i].v2].r);
-//			v1.normalize();
-//			v2.normalize();
-//			v3.normalize();
-//			angles[i * 3] = Math.acos(v1.dot(v2));
-//			angles[i * 3 + 1] = Math.acos(-v2.dot(v3));
-//			angles[i * 3 + 2] = Math.acos(v1.dot(v3));
-//		}
-//		// setup interior vertices table
-//		invInteriorTable = new int[vertices.length];
-//		Vector interiorVerticesTable = new Vector();
-//		int count = 0;
-//		for (int i = 0; i < vertices.length; i++) {
-//			if (edges[vertices[i].firstEdge].f1 != -1
-//					&& edges[vertices[i].firstEdge].f2 != -1) {
-//				// not a boundary edge
-//				interiorVerticesTable.add(new Integer(i));
-//				invInteriorTable[i] = count++;
-//			} else
-//				invInteriorTable[i] = -1;
-//		}
-//		nint = interiorVerticesTable.size();
-//		interiorVertices = new int[nint];
-//		for (int i = 0; i < nint; i++) {
-//			interiorVertices[i] = ((Integer) interiorVerticesTable.get(i))
-//					.intValue();
-//		}
-//		interiorVerticesTable = null;
-//		angleTable = new int[nint][];
-//		angleMTable = new int[nint][];
-//		anglePTable = new int[nint][];
-//		for (int i = 0; i < nint; i++) {
-//			int v = interiorVertices[i];
-//			int[] ed = vertices[v].getEdges();
-//			angleTable[i] = new int[ed.length];
-//			angleMTable[i] = new int[ed.length];
-//			anglePTable[i] = new int[ed.length];
-//			// edges do not sequentially point to faces they delimit
-//			// so we need to find the faces looking at both sides
-//			// of an edge
-//			int[] tris = new int[ed.length];
-//			boolean add;
-//			int index = 0;
-//			int tri;
-//			for (int j = 0; ((j < ed.length) && (index < ed.length)); j++) {
-//				add = true;
-//				tri = edges[ed[j]].f1;
-//				for (int k = 0; k < ed.length; k++) {
-//					if (tris[k] == tri) {
-//						add = false;
-//						break;
-//					}
-//				}
-//				if (add)
-//					tris[index++] = tri;
-//				add = true;
-//				tri = edges[ed[j]].f2;
-//				for (int k = 0; k < ed.length; k++) {
-//					if (tris[k] == tri) {
-//						add = false;
-//						break;
-//					}
-//				}
-//				if (add)
-//					tris[index++] = tri;
-//			}
-//			// now setup angles at interior vertices
-//			// and plus and minus angles as defined in ABF++ paper
-//			for (int j = 0; j < ed.length; j++) {
-//				tri = tris[j];
-//				if (v == faces[tri].v1) {
-//					angleTable[i][j] = 3 * tri + 0;
-//					anglePTable[i][j] = 3 * tri + 1;
-//					angleMTable[i][j] = 3 * tri + 2;
-//				} else if (v == faces[tri].v2) {
-//					angleTable[i][j] = 3 * tri + 1;
-//					anglePTable[i][j] = 3 * tri + 2;
-//					angleMTable[i][j] = 3 * tri + 0;
-//				} else if (v == faces[tri].v3) {
-//					angleTable[i][j] = 3 * tri + 2;
-//					anglePTable[i][j] = 3 * tri + 0;
-//					angleMTable[i][j] = 3 * tri + 1;
-//				} else {
-//					System.out
-//							.println("pb setting angle tables: vertex not in face");
-//				}
-//			}
-//		}
-//		var = new double[3 * ntri];
-//		for (int i = 0; i < nangles; i++) {
-//			var[i] = angles[i]; // start from current angle values
-//		}
-//		double anglesum;
-//		for (int i = 0; i < nint; i++) {
-//			anglesum = 0;
-//			for (int j = 0; j < angleTable[i].length; j++) {
-//				anglesum += angles[angleTable[i][j]];
-//			}
-//			if (anglesum > 0)
-//				for (int j = 0; j < angleTable[i].length; j++) {
-//					var[angleTable[i][j]] *= 2 * Math.PI / anglesum;
-//				}
-//		}
-		initializeLinearABF();
-		totaltime = new Date().getTime() - totaltime;
-		textArea.append("Initialize: "
-				+ Math.round(totaltime / 1000.0) + "s\n\n");
-		totaltime = new Date().getTime();
-		//set up matrix and constraints
-		//triangle consistency
-		FlexCompRowMatrix matrix = new FlexCompRowMatrix(ntri + 2*nint, 3*ntri);
-		FlexCompRowMatrix matTmat  = new FlexCompRowMatrix( ntri + 2*nint, ntri + 2*nint);
-		constraints = new double[ntri + 2 * nint];
+		TriangleMesh.Vertex[] vertices = (Vertex[]) trimesh.getVertices();
+		TriangleMesh.Face[] faces = trimesh.getFaces();
+		ntri = faces.length;
+		nangles = 3 * ntri;
+		angles = new double[nangles];
+		Vec3 v1r, v2r, v3r;
 		for (int i = 0; i < ntri; i++) {
-			constraints[i] = -Math.PI;
-			for (int j = 0; j < 3; j++) {
-				matrix.add(i, 3*i+j, angles[3*i+j]);
-				var[3*i+j] = (var[3*i+j]-angles[3*i+j])/angles[3*i+j];
-				//var[3*i+j] = 0;
-				constraints[i] += angles[3*i+j];
-			}
+			v1r = vertices[faces[i].v3].r.minus(vertices[faces[i].v1].r);
+			v2r = vertices[faces[i].v2].r.minus(vertices[faces[i].v1].r);
+			v3r = vertices[faces[i].v3].r.minus(vertices[faces[i].v2].r);
+			v1r.normalize();
+			v2r.normalize();
+			v3r.normalize();
+			angles[i * 3] = Math.acos(v1r.dot(v2r));
+			angles[i * 3 + 1] = Math.acos(-v2r.dot(v3r));
+			angles[i * 3 + 2] = Math.acos(v1r.dot(v3r));
 		}
-		//vertex  & length consistency
-		double sum;
+		// setup interior vertices table
+		invInteriorTable = new int[vertices.length];
+		Vector interiorVerticesTable = new Vector();
+		int count = 0;
+		for (int i = 0; i < vertices.length; i++) {
+			if (edges[vertices[i].firstEdge].f1 != -1
+					&& edges[vertices[i].firstEdge].f2 != -1) {
+				// not a boundary edge
+				interiorVerticesTable.add(new Integer(i));
+				invInteriorTable[i] = count++;
+			} else
+				invInteriorTable[i] = -1;
+		}
+		nint = interiorVerticesTable.size();
+		interiorVertices = new int[nint];
 		for (int i = 0; i < nint; i++) {
-			constraints[i+ntri] = 2*Math.PI;
-			sum = 0;
-			for (int j = 0; j < angleTable[i].length; j++) {
-				matrix.add(i + ntri, angleTable[i][j], angles[angleTable[i][j]]);
-				constraints[i+ntri] -= angles[angleTable[i][j]];
-				matrix.add(i + nint + ntri, angleMTable[i][j], angles[angleMTable[i][j]]/(Math.tan(angles[angleMTable[i][j]])));
-				matrix.add(i + nint + ntri, anglePTable[i][j], -angles[anglePTable[i][j]]/(Math.tan(angles[anglePTable[i][j]])));
-				sum -= Math.log(Math.sin(angles[angleMTable[i][j]]));
-				sum += Math.log(Math.sin(angles[anglePTable[i][j]]));
-			}
-			constraints[ntri + nint + i] = sum;
+			interiorVertices[i] = ((Integer) interiorVerticesTable.get(i))
+					.intValue();
 		}
-		DenseVector cons = new DenseVector(constraints);
-		totaltime = new Date().getTime() - totaltime;
-		textArea.append("Matrix and constraints: "
-				+ Math.round(totaltime / 1000.0) + "s\n\n");
-		totaltime = new Date().getTime();
-		double tmpdbl = 0;
-		SparseVector matVecI, matVecJ;
-		boolean nonzero;
-		int[] ind, jnd;
-		double[] idata, jdata;
-		for (int i = 0; i < 2*nint + ntri; i++) {
-			for (int j = 0; j <= i; j++) {
-				tmpdbl = 0;
-				nonzero = false;
-				matVecI = matrix.getRow(i);
-				matVecJ = matrix.getRow(j);
-				tmpdbl = matVecI.dot(matVecJ);
-				if (Math.abs(tmpdbl) > 0.00001) {
-					matTmat.add(i,j,tmpdbl);
-					if (i != j)
-						matTmat.add(j,i,tmpdbl);
+		interiorVerticesTable = null;
+		angleTable = new int[nint][];
+		for (int i = 0; i < nint; i++) {
+			int v = interiorVertices[i];
+			int[] ed = vertices[v].getEdges();
+			angleTable[i] = new int[ed.length];
+			// edges do not sequentially point to faces they delimit
+			// so we need to find the faces looking at both sides
+			// of an edge
+			int[] tris = new int[ed.length];
+			boolean add;
+			int index = 0;
+			int tri;
+			for (int j = 0; ((j < ed.length) && (index < ed.length)); j++) {
+				add = true;
+				tri = edges[ed[j]].f1;
+				for (int k = 0; k < ed.length; k++) {
+					if (tris[k] == tri) {
+						add = false;
+						break;
+					}
 				}
-//				
-//				ind = matVecI.getIndex();
-//				idata = matVecI.getData();
-//				jnd = matVecJ.getIndex();
-//				jdata = matVecJ.getData();
-//				for (int k = 0; k < ind.length; k++) {
-//					for (int l = 0; l < jnd.length; l++) {
-//						if (ind[k] == jnd[l]) {
-//							tmpdbl += idata[k]*jdata[l];
-//							nonzero = true;
-//						}
-//					}
-//				}
-//				//tmpdbl = matVecI.dot(matVecJ);
-//				if (nonzero) {
-//					matTmat.add(i,j,tmpdbl);
-//					if (i != j)
-//						matTmat.add(j,i,tmpdbl);
-//				}
+				if (add)
+					tris[index++] = tri;
+				add = true;
+				tri = edges[ed[j]].f2;
+				for (int k = 0; k < ed.length; k++) {
+					if (tris[k] == tri) {
+						add = false;
+						break;
+					}
+				}
+				if (add)
+					tris[index++] = tri;
+			}
+			// now setup angles at interior vertices
+			// and plus and minus angles as defined in ABF++ paper
+			for (int j = 0; j < ed.length; j++) {
+				tri = tris[j];
+				if (v == faces[tri].v1) {
+					angleTable[i][j] = 3 * tri + 0;
+				} else if (v == faces[tri].v2) {
+					angleTable[i][j] = 3 * tri + 1;
+				} else if (v == faces[tri].v3) {
+					angleTable[i][j] = 3 * tri + 2;
+				} else {
+					System.out
+							.println("pb setting angle tables: vertex not in face");
+				}
 			}
 		}
-		totaltime = new Date().getTime() - totaltime;
-		textArea.append("matrix.MatrixT : "
-				+ Math.round(totaltime / 1000.0) + "s\n");
-		totaltime = new Date().getTime();
+		var = new double[nangles];
+		for (int i = 0; i < nangles; i++) {
+			var[i] = angles[i]; // start from current angle values
+		}
+		double anglesum;
+		for (int i = 0; i < nint; i++) {
+			anglesum = 0;
+			for (int j = 0; j < angleTable[i].length; j++) {
+				anglesum += angles[angleTable[i][j]];
+			}
+			if (anglesum > 0)
+				for (int j = 0; j < angleTable[i].length; j++) {
+					var[angleTable[i][j]] *= 2 * Math.PI / anglesum;
+				}
+		}
+		constraints = new double[ntri + 2 * nint];
+		//set up matrix and constraints
+		System.out.println(ntri+2*nint);
+		FlexCompRowMatrix newMat = new FlexCompRowMatrix(ntri + 2*nint, 3*ntri);
+		FlexCompRowMatrix newMatTMat = new FlexCompRowMatrix( 2*nint + ntri, 2*nint + ntri);
+		double[] newConstraints = new double[ntri + 2 * nint];
+		for (int i = 0; i < ntri; i++) {
+			newConstraints[i]  = Math.PI;
+		}
+		for (int i = ntri; i < ntri + nint; i++) {
+			newConstraints[i]  = 2*Math.PI;
+		}
+		for (int i = 0; i < faces.length; i++) {
+			addToConstraints(newConstraints, i, faces[i].v1, faces[i].v2, faces[i].v3, 3*i,ntri, nint);
+			addToConstraints(newConstraints, i, faces[i].v2, faces[i].v3, faces[i].v1, 3*i+1, ntri, nint);
+			addToConstraints(newConstraints, i, faces[i].v3, faces[i].v1, faces[i].v2, 3*i+2, ntri, nint);
+			addToMatTMat(newMat, newMatTMat, i, faces[i].v1, faces[i].v2, faces[i].v3, 3*i,ntri, nint);
+			addToMatTMat(newMat, newMatTMat, i, faces[i].v2, faces[i].v3, faces[i].v1, 3*i+1, ntri, nint);
+			addToMatTMat(newMat, newMatTMat, i, faces[i].v3, faces[i].v1, faces[i].v2, 3*i+2, ntri, nint);
+		}
 		DenseVector sol = new DenseVector(ntri + 2*nint);
-		qmr = new QMR(sol);
+		CG cg = new CG(sol);
+		DenseVector newcons = new DenseVector(newConstraints);
 		try {
-			qmr.solve(matTmat, cons, sol);
+			cg.solve(newMatTMat, newcons, sol);
 		} catch (IterativeSolverNotConvergedException e) {
 			textArea.append("Failure : unfolding did not converge");
 			e.printStackTrace();
 			return false;
 		}
-		totaltime = new Date().getTime() - totaltime;
-		textArea.append("Solving : "
-				+ Math.round(totaltime / 1000.0) + "s\n");
-		totaltime = new Date().getTime();
 		double[] soldata = sol.getData();
-//		int[] ind;
-//		double[] idata;
 		for (int i = 0; i < var.length; i++) {
 			var[i] = 0;
 		}
+		SparseVector matVecI;
+		int[] ind;
+		double[] idata;
 		for (int i = 0; i < ntri + 2 * nint; i++) {
-			matVecI = matrix.getRow(i);
+			matVecI = newMat.getRow(i);
 			ind = matVecI.getIndex();
 			idata = matVecI.getData();
 			for (int j = 0; j < ind.length; j++) {
@@ -807,12 +727,11 @@ public class MeshUnfolder {
 		}
 			
 		totaltime = new Date().getTime() - totaltime;
-		textArea.append("Post-computing: "
-				+ Math.round(totaltime / 1000.0) + "s\n\n");
+		textArea.append("Mesh unfolded : "
+				+ Math.round(totaltime / 1000.0) + "s\n");
 		totaltime = new Date().getTime();
 		// now let's build the unfolded meshes
 		textArea.append("Rebuilding 2D mesh.\n");
-		Face[] faces = trimesh.getFaces();
 		Vertex[] verts = (Vertex[]) trimesh.getVertices();
 		ArrayList<UnfoldedMesh> unfoldedMeshesList = new ArrayList<UnfoldedMesh>();
 		UnfoldedEdge[] uedges = new UnfoldedEdge[nedges];
@@ -838,7 +757,7 @@ public class MeshUnfolder {
 		// and which come from triangulation
 		int[][] faceVertIndices = new int[ufaces.length][];
 		int meshFaceCount = mesh.getFaceCount();
-		int count;
+		//int count;
 		for (int i = 0; i < meshFaceCount; i++) {
 			count = mesh.getFaceVertexCount(i);
 			faceVertIndices[i] = new int[count];
@@ -973,9 +892,6 @@ public class MeshUnfolder {
 						}
 					}
 				}
-				totaltime = new Date().getTime() - totaltime;
-				textArea.append("separating piece: " + Math.round(totaltime / 1000) + "s\n");
-				totaltime = new Date().getTime();
 				try {
 					unfoldedMeshesList.add(computeUnfoldedMesh(vertList,
 							edgeList, faceList, uverts, uedges, ufaces));
@@ -997,6 +913,67 @@ public class MeshUnfolder {
 		}
 		return true;
 	}
+
+	private void addToConstraints(double[] constraints, int f, int v1, int v2, int v3,
+			int a1, int ntri, int nint) {
+		double alpha1 = angles[a1];
+		double lsana1 = Math.log(Math.sin(alpha1));
+		int interiorVertV1 = invInteriorTable[v1];
+		int interiorVertV2 = invInteriorTable[v2];
+		int interiorVertV3 = invInteriorTable[v3];
+		constraints[f] -= alpha1;
+		if (interiorVertV1 != -1) {
+			constraints[ntri+interiorVertV1] -= alpha1;
+		}
+		if (interiorVertV2 != -1) {
+			constraints[ntri+nint+interiorVertV2] += lsana1;
+		}
+		if (interiorVertV3 != -1) {
+			constraints[ntri+nint+interiorVertV3] -= lsana1;
+		}
+	}
+	
+	private void addToMatTMat(FlexCompRowMatrix mat, FlexCompRowMatrix matTmat, int f, int v1, int v2, int v3,
+			int a1, int ntri, int nint) {
+		double alpha1 = angles[a1];
+		double tana1 = alpha1/Math.tan(alpha1);
+		int interiorVertV1 = invInteriorTable[v1];
+		int interiorVertV2 = invInteriorTable[v2];
+		int interiorVertV3 = invInteriorTable[v3];
+		mat.add(f, a1, alpha1);
+		matTmat.add(f, f, alpha1*alpha1 );
+		if (interiorVertV1 != -1) {
+			mat.add(ntri+interiorVertV1, a1, alpha1);
+			matTmat.add(ntri+interiorVertV1, ntri+interiorVertV1, alpha1*alpha1);
+			matTmat.add(ntri+interiorVertV1, f, alpha1*alpha1);
+			matTmat.add(f, ntri+interiorVertV1, alpha1*alpha1);
+		}
+		if (interiorVertV2 != -1) {
+			mat.add(ntri+nint+interiorVertV2, a1, -tana1);
+			matTmat.add(ntri+nint+interiorVertV2, ntri+nint+interiorVertV2, tana1*tana1);
+			matTmat.add(ntri+nint+interiorVertV2, f, -alpha1*tana1);
+			matTmat.add(f, ntri+nint+interiorVertV2, -alpha1*tana1);
+		}
+		if (interiorVertV3 != -1) {
+			mat.add(ntri+nint+interiorVertV3, a1, tana1);
+			matTmat.add(ntri+nint+interiorVertV3, ntri+nint+interiorVertV3, tana1*tana1);
+			matTmat.add(ntri+nint+interiorVertV3, f, alpha1*tana1);
+			matTmat.add(f, ntri+nint+interiorVertV3, alpha1*tana1);
+		}
+		if (interiorVertV1 != -1 && interiorVertV2 != -1) {
+			matTmat.add(ntri+interiorVertV1, ntri+nint+interiorVertV2, -alpha1*tana1);
+			matTmat.add(ntri+nint+interiorVertV2, ntri+interiorVertV1, -alpha1*tana1);
+		}
+		if (interiorVertV1 != -1 && interiorVertV3 != -1) {
+			matTmat.add(ntri+interiorVertV1, ntri+nint+interiorVertV3, alpha1*tana1);
+			matTmat.add(ntri+nint+interiorVertV3, ntri+interiorVertV1, alpha1*tana1);
+		}
+		if (interiorVertV2 != -1 && interiorVertV3 != -1) {
+			matTmat.add(ntri+nint+interiorVertV2, ntri+nint+interiorVertV3, -tana1*tana1);
+			matTmat.add(ntri+nint+interiorVertV3, ntri+nint+interiorVertV2, -tana1*tana1);
+		}
+	}
+
 
 	/**
 	 * Given a piece of the unfolded mesh, this method computes a standalone
@@ -1081,6 +1058,7 @@ public class MeshUnfolder {
 		// then rebuild 2D mesh positions according
 		// to ABF++ procedure
 		int nvars = 2 * (vertices.length - 2); // number of variables
+		System.out.println("nvar: " + nvars);
 		SparseVector b = new SparseVector(6 * faces.length);
 		FlexCompColMatrix mat = new FlexCompColMatrix(6 * faces.length, nvars);
 		FlexCompRowMatrix matTmat = new FlexCompRowMatrix(nvars, nvars);
@@ -1250,73 +1228,10 @@ public class MeshUnfolder {
 			}
 		}
 		DenseVector vsol = new DenseVector(nvars);
-//		for (int i = 2; i < vertices.length; i++) {
-//			vsol.set(2*i-4, vertices[i].r.x);
-//			vsol.set(2*i-3, vertices[i].r.y);			
-//		}
 		SparseVector mtb = new SparseVector(nvars);
-		long time = new Date().getTime();
-		System.out.println("transMult en cours ");
-		System.out.flush();
 		mtb = (SparseVector) mat.transMult(b, mtb);
-		
-		/******/
-//		double tmpdbl = 0;
-//		int nonzero = 0;
-//		SparseVector matVecI, matVecJ;
-//		boolean zero;
-//		int[] ind, jnd;
-//		double[] idata, jdata;
-//		int[] bindx;
-//		double[] bdata;
-//		SparseVector nmtb = new SparseVector(nvars);
-//		for (int i = 0; i < nvars; i++) {
-//			matVecI = mat.getColumn(i);
-//			
-//		}
-//		FlexCompRowMatrix newmat = new FlexCompRowMatrix(nvars, nvars);
-//		for (int i = 0; i < nvars; i++) {
-//			for (int j = 0; j < nvars; j++) {
-//				tmpdbl = 0;
-//				zero = true;
-//				matVecI = mat.getColumn(i);
-//				matVecJ = mat.getColumn(j);
-//				tmpdbl = matVecI.dot(matVecJ);
-//				if (Math.abs(tmpdbl) > 0.0001) {
-//					zero = false;
-//				}
-////				
-////				ind = matVecI.getIndex();
-////				idata = matVecI.getData();
-////				jnd = matVecJ.getIndex();
-////				jdata = matVecJ.getData();
-////				for (int k = 0; k < ind.length; k++) {
-////					for (int l = 0; l < jnd.length; l++) {
-////						if (ind[k] == jnd[l]) {
-////							tmpdbl += idata[k]*jdata[l];
-////							zero = false;
-////						}
-////					}
-////				}
-//				if (!zero) {
-//					newmat.add(i, j, tmpdbl);
-//				}
-//				if (Math.abs(tmpdbl - matTmat.get(i,j)) > 0.001 ) {
-//						System.out.println("matTmat pb : " + i + " " + j + " | " + tmpdbl + " | " + matTmat.get(i,j));
-//				}
-//			}
-//		}
-		//mat.transAmult(mat, newmat);
-		time = new Date().getTime() - time;
-		System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
-		time = new Date().getTime();
-		QMR qmr = new QMR(mtb);
+		CG qmr = new CG(mtb);
 		qmr.solve(matTmat, mtb, vsol);
-		//qmr.solve(newmat, mtb, vsol);
-		time = new Date().getTime() - time;
-		System.out.println("solved: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
 		Vec2 center = new Vec2();
 		for (int i = 2; i < vertices.length; i++) {
 			vertices[i].r.x = vsol.get((i - 2) * 2);
@@ -1617,7 +1532,7 @@ public class MeshUnfolder {
 		System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
 		System.out.flush();
 		time = new Date().getTime();
-		QMR qmr = new QMR(mtb);
+		CG qmr = new CG(mtb);
 		qmr.solve(matTmat, mtb, vsol);
 		//qmr.solve(newmat, mtb, vsol);
 		time = new Date().getTime() - time;
@@ -1651,6 +1566,209 @@ public class MeshUnfolder {
 		}
 		return new UnfoldedMesh(vertices, edges, faces);
 	}
+	
+	private UnfoldedMesh computeUnfoldedMeshNew(ArrayList<Integer> vertList,
+			ArrayList<Integer> edgeList, ArrayList<Integer> faceList,
+			UnfoldedVertex[] uverts, UnfoldedEdge[] uedges,
+			UnfoldedFace[] ufaces) throws IterativeSolverNotConvergedException {
+		UnfoldedVertex[] vertices = new UnfoldedVertex[vertList.size()];
+		UnfoldedEdge[] edges = new UnfoldedEdge[edgeList.size()];
+		UnfoldedFace[] faces = new UnfoldedFace[faceList.size()];
+		int[] vertTrans = new int[uverts.length];
+		int[] edgeTrans = new int[uedges.length];
+		int[] faceTrans = new int[ufaces.length];
+		// first, translate the indexes
+		for (int i = 0; i < vertTrans.length; i++) {
+			vertTrans[i] = -1;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			vertTrans[vertList.get(i)] = i;
+		}
+		for (int i = 0; i < edgeTrans.length; i++) {
+			edgeTrans[i] = -1;
+		}
+		for (int i = 0; i < edges.length; i++) {
+			edgeTrans[edgeList.get(i)] = i;
+		}
+		for (int i = 0; i < faceTrans.length; i++) {
+			faceTrans[i] = -1;
+		}
+		for (int i = 0; i < faces.length; i++) {
+			faceTrans[faceList.get(i)] = i;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			vertices[i] = uverts[vertList.get(i)].duplicate();
+			if (edgeTrans[vertices[i].edge] == -1)
+				System.out.println("Pb edge translation");
+			vertices[i].edge = edgeTrans[vertices[i].edge];
+		}
+		for (int i = 0; i < edges.length; i++) {
+			edges[i] = uedges[edgeList.get(i)].duplicate();
+			if (vertTrans[edges[i].v1] == -1)
+				System.out.println("Pb edge vert v1");
+			if (vertTrans[edges[i].v2] == -1)
+				System.out.println("Pb edge vert v2");
+			edges[i].v1 = vertTrans[edges[i].v1];
+			edges[i].v2 = vertTrans[edges[i].v2];
+			if (edges[i].f1 != -1) {
+				if (faceTrans[edges[i].f1] == -1)
+					System.out.println("Pb edge face f1");
+				edges[i].f1 = faceTrans[edges[i].f1];
+			}
+			if (edges[i].f2 != -1) {
+				if (faceTrans[edges[i].f2] == -1)
+					System.out.println("Pb edge face f2");
+				edges[i].f2 = faceTrans[edges[i].f2];
+			}
+		}
+		for (int i = 0; i < faces.length; i++) {
+			faces[i] = ufaces[faceList.get(i)].duplicate();
+			if (vertTrans[faces[i].v1] == -1)
+				System.out.println("Pb face vert v1");
+			if (vertTrans[faces[i].v2] == -1)
+				System.out.println("Pb face vert v2");
+			if (vertTrans[faces[i].v3] == -1)
+				System.out.println("Pb face vert v3");
+			faces[i].v1 = vertTrans[faces[i].v1];
+			faces[i].v2 = vertTrans[faces[i].v2];
+			faces[i].v3 = vertTrans[faces[i].v3];
+			if (edgeTrans[faces[i].e1] == -1)
+				System.out.println("Pb face edge e1");
+			if (edgeTrans[faces[i].e2] == -1)
+				System.out.println("Pb face edge e2");
+			if (edgeTrans[faces[i].e3] == -1)
+				System.out.println("Pb face edge e3");
+			faces[i].e1 = edgeTrans[faces[i].e1];
+			faces[i].e2 = edgeTrans[faces[i].e2];
+			faces[i].e3 = edgeTrans[faces[i].e3];
+		}
+		// then rebuild 2D mesh positions according
+		// to ABF++ procedure
+		int nvars = 2 * (vertices.length); // - 2); // number of variables
+		SparseVector b = new SparseVector(6 * faces.length);
+		FlexCompColMatrix mat = new FlexCompColMatrix(6 * ntri + 4, nvars);
+		FlexCompRowMatrix matTmat = new FlexCompRowMatrix(nvars, nvars);
+		SparseVector rh = new SparseVector(6*ntri+4);
+		for (int i = 0; i < faces.length; i++) {
+//			addToConstraints(newConstraints, i, faces[i].v1, faces[i].v2, faces[i].v3, 3*i,ntri, nint);
+//			addToConstraints(newConstraints, i, faces[i].v2, faces[i].v3, faces[i].v1, 3*i+1, ntri, nint);
+//			addToConstraints(newConstraints, i, faces[i].v3, faces[i].v1, faces[i].v2, 3*i+2, ntri, nint);
+			addToRebuildMatTMat(mat, matTmat, 6*i, faces[i].v1, faces[i].v2, faces[i].v3, 3*i, 3*i+1, 3*i+2);
+			addToRebuildMatTMat(mat, matTmat, 6*i+2, faces[i].v2, faces[i].v3, faces[i].v1, 3*i+1, 3*i+2, 3*i);
+			addToRebuildMatTMat(mat, matTmat, 6*i+4, faces[i].v3, faces[i].v1, faces[i].v2, 3*i+2, 3*i, 3*i+1);
+		}
+		rh.add(2*ntri, vertices[0].r.x);
+		rh.add(2*ntri+1, vertices[0].r.y);
+		rh.add(2*ntri+2, vertices[1].r.x);
+		rh.add(2*ntri+3, vertices[1].r.y);
+		mat.add(2*ntri+0, 0, 1);
+		mat.add(2*ntri+1, 1, 1);
+		mat.add(2*ntri+2, 2, 1);
+		mat.add(2*ntri+3, 3, 1);
+		DenseVector vsol = new DenseVector(nvars);
+		vsol.set(0, vertices[0].r.x);
+		vsol.set(1, vertices[0].r.y);
+		vsol.set(2, vertices[1].r.x);
+		vsol.set(3, vertices[1].r.y);
+		
+		SparseVector mtb = new SparseVector(nvars);
+		long time = new Date().getTime();
+		System.out.println("transMult en cours ");
+		System.out.flush();
+		//mtb = (SparseVector) mat.transMult(rh, mtb);
+		
+		/******/
+		double tmpdbl = 0;
+		int nonzero = 0;
+		SparseVector matVecI, matVecJ;
+		boolean zero;
+		int[] ind, jnd;
+		double[] idata, jdata;
+		int[] bindx;
+		double[] bdata;
+//		SparseVector nmtb = new SparseVector(nvars);
+////		for (int i = 0; i < nvars; i++) {
+////			matVecI = mat.getColumn(i);
+////			
+////		}
+//		FlexCompRowMatrix newmat = new FlexCompRowMatrix(nvars, nvars);
+		for (int i = 0; i < nvars; i++) {
+			matVecI = mat.getColumn(i);
+			tmpdbl = matVecI.dot(rh);
+			if (Math.abs(tmpdbl) > 0.0001) {
+				mtb.add(i, tmpdbl);
+			}
+			for (int j = 0; j < nvars; j++) {
+				tmpdbl = 0;
+				zero = true;
+				matVecJ = mat.getColumn(j);
+				tmpdbl = matVecI.dot(matVecJ);
+				if (Math.abs(tmpdbl) > 0.0001) {
+					zero = false;
+				}
+				if (!zero) {
+					matTmat.add(i, j, tmpdbl);
+				}
+//				if (Math.abs(tmpdbl - matTmat.get(i,j)) > 0.001 ) {
+//						System.out.println("matTmat pb : " + i + " " + j + " | " + tmpdbl + " | " + matTmat.get(i,j));
+//				}
+			}
+		}
+		//mat.transAmult(mat, newmat);
+		time = new Date().getTime() - time;
+		System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
+		System.out.flush();
+		time = new Date().getTime();
+		QMR qmr = new QMR(mtb);
+		qmr.solve(matTmat, mtb, vsol);
+		//qmr.solve(newmat, mtb, vsol);
+		time = new Date().getTime() - time;
+		System.out.println("solved: " + Math.round(time / 1000) + "s\n");
+		System.out.flush();
+		Vec2 center = new Vec2();
+		for (int i = 0; i < vertices.length; i++) {
+			vertices[i].r.x = vsol.get(i * 2);
+			vertices[i].r.y = vsol.get(i * 2 + 1);
+			center.add(vertices[i].r);
+		}
+		//check if the mesh is right handed
+		boolean leftHanded = false;
+		Vec2 v1r = vertices[faces[0].v3].r.minus(vertices[faces[0].v1].r);
+		Vec2 v2r = vertices[faces[0].v2].r.minus(vertices[faces[0].v1].r);
+		if (v1r.x * v2r.y - v1r.y * v2r.x < 0) {
+			leftHanded = true;
+		}
+		// center the mesh
+		center.scale(1.0 / ((double) vertices.length));
+		if (!leftHanded) {
+			center.y *= -1;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			if (!leftHanded) {
+				vertices[i].r.y *= -1;
+			}
+			vertices[i].r.subtract(center);
+		}
+		return new UnfoldedMesh(vertices, edges, faces);
+	}
+	
+	private void addToRebuildMatTMat(FlexCompColMatrix mat,
+			FlexCompRowMatrix matTmat, int f, int v1, int v2, int v3, int a1, int a2, int a3) {
+		double a = Math.sin(var[a2])/Math.sin(var[a3]);
+		double b = a * Math.sin(var[a1]);
+		a *= Math.cos(var[a1]);
+		mat.add(f, 2*v1, 1-a);
+		mat.add(f, 2*v1+1, b);
+		mat.add(f+1, 2*v1, -b);
+		mat.add(f+1, 2*v1+1, 1-a);
+		mat.add(f, 2*v2, a);
+		mat.add(f, 2*v2+1, -b);
+		mat.add(f+1, 2*v2, b);
+		mat.add(f+1, 2*v2+1, a);
+		mat.add(f, 2*v3, -1);
+		mat.add(f+1, 2*v3+1, -1);
+	}
+
 	/**
 	 * Given an edge and a face, this method checks the 3rd vertex as being
 	 * unfolded if's not already checked
@@ -1875,16 +1993,16 @@ public class MeshUnfolder {
 				tri = tris[j];
 				if (v == faces[tri].v1) {
 					angleTable[i][j] = 3 * tri + 0;
-					anglePTable[i][j] = 3 * tri + 1;
-					angleMTable[i][j] = 3 * tri + 2;
+					angleMTable[i][j] = 3 * tri + 1;
+					anglePTable[i][j] = 3 * tri + 2;
 				} else if (v == faces[tri].v2) {
 					angleTable[i][j] = 3 * tri + 1;
-					anglePTable[i][j] = 3 * tri + 2;
-					angleMTable[i][j] = 3 * tri + 0;
+					angleMTable[i][j] = 3 * tri + 2;
+					anglePTable[i][j] = 3 * tri + 0;
 				} else if (v == faces[tri].v3) {
 					angleTable[i][j] = 3 * tri + 2;
-					anglePTable[i][j] = 3 * tri + 0;
-					angleMTable[i][j] = 3 * tri + 1;
+					angleMTable[i][j] = 3 * tri + 0;
+					anglePTable[i][j] = 3 * tri + 1;
 				} else {
 					System.out
 							.println("pb setting angle tables: vertex not in face");
@@ -1933,141 +2051,6 @@ public class MeshUnfolder {
 		}
 		weightsVec = new DenseVector(weights);
 		weightsVec.scale(0.5);
-	}
-
-	/**
-	 * Initilization job :
-	 * computes mesh angle,
-	 * builds interior vertices table
-	 * and more generally allocates memory and instantite objects needed.
-	 */
-	@SuppressWarnings("unchecked")
-	private void initializeLinearABF() {
-		TriangleMesh.Vertex[] vertices = (Vertex[]) trimesh.getVertices();
-		TriangleMesh.Edge[] edges = trimesh.getEdges();
-		TriangleMesh.Face[] faces = trimesh.getFaces();
-
-		// compute the mesh angles
-		ntri = faces.length;
-		nangles = 3 * ntri;
-		angles = new double[nangles];
-		Vec3 v1, v2, v3;
-		for (int i = 0; i < ntri; i++) {
-			v1 = vertices[faces[i].v3].r.minus(vertices[faces[i].v1].r);
-			v2 = vertices[faces[i].v2].r.minus(vertices[faces[i].v1].r);
-			v3 = vertices[faces[i].v3].r.minus(vertices[faces[i].v2].r);
-			v1.normalize();
-			v2.normalize();
-			v3.normalize();
-			angles[i * 3] = Math.acos(v1.dot(v2));
-			angles[i * 3 + 1] = Math.acos(-v2.dot(v3));
-			angles[i * 3 + 2] = Math.acos(v1.dot(v3));
-		}
-		// setup interior vertices table
-		invInteriorTable = new int[vertices.length];
-		Vector interiorVerticesTable = new Vector();
-		int count = 0;
-		for (int i = 0; i < vertices.length; i++) {
-			if (edges[vertices[i].firstEdge].f1 != -1
-					&& edges[vertices[i].firstEdge].f2 != -1) {
-				// not a boundary edge
-				interiorVerticesTable.add(new Integer(i));
-				invInteriorTable[i] = count++;
-			} else
-				invInteriorTable[i] = -1;
-		}
-		nint = interiorVerticesTable.size();
-		interiorVertices = new int[nint];
-		for (int i = 0; i < nint; i++) {
-			interiorVertices[i] = ((Integer) interiorVerticesTable.get(i))
-					.intValue();
-		}
-		interiorVerticesTable = null;
-		angleTable = new int[nint][];
-		angleMTable = new int[nint][];
-		anglePTable = new int[nint][];
-		for (int i = 0; i < nint; i++) {
-			int v = interiorVertices[i];
-			int[] ed = vertices[v].getEdges();
-			angleTable[i] = new int[ed.length];
-			angleMTable[i] = new int[ed.length];
-			anglePTable[i] = new int[ed.length];
-			// edges do not sequentially point to faces they delimit
-			// so we need to find the faces looking at both sides
-			// of an edge
-			int[] tris = new int[ed.length];
-			boolean add;
-			int index = 0;
-			int tri;
-			for (int j = 0; ((j < ed.length) && (index < ed.length)); j++) {
-				add = true;
-				tri = edges[ed[j]].f1;
-				for (int k = 0; k < ed.length; k++) {
-					if (tris[k] == tri) {
-						add = false;
-						break;
-					}
-				}
-				if (add)
-					tris[index++] = tri;
-				add = true;
-				tri = edges[ed[j]].f2;
-				for (int k = 0; k < ed.length; k++) {
-					if (tris[k] == tri) {
-						add = false;
-						break;
-					}
-				}
-				if (add)
-					tris[index++] = tri;
-			}
-			// now setup angles at interior vertices
-			// and plus and minus angles as defined in ABF++ paper
-			for (int j = 0; j < ed.length; j++) {
-				tri = tris[j];
-				if (v == faces[tri].v1) {
-					angleTable[i][j] = 3 * tri + 0;
-					anglePTable[i][j] = 3 * tri + 1;
-					angleMTable[i][j] = 3 * tri + 2;
-				} else if (v == faces[tri].v2) {
-					angleTable[i][j] = 3 * tri + 1;
-					anglePTable[i][j] = 3 * tri + 2;
-					angleMTable[i][j] = 3 * tri + 0;
-				} else if (v == faces[tri].v3) {
-					angleTable[i][j] = 3 * tri + 2;
-					anglePTable[i][j] = 3 * tri + 0;
-					angleMTable[i][j] = 3 * tri + 1;
-				} else {
-					System.out
-							.println("pb setting angle tables: vertex not in face");
-				}
-			}
-		}
-		var = new double[3 * ntri];
-		for (int i = 0; i < nangles; i++) {
-			var[i] = angles[i]; // start from current angle values
-		}
-		double anglesum;
-		for (int i = 0; i < nint; i++) {
-			anglesum = 0;
-			for (int j = 0; j < angleTable[i].length; j++) {
-				anglesum += angles[angleTable[i][j]];
-			}
-			if (anglesum > 0)
-				for (int j = 0; j < angleTable[i].length; j++) {
-					var[angleTable[i][j]] *= 2 * Math.PI / anglesum;
-					angles[angleTable[i][j]] = var[angleTable[i][j]];
-				}
-		}
-		constraints = new double[ntri + 2 * nint];
-//		gradient = new double[nangles];
-//		bstar = new double[ntri + 2 * nint];
-//		solution = new double[4 * ntri + 2 * nint];
-//		jstar = new FlexCompRowMatrix(2 * nint, ntri);
-//		jstarstar = new FlexCompRowMatrix(2 * nint, 2 * nint);
-//		matrix = new FlexCompRowMatrix(2 * nint, 2 * nint);
-//		bb2vec = new DenseVector(2 * nint);
-		// lambdaStar is computed once and for all
 	}
 
 	/**
@@ -2257,4 +2240,184 @@ public class MeshUnfolder {
 		System.out.println("/***** end gradient *****/");
 
 	}
+	
+	private UnfoldedMesh computeUnfoldedMeshSimple(ArrayList<Integer> vertList,
+			ArrayList<Integer> edgeList, ArrayList<Integer> faceList,
+			UnfoldedVertex[] uverts, UnfoldedEdge[] uedges,
+			UnfoldedFace[] ufaces) throws IterativeSolverNotConvergedException {
+		System.out.println("Compute unfolded mesh curde reconstruction");
+		UnfoldedVertex[] vertices = new UnfoldedVertex[vertList.size()];
+		UnfoldedEdge[] edges = new UnfoldedEdge[edgeList.size()];
+		UnfoldedFace[] faces = new UnfoldedFace[faceList.size()];
+		int[] vertTrans = new int[uverts.length];
+		int[] edgeTrans = new int[uedges.length];
+		int[] faceTrans = new int[ufaces.length];
+		// first, translate the indexes
+		for (int i = 0; i < vertTrans.length; i++) {
+			vertTrans[i] = -1;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			vertTrans[vertList.get(i)] = i;
+		}
+		for (int i = 0; i < edgeTrans.length; i++) {
+			edgeTrans[i] = -1;
+		}
+		for (int i = 0; i < edges.length; i++) {
+			edgeTrans[edgeList.get(i)] = i;
+		}
+		for (int i = 0; i < faceTrans.length; i++) {
+			faceTrans[i] = -1;
+		}
+		for (int i = 0; i < faces.length; i++) {
+			faceTrans[faceList.get(i)] = i;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			vertices[i] = uverts[vertList.get(i)].duplicate();
+			if (edgeTrans[vertices[i].edge] == -1)
+				System.out.println("Pb edge translation");
+			vertices[i].edge = edgeTrans[vertices[i].edge];
+		}
+		for (int i = 0; i < edges.length; i++) {
+			edges[i] = uedges[edgeList.get(i)].duplicate();
+			if (vertTrans[edges[i].v1] == -1)
+				System.out.println("Pb edge vert v1");
+			if (vertTrans[edges[i].v2] == -1)
+				System.out.println("Pb edge vert v2");
+			edges[i].v1 = vertTrans[edges[i].v1];
+			edges[i].v2 = vertTrans[edges[i].v2];
+			if (edges[i].f1 != -1) {
+				if (faceTrans[edges[i].f1] == -1)
+					System.out.println("Pb edge face f1");
+				edges[i].f1 = faceTrans[edges[i].f1];
+			}
+			if (edges[i].f2 != -1) {
+				if (faceTrans[edges[i].f2] == -1)
+					System.out.println("Pb edge face f2");
+				edges[i].f2 = faceTrans[edges[i].f2];
+			}
+		}
+		for (int i = 0; i < faces.length; i++) {
+			faces[i] = ufaces[faceList.get(i)].duplicate();
+			if (vertTrans[faces[i].v1] == -1)
+				System.out.println("Pb face vert v1");
+			if (vertTrans[faces[i].v2] == -1)
+				System.out.println("Pb face vert v2");
+			if (vertTrans[faces[i].v3] == -1)
+				System.out.println("Pb face vert v3");
+			faces[i].v1 = vertTrans[faces[i].v1];
+			faces[i].v2 = vertTrans[faces[i].v2];
+			faces[i].v3 = vertTrans[faces[i].v3];
+			if (edgeTrans[faces[i].e1] == -1)
+				System.out.println("Pb face edge e1");
+			if (edgeTrans[faces[i].e2] == -1)
+				System.out.println("Pb face edge e2");
+			if (edgeTrans[faces[i].e3] == -1)
+				System.out.println("Pb face edge e3");
+			faces[i].e1 = edgeTrans[faces[i].e1];
+			faces[i].e2 = edgeTrans[faces[i].e2];
+			faces[i].e3 = edgeTrans[faces[i].e3];
+		}
+		Vec2 center = new Vec2();
+		for (int i = 0; i < vertices.length; i++) {
+			center.add(vertices[i].r);
+		}
+		//check if the mesh is right handed
+		boolean leftHanded = false;
+		Vec2 v1r = vertices[faces[0].v3].r.minus(vertices[faces[0].v1].r);
+		Vec2 v2r = vertices[faces[0].v2].r.minus(vertices[faces[0].v1].r);
+		if (v1r.x * v2r.y - v1r.y * v2r.x < 0) {
+			leftHanded = true;
+		}
+		// center the mesh
+		center.scale(1.0 / ((double) vertices.length));
+		if (!leftHanded) {
+			center.y *= -1;
+		}
+		for (int i = 0; i < vertices.length; i++) {
+			if (!leftHanded) {
+				vertices[i].r.y *= -1;
+			}
+			vertices[i].r.subtract(center);
+		}
+		return new UnfoldedMesh(vertices, edges, faces);
+	}
+	
+	/**
+	 * Given an edge and a face, this method checks the 3rd vertex as being
+	 * unfolded if it's not already checked
+	 */
+	private void computeFaceNew(int e, int f, UnfoldedVertex[] uverts,
+			UnfoldedEdge[] uedges, UnfoldedFace[] ufaces,
+			boolean[] unfoldedFace, boolean[] unfoldedVerts,
+			ArrayList<Integer> vertList, ArrayList<Integer> edgeList,
+			ArrayList<Integer> faceList, double[] angles) {
+		int v1, v2, v3;
+		v1 = ufaces[f].v1;
+		v2 = ufaces[f].v2;
+		v3 = ufaces[f].v3;
+		Vec2 v;
+		//System.out.println("Face: " + f);
+		double sin2, sin3, sin1, cos1;
+		if ((uedges[e].v1 == v1 && uedges[e].v2 == v2)
+				|| (uedges[e].v1 == v2 && uedges[e].v2 == v1)) {
+			// add v3
+			//System.out.println("add v3");
+			if (!unfoldedVerts[ufaces[f].v3]) {
+				unfoldedVerts[ufaces[f].v3] = true;
+				vertList.add(v3);
+				sin1 = Math.sin(angles[3*f]);
+				sin2 = Math.sin(angles[3*f+1]);
+				sin3 = Math.sin(angles[3*f+2]);
+				cos1 = Math.cos(angles[3*f]);
+				v = uverts[v2].r.minus(uverts[v1].r);
+				uverts[v3].r = new Vec2( (sin2/sin3)*(cos1*v.x - sin1*v.y) + uverts[v1].r.x,
+						(sin2/sin3)*(sin1*v.x + cos1*v.y) + uverts[v1].r.y);
+			}
+		} else if ((uedges[e].v1 == v2 && uedges[e].v2 == v3)
+				|| (uedges[e].v1 == v3 && uedges[e].v2 == v2)) {
+			if (!unfoldedVerts[ufaces[f].v1]) {
+				// add v1
+				//System.out.println("add v1");
+				unfoldedVerts[ufaces[f].v1] = true;
+				vertList.add(v1);
+				sin1 = Math.sin(angles[3*f+1]);
+				sin2 = Math.sin(angles[3*f+2]);
+				sin3 = Math.sin(angles[3*f]);
+				cos1 = Math.cos(angles[3*f+1]);
+				v = uverts[v3].r.minus(uverts[v2].r);
+				uverts[v1].r = new Vec2( (sin2/sin3)*(cos1*v.x - sin1*v.y) + uverts[v2].r.x,
+						(sin2/sin3)*(sin1*v.x + cos1*v.y) + uverts[v2].r.y);
+			}
+		} else {
+			if (!unfoldedVerts[ufaces[f].v2]) {
+				// add v2
+				//System.out.println("add v2");
+				unfoldedVerts[ufaces[f].v2] = true;
+				vertList.add(v2);
+				sin1 = Math.sin(angles[3*f+2]);
+				sin2 = Math.sin(angles[3*f]);
+				sin3 = Math.sin(angles[3*f+1]);
+				cos1 = Math.cos(angles[3*f+2]);
+				v = uverts[v1].r.minus(uverts[v3].r);
+				uverts[v2].r = new Vec2( (sin2/sin3)*(cos1*v.x - sin1*v.y) + uverts[v3].r.x,
+						(sin2/sin3)*(sin1*v.x + cos1*v.y) + uverts[v3].r.y);
+			}
+		}
+//		System.out.println("Face: " + f);
+//		System.out.println("v1: " + uverts[v1].r);
+//		System.out.println("v2: " + uverts[v2].r);
+//		System.out.println("v3: " + uverts[v3].r);
+//		cos1 = Math.acos((uverts[v2].r.minus(uverts[v1].r).dot(uverts[v3].r.minus(uverts[v1].r))/
+//					((uverts[v2].r.minus(uverts[v1].r).length())*(uverts[v3].r.minus(uverts[v1].r)).length())));
+//		System.out.println(angles[3*f] + " : " + cos1 );
+//		cos1 = Math.acos((uverts[v1].r.minus(uverts[v2].r).dot(uverts[v3].r.minus(uverts[v2].r))/
+//				((uverts[v1].r.minus(uverts[v2].r).length())*(uverts[v3].r.minus(uverts[v2].r)).length())));
+//		System.out.println(angles[3*f+1] + " : " + cos1 );
+//		cos1 = Math.acos((uverts[v2].r.minus(uverts[v3].r).dot(uverts[v1].r.minus(uverts[v3].r))/
+//				((uverts[v2].r.minus(uverts[v3].r).length())*(uverts[v1].r.minus(uverts[v3].r)).length())));
+//		System.out.println(angles[3*f+2] + " : " + cos1 );
+		unfoldedFace[f] = true;
+		faceList.add(f);
+	}
+
 }

@@ -1257,17 +1257,20 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 					}
 					break;
 				default:
+					//new vertex is marked as corner
+					nverts[i].type = Wvertex.CORNER;
 					break;
 				}
-				//dist = pos.distance(nverts[i].r);
-				dist = Math.abs(pos.minus(nverts[i].r).dot(normals[i]));
-				if (dist > tol) {
-					moveVerts[i] = true;
+				if (nverts[i].type != Wvertex.CORNER) {
+					dist = Math.abs(pos.minus(nverts[i].r).dot(normals[i]));
+					if (dist > tol) {
+						moveVerts[i] = true;
+					}
+					if (dist > maxDist) {
+						maxDist = dist;
+					}
+					nverts[i].r = pos;
 				}
-				if (dist > maxDist) {
-					maxDist = dist;
-				}
-				nverts[i].r = pos;
 			}
 		}
 //		time2 = System.currentTimeMillis();
