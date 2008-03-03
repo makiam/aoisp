@@ -1,0 +1,13 @@
+for (int i = 0; i < ambientSpotLightCount; i++)
+{
+  vec3 dir = ambientSpotLightPos[i]-(vec3(Position)/Position.w);
+  float dist = length(dir);
+  dir /= dist;
+  float cosangle = dot(dir, ambientSpotLightDir[i]);
+  if (cosangle > ambientSpotLightCutoff[i])
+  {
+    float x = ambientSpotLightDecayRate[i]*dist;
+    float intensity = pow(cosangle, ambientSpotLightExponent[i])/(1.0+x+x*x);
+    diffuseLight += ambientSpotLightColor[i]*intensity;
+  }
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" standalone="yes"?>
+<extension name="GLRenderer" version="0.1">
+  <author>Peter Eastman</author>
+  <date>2008</date>
+  <filter experimental="hide"/>
+  <description>
+This is an experimental renderer which uses OpenGL for hardware accelerated rendering.
+  </description>
+  <comments>
+  </comments>
+  <plugin class="artofillusion.glrenderer.GLRenderer"/>
+</extension>
+

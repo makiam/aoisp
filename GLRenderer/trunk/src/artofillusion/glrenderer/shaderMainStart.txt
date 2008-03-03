@@ -1,0 +1,10 @@
+uniform vec3 diffuseColor;
+uniform vec3 hilightColor;
+uniform vec3 emissiveColor;
+uniform float roughness;
+varying vec4 Position;
+varying vec3 Normal;
+
+void main()
+{
+  vec3 hilightLight = vec3(0, 0, 0);

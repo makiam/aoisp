@@ -1,0 +1,9 @@
+varying vec4 Position;
+varying vec3 Normal;
+
+void main()
+{
+	gl_Position = ftransform();
+	Position = gl_ModelViewMatrix*gl_Vertex;
+	Normal = normalize(gl_NormalMatrix*gl_Normal);
+}

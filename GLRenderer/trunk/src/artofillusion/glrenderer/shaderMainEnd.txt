@@ -1,0 +1,3 @@
+  vec3 color = diffuseColor*diffuseLight + hilightColor*hilightLight + emissiveColor;
+  gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+}

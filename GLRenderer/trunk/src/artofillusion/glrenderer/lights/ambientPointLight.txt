@@ -1,0 +1,9 @@
+for (int i = 0; i < ambientPointLightCount; i++)
+{
+  vec3 dir = ambientPointLightPos[i]-(vec3(Position)/Position.w);
+  float dist = length(dir);
+  dir /= dist;
+  float x = ambientPointLightDecayRate[i]*dist;
+  float intensity = 1.0/(1.0+x+x*x);
+  diffuseLight += ambientPointLightColor[i]*intensity;
+}
