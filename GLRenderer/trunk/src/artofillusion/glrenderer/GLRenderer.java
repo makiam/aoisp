@@ -46,8 +46,8 @@ public class GLRenderer implements Renderer, Runnable
   private Thread renderThread;
   private double time, smoothing = 1.0, smoothScale, depthOfField, focalDist, surfaceError = 0.02, fogDist;
   private boolean fog, transparentBackground = false, adaptive = true, hideBackfaces = true, generateHDR = false, positionNeeded, depthNeeded, needCopyToUI = true;
-  private FloatBuffer vertBuffer, normBuffer;
   private int diffuseColorId, hilightColorId, emissiveColorId, roughnessId;
+  private int vertBufferId, indexBufferId;
   private boolean cullingEnabled;
   private TextureSpec spec;
 
@@ -359,8 +359,6 @@ public class GLRenderer implements Renderer, Runnable
     theCamera = null;
     image = null;
     spec = null;
-    vertBuffer = null;
-    normBuffer = null;
     RenderListener rl = listener;
     listener = null;
     renderThread = null;
@@ -405,19 +403,6 @@ public class GLRenderer implements Renderer, Runnable
       gl.glEnable(GL.GL_CULL_FACE);
     else
       gl.glDisable(GL.GL_CULL_FACE);
-  }
-
-  /** Prepare the buffers used for storing vertex and normal arrays. */
-
-  private void prepareBuffers(GL gl, int requiredSize)
-  {
-    if (vertBuffer == null || vertBuffer.capacity() < requiredSize)
-    {
-      vertBuffer = BufferUtil.newFloatBuffer(requiredSize);
-      normBuffer = BufferUtil.newFloatBuffer(requiredSize);
-      gl.glVertexPointer(3, GL.GL_FLOAT, 0, vertBuffer);
-      gl.glNormalPointer(GL.GL_FLOAT, 0, normBuffer);
-    }
   }
 
   /** Render an object to the image. */
@@ -479,44 +464,53 @@ public class GLRenderer implements Renderer, Runnable
     gl.glUniform3f(emissiveColorId, spec.emissive.getRed(), spec.emissive.getGreen(), spec.emissive.getBlue());
     gl.glUniform1f(roughnessId, (float) spec.roughness);
 
-    // Fill in buffers with the vertices and normals.
+    // Map a buffer in which to store the vertices and normals.
 
-    prepareBuffers(gl, mesh.triangle.length*9);
-    vertBuffer.clear();
-    normBuffer.clear();
-    int faceCount = 0;
+    gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vertBufferId);
+    gl.glBufferDataARB(GL.GL_ARRAY_BUFFER, mesh.triangle.length*18*BufferUtil.SIZEOF_FLOAT, null, GL.GL_STREAM_DRAW);
+    ByteBuffer map = gl.glMapBuffer(GL.GL_ARRAY_BUFFER, GL.GL_WRITE_ONLY);
+    map.order(ByteOrder.nativeOrder());
+    FloatBuffer buffer = map.asFloatBuffer();
+    gl.glVertexPointer(3, GL.GL_FLOAT, 0, 0);
+    gl.glNormalPointer(GL.GL_FLOAT, 0, mesh.triangle.length*9*BufferUtil.SIZEOF_FLOAT);
+
+    // Set the vertices from the mesh.
+
     for (RenderingTriangle tri : mesh.triangle)
     {
-      faceCount++;
       Vec3 v = mesh.vert[tri.v1];
-      vertBuffer.put((float) v.x);
-      vertBuffer.put((float) v.y);
-      vertBuffer.put((float) v.z);
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
       v = mesh.vert[tri.v2];
-      vertBuffer.put((float) v.x);
-      vertBuffer.put((float) v.y);
-      vertBuffer.put((float) v.z);
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
       v = mesh.vert[tri.v3];
-      vertBuffer.put((float) v.x);
-      vertBuffer.put((float) v.y);
-      vertBuffer.put((float) v.z);
-
-      // Set the normals from the mesh.
-
-      v = mesh.norm[tri.n1];
-      normBuffer.put((float) v.x);
-      normBuffer.put((float) v.y);
-      normBuffer.put((float) v.z);
-      v = mesh.norm[tri.n2];
-      normBuffer.put((float) v.x);
-      normBuffer.put((float) v.y);
-      normBuffer.put((float) v.z);
-      v = mesh.norm[tri.n3];
-      normBuffer.put((float) v.x);
-      normBuffer.put((float) v.y);
-      normBuffer.put((float) v.z);
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
     }
-    gl.glDrawArrays(GL.GL_TRIANGLES, 0, faceCount*3);
+
+    // Set the normals from the mesh.
+
+    for (RenderingTriangle tri : mesh.triangle)
+    {
+      Vec3 v = mesh.norm[tri.n1];
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
+      v = mesh.norm[tri.n2];
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
+      v = mesh.norm[tri.n3];
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
+    }
+    gl.glUnmapBuffer(GL.GL_ARRAY_BUFFER);
+    gl.glDrawArrays(GL.GL_TRIANGLES, 0, mesh.triangle.length*3);
   }
 
   private String readFile(String name) throws IOException
@@ -755,6 +749,12 @@ public class GLRenderer implements Renderer, Runnable
       gl.glBindFramebufferEXT(GL.GL_FRAMEBUFFER_EXT, fbo[0]);
       gl.glViewport(0, 0, width, height);
 
+      // Prepare for rendering with Vertex Buffer Objects.
+
+      int bufferIds[] = new int [2];
+      gl.glGenBuffers(2, bufferIds, 0);
+      vertBufferId = bufferIds[0];
+      indexBufferId = bufferIds[1];
       gl.glEnableClientState(GL.GL_VERTEX_ARRAY);
       gl.glEnableClientState(GL.GL_NORMAL_ARRAY);
     }
