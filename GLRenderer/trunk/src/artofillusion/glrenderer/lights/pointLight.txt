@@ -3,11 +3,11 @@ for (int i = 0; i < pointLightCount; i++)
   vec3 dir = pointLightPos[i]-(vec3(Position)/Position.w);
   float dist = length(dir);
   dir /= dist;
-  float dot = max(0.0, (gl_FrontFacing ? 1.0 : -1.0)*dot(dir, Normal));
+  float dirdot = max(0.0, (gl_FrontFacing ? 1.0 : -1.0)*dot(dir, Normal));
   float x = pointLightDecayRate[i]*dist;
   float intensity = 1.0/(1.0+x+x*x);
-  diffuseLight += pointLightColor[i]*dot*intensity;
+  diffuseLight += pointLightColor[i]*dirdot*intensity;
   vec3 hilightDir = normalize(dir+vec3(0.0, 0.0, 1.0));
-  float hilightDot = (dot == 0.0 ? 0.0 : abs(dot(hilightDir, Normal)));
+  float hilightDot = (dirdot == 0.0 ? 0.0 : abs(dot(hilightDir, Normal)));
   hilightLight += intensity*pow(hilightDot, (1.0-roughness)*128.0+1.0);
 }
