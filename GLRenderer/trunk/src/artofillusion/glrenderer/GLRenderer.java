@@ -29,7 +29,7 @@ import java.io.*;
 
 import com.sun.opengl.util.*;
 
-/** Raster is a Renderer which generates images with a scanline algorithm. */
+/** This is a Renderer which uses OpenGL to generate images. */
 
 public class GLRenderer implements Renderer, Runnable
 {
@@ -48,8 +48,12 @@ public class GLRenderer implements Renderer, Runnable
   private boolean fog, transparentBackground = false, adaptive = true, hideBackfaces = true, generateHDR = false, positionNeeded, depthNeeded, needCopyToUI = true;
   private int diffuseColorId, hilightColorId, emissiveColorId, roughnessId;
   private int vertBufferId, indexBufferId;
+  private int displacementBufferIndex;
+  private FloatBuffer displacementBuffer;
   private boolean cullingEnabled;
   private TextureSpec spec;
+
+  private static final int DISPLACEMENT_BUFFER_SIZE = 1024;
 
   public GLRenderer()
   {
@@ -464,6 +468,14 @@ public class GLRenderer implements Renderer, Runnable
     gl.glUniform3f(emissiveColorId, spec.emissive.getRed(), spec.emissive.getGreen(), spec.emissive.getBlue());
     gl.glUniform1f(roughnessId, (float) spec.roughness);
 
+    // Handle displacement mapped objects.
+
+    if (info.object.getTexture().hasComponent(Texture.DISPLACEMENT_COMPONENT))
+    {
+      renderMeshDisplaced(gl, mesh, tol);
+      return;
+    }
+
     // Map a buffer in which to store the vertices and normals.
 
     gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vertBufferId);
@@ -471,10 +483,10 @@ public class GLRenderer implements Renderer, Runnable
     ByteBuffer map = gl.glMapBuffer(GL.GL_ARRAY_BUFFER, GL.GL_WRITE_ONLY);
     map.order(ByteOrder.nativeOrder());
     FloatBuffer buffer = map.asFloatBuffer();
-    gl.glVertexPointer(3, GL.GL_FLOAT, 0, 0);
-    gl.glNormalPointer(GL.GL_FLOAT, 0, mesh.triangle.length*9*BufferUtil.SIZEOF_FLOAT);
+    gl.glVertexPointer(3, GL.GL_FLOAT, 6*BufferUtil.SIZEOF_FLOAT, 0);
+    gl.glNormalPointer(GL.GL_FLOAT, 6*BufferUtil.SIZEOF_FLOAT, 3*BufferUtil.SIZEOF_FLOAT);
 
-    // Set the vertices from the mesh.
+    // Set the vertices and normals from the mesh.
 
     for (RenderingTriangle tri : mesh.triangle)
     {
@@ -482,25 +494,19 @@ public class GLRenderer implements Renderer, Runnable
       buffer.put((float) v.x);
       buffer.put((float) v.y);
       buffer.put((float) v.z);
+      v = mesh.norm[tri.n1];
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
       v = mesh.vert[tri.v2];
       buffer.put((float) v.x);
       buffer.put((float) v.y);
       buffer.put((float) v.z);
-      v = mesh.vert[tri.v3];
-      buffer.put((float) v.x);
-      buffer.put((float) v.y);
-      buffer.put((float) v.z);
-    }
-
-    // Set the normals from the mesh.
-
-    for (RenderingTriangle tri : mesh.triangle)
-    {
-      Vec3 v = mesh.norm[tri.n1];
-      buffer.put((float) v.x);
-      buffer.put((float) v.y);
-      buffer.put((float) v.z);
       v = mesh.norm[tri.n2];
+      buffer.put((float) v.x);
+      buffer.put((float) v.y);
+      buffer.put((float) v.z);
+      v = mesh.vert[tri.v3];
       buffer.put((float) v.x);
       buffer.put((float) v.y);
       buffer.put((float) v.z);
@@ -531,7 +537,13 @@ public class GLRenderer implements Renderer, Runnable
     int status[] = new int[1];
     gl.glGetShaderiv(shader, GL.GL_COMPILE_STATUS, status, 0);
     if (status[0] != GL.GL_TRUE)
-      throw new GLException("Shader failed to compile: "+source);
+    {
+      int size[] = new int [1];
+      gl.glGetShaderiv(shader, GL.GL_INFO_LOG_LENGTH, size, 0);
+      byte log[] = new byte[size[0]];
+      gl.glGetShaderInfoLog(shader, size[0], size, 0, log, 0);
+      throw new GLException("Shader failed to compile:\n"+source+"\n\nDetails:\n\n"+new String(log));
+    }
     return shader;
   }
 
@@ -719,8 +731,255 @@ public class GLRenderer implements Renderer, Runnable
       shader.append(readFile("artofillusion/glrenderer/lights/ambientSpotLight.txt"));
     }
     shader.append(readFile("artofillusion/glrenderer/shaderMainEnd.txt"));
-//System.out.println(shader.toString());
     return shader.toString();
+  }
+
+  /** Vertices are accumulated in a buffer while rendering a displacement mapped object.
+      This method draws the current contents of the buffer, then prepares it for further
+      rendering. */
+
+  private void flushDisplacementBuffer(GL gl, boolean currentlyMapped, boolean stillNeeded)
+  {
+    if (currentlyMapped && displacementBufferIndex > 0)
+    {
+      gl.glUnmapBuffer(GL.GL_ARRAY_BUFFER);
+      gl.glDrawArrays(GL.GL_TRIANGLES, 0, displacementBufferIndex*3);
+    }
+    displacementBufferIndex = 0;
+    if (stillNeeded)
+    {
+      gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vertBufferId);
+      gl.glBufferDataARB(GL.GL_ARRAY_BUFFER, DISPLACEMENT_BUFFER_SIZE*18*BufferUtil.SIZEOF_FLOAT, null, GL.GL_STREAM_DRAW);
+      ByteBuffer map = gl.glMapBuffer(GL.GL_ARRAY_BUFFER, GL.GL_WRITE_ONLY);
+      map.order(ByteOrder.nativeOrder());
+      displacementBuffer = map.asFloatBuffer();
+      gl.glVertexPointer(3, GL.GL_FLOAT, 6*BufferUtil.SIZEOF_FLOAT, 0);
+      gl.glNormalPointer(GL.GL_FLOAT, 6*BufferUtil.SIZEOF_FLOAT, 3*BufferUtil.SIZEOF_FLOAT);
+    }
+  }
+
+  /** Render a displacement mapped triangle mesh by recursively subdividing the triangles
+      until they are sufficiently small. */
+
+  private void renderMeshDisplaced(GL gl, RenderingMesh mesh, double tol)
+  {
+    Vec3 vert[] = mesh.vert, norm[] = mesh.norm;
+    Mat4 toView = theCamera.getObjectToView();
+    Vec3 temp1 = new Vec3(), temp2 = new Vec3();
+
+    flushDisplacementBuffer(gl, false, true);
+    for (RenderingTriangle tri : mesh.triangle)
+    {
+      int v1 = tri.v1;
+      int v2 = tri.v2;
+      int v3 = tri.v3;
+      int n1 = tri.n1;
+      int n2 = tri.n2;
+      int n3 = tri.n3;
+      double dist1 = vert[v1].distance(vert[v2]);
+      double dist2 = vert[v2].distance(vert[v3]);
+      double dist3 = vert[v3].distance(vert[v1]);
+
+      // Calculate the gradient vectors for u and v.
+
+      temp1.set(vert[v1].x-vert[v3].x, vert[v1].y-vert[v3].y, vert[v1].z-vert[v3].z);
+      temp2.set(vert[v3].x-vert[v2].x, vert[v3].y-vert[v2].y, vert[v3].z-vert[v2].z);
+      Vec3 vgrad = temp1.cross(mesh.faceNorm[tri.index]);
+      Vec3 ugrad = temp2.cross(mesh.faceNorm[tri.index]);
+      vgrad.scale(-1.0/vgrad.dot(temp2));
+      ugrad.scale(1.0/ugrad.dot(temp1));
+      DisplacedVertex dv1 = new DisplacedVertex(tri, vert[v1], norm[n1], 1.0, 0.0, toView, ugrad, vgrad);
+      DisplacedVertex dv2 = new DisplacedVertex(tri, vert[v2], norm[n2], 0.0, 1.0, toView, ugrad, vgrad);
+      DisplacedVertex dv3 = new DisplacedVertex(tri, vert[v3], norm[n3], 0.0, 0.0, toView, ugrad, vgrad);
+      renderDisplacedTriangle(gl, tri, dv1, dist1, dv2, dist2, dv3, dist3, ugrad, vgrad, tol);
+    }
+    flushDisplacementBuffer(gl, true, false);
+  }
+
+  /** Render a displacement mapeed triangle by recursively subdividing it. */
+
+  private void renderDisplacedTriangle(GL gl, RenderingTriangle tri, DisplacedVertex dv1,
+                                       double dist1, DisplacedVertex dv2, double dist2, DisplacedVertex dv3, double dist3,
+                                       Vec3 ugrad, Vec3 vgrad, double tol)
+  {
+    Mat4 toView = theCamera.getObjectToView();
+    DisplacedVertex midv1 = null, midv2 = null, midv3 = null;
+    double halfdist1 = 0, halfdist2 = 0, halfdist3 = 0;
+    boolean split1 = dist1 > tol, split2 = dist2 > tol, split3 = dist3 > tol;
+    int count = 0;
+
+    if (split1)
+    {
+      midv1 = new DisplacedVertex(tri, new Vec3(0.5*(dv1.vert.x+dv2.vert.x), 0.5*(dv1.vert.y+dv2.vert.y), 0.5*(dv1.vert.z+dv2.vert.z)),
+        new Vec3(0.5*(dv1.norm.x+dv2.norm.x), 0.5*(dv1.norm.y+dv2.norm.y), 0.5*(dv1.norm.z+dv2.norm.z)),
+        0.5*(dv1.u+dv2.u), 0.5*(dv1.v+dv2.v), toView, ugrad, vgrad);
+      halfdist1 = 0.5*dist1;
+      count++;
+    }
+    if (split2)
+    {
+      midv2 = new DisplacedVertex(tri, new Vec3(0.5*(dv2.vert.x+dv3.vert.x), 0.5*(dv2.vert.y+dv3.vert.y), 0.5*(dv2.vert.z+dv3.vert.z)),
+        new Vec3(0.5*(dv2.norm.x+dv3.norm.x), 0.5*(dv2.norm.y+dv3.norm.y), 0.5*(dv2.norm.z+dv3.norm.z)),
+        0.5*(dv2.u+dv3.u), 0.5*(dv2.v+dv3.v), toView, ugrad, vgrad);
+      halfdist2 = 0.5*dist2;
+      count++;
+    }
+    if (split3)
+    {
+      midv3 = new DisplacedVertex(tri, new Vec3(0.5*(dv3.vert.x+dv1.vert.x), 0.5*(dv3.vert.y+dv1.vert.y), 0.5*(dv3.vert.z+dv1.vert.z)),
+        new Vec3(0.5*(dv3.norm.x+dv1.norm.x), 0.5*(dv3.norm.y+dv1.norm.y), 0.5*(dv3.norm.z+dv1.norm.z)),
+        0.5*(dv3.u+dv1.u), 0.5*(dv3.v+dv1.v), toView, ugrad, vgrad);
+      halfdist3 = 0.5*dist3;
+      count++;
+    }
+
+    // If any side is still too large, subdivide the triangle further.
+
+    if (count == 1)
+    {
+      // Split it into two triangles.
+
+      if (split1)
+      {
+        double d = dv3.vert.distance(midv1.vert);
+        renderDisplacedTriangle(gl, tri, dv1, halfdist1, midv1, d, dv3, dist3,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, midv1, halfdist1, dv2, dist2, dv3, d,
+            ugrad, vgrad, tol);
+      }
+      else if (split2)
+      {
+        double d = dv1.vert.distance(midv2.vert);
+        renderDisplacedTriangle(gl, tri, dv2, halfdist2, midv2, d, dv1, dist1,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, midv2, halfdist2, dv3, dist3, dv1, d,
+            ugrad, vgrad, tol);
+      }
+      else
+      {
+        double d = dv1.vert.distance(midv3.vert);
+        renderDisplacedTriangle(gl, tri, dv3, halfdist3, midv3, d, dv2, dist2,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, midv3, halfdist3, dv1, dist1, dv2, d,
+            ugrad, vgrad, tol);
+      }
+      return;
+    }
+    if (count == 2)
+    {
+      // Split it into three triangles.
+
+      if (!split1)
+      {
+        double d1 = midv2.vert.distance(dv1.vert), d2 = midv2.vert.distance(midv3.vert);
+        renderDisplacedTriangle(gl, tri, dv1, dist1, dv2, halfdist2, midv2, d1,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, dv1, d1, midv2, d2, midv3, halfdist3,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, dv3, halfdist3, midv3, d2, midv2, halfdist2,
+            ugrad, vgrad, tol);
+      }
+      else if (!split2)
+      {
+        double d1 = midv3.vert.distance(dv2.vert), d2 = midv3.vert.distance(midv1.vert);
+        renderDisplacedTriangle(gl, tri, dv2, dist2, dv3, halfdist3, midv3, d1,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, dv2, d1, midv3, d2, midv1, halfdist1,
+            ugrad, vgrad, tol );
+        renderDisplacedTriangle(gl, tri, dv1, halfdist1, midv1, d2, midv3, halfdist3,
+            ugrad, vgrad, tol);
+      }
+      else
+      {
+        double d1 = midv1.vert.distance(dv3.vert), d2 = midv1.vert.distance(midv2.vert);
+        renderDisplacedTriangle(gl, tri, dv3, dist3, dv1, halfdist1, midv1, d1,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, dv3, d1, midv1, d2, midv2, halfdist2,
+            ugrad, vgrad, tol);
+        renderDisplacedTriangle(gl, tri, dv2, halfdist2, midv2, d2, midv1, halfdist1,
+            ugrad, vgrad, tol);
+      }
+      return;
+    }
+    if (count == 3)
+    {
+      // Split it into four triangles.
+
+      double d1 = midv1.vert.distance(midv2.vert), d2 = midv2.vert.distance(midv3.vert), d3 = midv3.vert.distance(midv1.vert);
+      renderDisplacedTriangle(gl, tri, dv1, halfdist1, midv1, d3, midv3, halfdist3,
+          ugrad, vgrad, tol);
+      renderDisplacedTriangle(gl, tri, dv2, halfdist2, midv2, d1, midv1, halfdist1,
+          ugrad, vgrad, tol);
+      renderDisplacedTriangle(gl, tri, dv3, halfdist3, midv3, d2, midv2, halfdist2,
+          ugrad, vgrad, tol);
+      renderDisplacedTriangle(gl, tri, midv1, d1, midv2, d2, midv3, d3,
+          ugrad, vgrad, tol);
+      return;
+    }
+
+    // The triangle is small enough that it does not need to be split any more, so render it.
+
+    Vec3 v = dv1.dispvert;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    v = dv1.dispnorm;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    v = dv2.dispvert;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    v = dv2.dispnorm;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    v = dv3.dispvert;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    v = dv3.dispnorm;
+    displacementBuffer.put((float) v.x);
+    displacementBuffer.put((float) v.y);
+    displacementBuffer.put((float) v.z);
+    displacementBufferIndex++;
+    if (displacementBufferIndex == DISPLACEMENT_BUFFER_SIZE)
+      flushDisplacementBuffer(gl, true, true);
+  }
+
+  /** This is an inner class for keeping track of information about vertices when
+     doing displacement mapping. */
+
+  private class DisplacedVertex
+  {
+    public Vec3 vert, norm, dispvert, dispnorm;
+    public double u, v;
+
+    public DisplacedVertex(RenderingTriangle tri, Vec3 vert, Vec3 norm, double u, double v,
+                           Mat4 toView, Vec3 ugrad, Vec3 vgrad)
+    {
+      this.vert = vert;
+      this.norm = norm;
+      this.u = u;
+      this.v = v;
+      double z = (float) toView.timesZ(vert);
+      double tol = (z > theCamera.getDistToScreen()) ? smoothScale*z : smoothScale;
+      double disp = tri.getDisplacement(u, v, 1.0-u-v, tol, 0.0);
+      dispvert = new Vec3(vert.x+disp*norm.x, vert.y+disp*norm.y, vert.z+disp*norm.z);
+
+      // Find the derivatives of the displacement map, and use them to find the
+      // local normal vector.
+
+      double w = 1.0-u-v;
+      double dhdu = (tri.getDisplacement(u+(1e-5), v, w-(1e-5), tol, 0.0)-disp)*1e5;
+      double dhdv = (tri.getDisplacement(u, v+(1e-5), w-(1e-5), tol, 0.0)-disp)*1e5;
+      dispnorm = new Vec3(norm);
+      Vec3 temp = new Vec3(dhdu*ugrad.x+dhdv*vgrad.x, dhdu*ugrad.y+dhdv*vgrad.y, dhdu*ugrad.z+dhdv*vgrad.z);
+      dispnorm.scale(temp.dot(dispnorm)+1.0);
+      dispnorm.subtract(temp);
+      dispnorm.normalize();
+    }
   }
 
   /** This inner class implements the callbacks to perform drawing with Jogl. */
@@ -778,7 +1037,14 @@ public class GLRenderer implements Renderer, Runnable
         gl.glLinkProgram(program);
         int status[] = new int[1];
         gl.glGetProgramiv(program, GL.GL_LINK_STATUS, status, 0);
-        System.out.println(status[0]);
+        if (status[0] != GL.GL_TRUE)
+        {
+          int size[] = new int [1];
+          gl.glGetProgramiv(program, GL.GL_INFO_LOG_LENGTH, size, 0);
+          byte log[] = new byte[size[0]];
+          gl.glGetProgramInfoLog(program, size[0], size, 0, log, 0);
+          throw new GLException("Error linking program:\n\n"+new String(log));
+        }
         gl.glUseProgram(program);
 
         diffuseColorId = gl.glGetUniformLocation(program, "diffuseColor");
