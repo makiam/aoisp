@@ -46,12 +46,11 @@ public class GLRenderer implements Renderer, Runnable
   private Thread renderThread;
   private double time, smoothing = 1.0, smoothScale, depthOfField, focalDist, surfaceError = 0.02, fogDist;
   private boolean fog, transparentBackground = false, adaptive = true, hideBackfaces = true, generateHDR = false, positionNeeded, depthNeeded, needCopyToUI = true;
-  private int diffuseColorId, hilightColorId, emissiveColorId, roughnessId;
   private int vertBufferId, indexBufferId;
   private int displacementBufferIndex;
   private FloatBuffer displacementBuffer;
   private boolean cullingEnabled;
-  private TextureSpec spec;
+  private ShaderGenerator shaderGenerator;
 
   private static final int DISPLACEMENT_BUFFER_SIZE = 1024;
 
@@ -91,8 +90,8 @@ public class GLRenderer implements Renderer, Runnable
     theCamera.setSize(width, height);
     theCamera.setDistToScreen(theCamera.getDistToScreen());
     theCamera.setClipDistance(theCamera.getClipDistance());
-    spec = new TextureSpec();
     image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    shaderGenerator = new ShaderGenerator(theScene, theCamera);
     renderThread = new Thread(this, "OpenGL Renderer Main Thread");
     renderThread.start();
   }
@@ -264,6 +263,7 @@ public class GLRenderer implements Renderer, Runnable
     fog = theScene.getFogState();
     fogDist = theScene.getFogDistance();
 
+    Threading.disableSingleThreading();
     GLPbuffer pbuffer = GLDrawableFactory.getFactory().createGLPbuffer(new GLCapabilities(), new DefaultGLCapabilitiesChooser(), 1, 1, null);
     pbuffer.addGLEventListener(new CanvasListener());
     pbuffer.display();
@@ -362,7 +362,7 @@ public class GLRenderer implements Renderer, Runnable
     theScene = null;
     theCamera = null;
     image = null;
-    spec = null;
+    shaderGenerator = null;
     RenderListener rl = listener;
     listener = null;
     renderThread = null;
@@ -420,28 +420,31 @@ public class GLRenderer implements Renderer, Runnable
 //    Thread currentThread = Thread.currentThread();
 //    if (currentThread != renderThread)
 //      return;
-    if (info.object instanceof ObjectCollection)
+    Object3D theObject = info.object;
+    while (theObject instanceof ObjectWrapper)
+      theObject = ((ObjectWrapper) theObject).getWrappedObject();
+    if (theObject instanceof ObjectCollection)
+    {
+      Enumeration objects = ((ObjectCollection) theObject).getObjects(info, false, theScene);
+      while (objects.hasMoreElements())
       {
-        Enumeration objects = ((ObjectCollection) info.object).getObjects(info, false, theScene);
-        while (objects.hasMoreElements())
-          {
-            ObjectInfo elem = (ObjectInfo) objects.nextElement();
-            ObjectInfo copy = elem.duplicate();
-            copy.coords.transformCoordinates(info.coords.fromLocal());
-            renderObject(gl, copy);
-          }
-        return;
+        ObjectInfo elem = (ObjectInfo) objects.nextElement();
+        ObjectInfo copy = elem.duplicate();
+        copy.coords.transformCoordinates(info.coords.fromLocal());
+        renderObject(gl, copy);
       }
+      return;
+    }
     double tol;
     if (adaptive)
-      {
-        double dist = info.getBounds().distanceToPoint(info.coords.toLocal().times(theCamera.getCameraCoordinates().getOrigin()));
-        double distToScreen = theCamera.getDistToScreen();
-        if (dist < distToScreen)
-          tol = surfaceError;
-        else
-          tol = surfaceError*dist/distToScreen;
-      }
+    {
+      double dist = info.getBounds().distanceToPoint(info.coords.toLocal().times(theCamera.getCameraCoordinates().getOrigin()));
+      double distToScreen = theCamera.getDistToScreen();
+      if (dist < distToScreen)
+        tol = surfaceError;
+      else
+        tol = surfaceError*dist/distToScreen;
+    }
     else
       tol = surfaceError;
     RenderingMesh mesh = info.getRenderingMesh(tol);
@@ -458,19 +461,22 @@ public class GLRenderer implements Renderer, Runnable
         -toView.m13, toView.m23, -toView.m33, toView.m43,
         -toView.m14, toView.m24, -toView.m34, toView.m44
     }, 0);
-    prepareCulling(gl, hideBackfaces && info.object.isClosed() && !info.object.getTexture().hasComponent(Texture.TRANSPARENT_COLOR_COMPONENT));
+    prepareCulling(gl, hideBackfaces && theObject.isClosed() && !theObject.getTexture().hasComponent(Texture.TRANSPARENT_COLOR_COMPONENT));
 
     // Set up the material properties to let OpenGL shade the surface.
 
-    info.object.getTexture().getAverageSpec(spec, time, info.object.getAverageParameterValues());
-    gl.glUniform3f(diffuseColorId, spec.diffuse.getRed(), spec.diffuse.getGreen(), spec.diffuse.getBlue());
-    gl.glUniform3f(hilightColorId, spec.hilight.getRed(), spec.hilight.getGreen(), spec.hilight.getBlue());
-    gl.glUniform3f(emissiveColorId, spec.emissive.getRed(), spec.emissive.getGreen(), spec.emissive.getBlue());
-    gl.glUniform1f(roughnessId, (float) spec.roughness);
+    try
+    {
+      shaderGenerator.prepareShader(gl, info);
+    }
+    catch (IOException ex)
+    {
+      ex.printStackTrace();
+    }
 
     // Handle displacement mapped objects.
 
-    if (info.object.getTexture().hasComponent(Texture.DISPLACEMENT_COMPONENT))
+    if (theObject.getTexture().hasComponent(Texture.DISPLACEMENT_COMPONENT))
     {
       renderMeshDisplaced(gl, mesh, tol);
       return;
@@ -517,221 +523,6 @@ public class GLRenderer implements Renderer, Runnable
     }
     gl.glUnmapBuffer(GL.GL_ARRAY_BUFFER);
     gl.glDrawArrays(GL.GL_TRIANGLES, 0, mesh.triangle.length*3);
-  }
-
-  private String readFile(String name) throws IOException
-  {
-    BufferedReader in = new BufferedReader(new InputStreamReader(getClass().getClassLoader().getResourceAsStream(name)));
-    StringBuilder sb = new StringBuilder();
-    String line;
-    while ((line = in.readLine()) != null)
-      sb.append(line).append('\n');
-    return sb.toString();
-  }
-
-  private int createShader(GL gl, int type, String source) throws GLException
-  {
-    int shader = gl.glCreateShader(type);
-    gl.glShaderSource(shader, 1, new String[] {source}, new int[] {source.length()}, 0);
-    gl.glCompileShader(shader);
-    int status[] = new int[1];
-    gl.glGetShaderiv(shader, GL.GL_COMPILE_STATUS, status, 0);
-    if (status[0] != GL.GL_TRUE)
-    {
-      int size[] = new int [1];
-      gl.glGetShaderiv(shader, GL.GL_INFO_LOG_LENGTH, size, 0);
-      byte log[] = new byte[size[0]];
-      gl.glGetShaderInfoLog(shader, size[0], size, 0, log, 0);
-      throw new GLException("Shader failed to compile:\n"+source+"\n\nDetails:\n\n"+new String(log));
-    }
-    return shader;
-  }
-
-  /** Create the shader which performs lighting calculations. */
-
-  private String createLightingShader() throws IOException
-  {
-    ArrayList<ObjectInfo> directionalLights = new ArrayList<ObjectInfo>();
-    ArrayList<ObjectInfo> ambientDirectionalLights = new ArrayList<ObjectInfo>();
-    ArrayList<ObjectInfo> pointLights = new ArrayList<ObjectInfo>();
-    ArrayList<ObjectInfo> ambientPointLights = new ArrayList<ObjectInfo>();
-    ArrayList<ObjectInfo> spotLights = new ArrayList<ObjectInfo>();
-    ArrayList<ObjectInfo> ambientSpotLights = new ArrayList<ObjectInfo>();
-
-    for (int i = 0; i < theScene.getNumObjects(); i++)
-    {
-      ObjectInfo info = theScene.getObject(i);
-      if (!(info.object instanceof Light))
-        continue;
-      if (!info.visible)
-        continue;
-      Light light = (Light) info.object;
-      if (light instanceof DirectionalLight)
-      {
-        if (light.getType() == Light.TYPE_AMBIENT)
-          ambientDirectionalLights.add(info);
-        else
-          directionalLights.add(info);
-      }
-      if (light instanceof PointLight)
-      {
-        if (light.getType() == Light.TYPE_AMBIENT)
-          ambientPointLights.add(info);
-        else
-          pointLights.add(info);
-      }
-      if (light instanceof SpotLight)
-      {
-        if (light.getType() == Light.TYPE_AMBIENT)
-          ambientSpotLights.add(info);
-        else
-          spotLights.add(info);
-      }
-    }
-    StringBuilder shader = new StringBuilder(readFile("artofillusion/glrenderer/shaderMainStart.txt"));
-    RGBColor ambient = theScene.getAmbientColor().duplicate();
-    for (ObjectInfo info : ambientDirectionalLights)
-    {
-      RGBColor light = new RGBColor();
-      ((DirectionalLight) info.object).getLight(light, 0.0f);
-      ambient.add(light);
-    }
-    shader.append("vec3 diffuseLight = vec3(").append(ambient.getRed()).append(", ").append(ambient.getGreen()).append(", ").append(ambient.getBlue()).append(");\n");
-    Mat4 toView = theCamera.getWorldToView();
-    toView = new Mat4(-toView.m11, -toView.m12, -toView.m13, -toView.m14,
-                      toView.m21, toView.m22, toView.m23, toView.m24,
-                      -toView.m31, -toView.m32, -toView.m33, -toView.m34,
-                      toView.m41, toView.m42, toView.m43, toView.m44
-    );
-    if (pointLights.size() > 0)
-    {
-      shader.append("const int pointLightCount = ").append(pointLights.size()).append(";\n");
-      shader.append("vec3 pointLightPos[").append(pointLights.size()).append("];\n");
-      shader.append("vec3 pointLightColor[").append(pointLights.size()).append("];\n");
-      shader.append("float pointLightDecayRate[").append(pointLights.size()).append("];\n");
-      for (int i = 0; i < pointLights.size(); i++)
-      {
-        PointLight light = (PointLight) pointLights.get(i).object;
-        Vec3 pos = toView.times(pointLights.get(i).coords.getOrigin());
-        shader.append("pointLightPos[").append(i).append("] = vec3(")
-          .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
-        RGBColor color = light.getColor();
-        color.scale(light.getIntensity());
-        shader.append("pointLightColor[").append(i).append("] = vec3(")
-          .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        shader.append("pointLightDecayRate[").append(i).append("] = ")
-          .append(light.getDecayRate()).append(";\n");
-      }
-      shader.append(readFile("artofillusion/glrenderer/lights/pointLight.txt"));
-    }
-    if (ambientPointLights.size() > 0)
-    {
-      shader.append("const int ambientPointLightCount = ").append(ambientPointLights.size()).append(";\n");
-      shader.append("vec3 ambientPointLightPos[").append(ambientPointLights.size()).append("];\n");
-      shader.append("vec3 ambientPointLightColor[").append(ambientPointLights.size()).append("];\n");
-      shader.append("float ambientPointLightDecayRate[").append(ambientPointLights.size()).append("];\n");
-      for (int i = 0; i < ambientPointLights.size(); i++)
-      {
-        PointLight light = (PointLight) ambientPointLights.get(i).object;
-        Vec3 pos = toView.times(ambientPointLights.get(i).coords.getOrigin());
-        shader.append("ambientPointLightPos[").append(i).append("] = vec3(")
-          .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
-        RGBColor color = light.getColor();
-        color.scale(light.getIntensity());
-        shader.append("ambientPointLightColor[").append(i).append("] = vec3(")
-          .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        shader.append("ambientPointLightDecayRate[").append(i).append("] = ")
-          .append(light.getDecayRate()).append(";\n");
-      }
-      shader.append(readFile("artofillusion/glrenderer/lights/ambientPointLight.txt"));
-    }
-    if (directionalLights.size() > 0)
-    {
-      shader.append("const int directionalLightCount = ").append(directionalLights.size()).append(";\n");
-      shader.append("vec3 directionalLightDir[").append(directionalLights.size()).append("];\n");
-      shader.append("vec3 directionalLightHilightDir[").append(directionalLights.size()).append("];\n");
-      shader.append("vec3 directionalLightColor[").append(directionalLights.size()).append("];\n");
-      for (int i = 0; i < directionalLights.size(); i++)
-      {
-        DirectionalLight light = (DirectionalLight) directionalLights.get(i).object;
-        Vec3 dir = toView.timesDirection(directionalLights.get(i).coords.getZDirection());
-        shader.append("directionalLightDir[").append(i).append("] = vec3(")
-          .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
-        dir.z -= 1.0;
-        dir.normalize();
-        shader.append("directionalLightHilightDir[").append(i).append("] = vec3(")
-          .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
-        RGBColor color = light.getColor();
-        color.scale(light.getIntensity());
-        shader.append("directionalLightColor[").append(i).append("] = vec3(")
-          .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-      }
-      shader.append(readFile("artofillusion/glrenderer/lights/directionalLight.txt"));
-    }
-    if (spotLights.size() > 0)
-    {
-      shader.append("const int spotLightCount = ").append(spotLights.size()).append(";\n");
-      shader.append("vec3 spotLightPos[").append(spotLights.size()).append("];\n");
-      shader.append("vec3 spotLightColor[").append(spotLights.size()).append("];\n");
-      shader.append("vec3 spotLightDir[").append(spotLights.size()).append("];\n");
-      shader.append("float spotLightDecayRate[").append(spotLights.size()).append("];\n");
-      shader.append("float spotLightCutoff[").append(spotLights.size()).append("];\n");
-      shader.append("float spotLightExponent[").append(spotLights.size()).append("];\n");
-      for (int i = 0; i < spotLights.size(); i++)
-      {
-        SpotLight light = (SpotLight) spotLights.get(i).object;
-        Vec3 pos = toView.times(spotLights.get(i).coords.getOrigin());
-        shader.append("spotLightPos[").append(i).append("] = vec3(")
-          .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
-        RGBColor color = light.getColor();
-        color.scale(light.getIntensity());
-        shader.append("spotLightColor[").append(i).append("] = vec3(")
-          .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        Vec3 dir = toView.timesDirection(spotLights.get(i).coords.getZDirection());
-        shader.append("spotLightDir[").append(i).append("] = vec3(")
-          .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
-        shader.append("spotLightDecayRate[").append(i).append("] = ")
-          .append(light.getDecayRate()).append(";\n");
-        shader.append("spotLightCutoff[").append(i).append("] = ")
-          .append(light.getAngleCosine()).append(";\n");
-        shader.append("spotLightExponent[").append(i).append("] = ")
-          .append(light.getExponent()).append(";\n");
-      }
-      shader.append(readFile("artofillusion/glrenderer/lights/spotLight.txt"));
-    }
-    if (ambientSpotLights.size() > 0)
-    {
-      shader.append("const int ambientSpotLightCount = ").append(ambientSpotLights.size()).append(";\n");
-      shader.append("vec3 ambientSpotLightPos[").append(ambientSpotLights.size()).append("];\n");
-      shader.append("vec3 ambientSpotLightColor[").append(ambientSpotLights.size()).append("];\n");
-      shader.append("vec3 ambientSpotLightDir[").append(ambientSpotLights.size()).append("];\n");
-      shader.append("float ambientSpotLightDecayRate[").append(ambientSpotLights.size()).append("];\n");
-      shader.append("float ambientSpotLightCutoff[").append(ambientSpotLights.size()).append("];\n");
-      shader.append("float ambientSpotLightExponent[").append(ambientSpotLights.size()).append("];\n");
-      for (int i = 0; i < ambientSpotLights.size(); i++)
-      {
-        SpotLight light = (SpotLight) ambientSpotLights.get(i).object;
-        Vec3 pos = toView.times(ambientSpotLights.get(i).coords.getOrigin());
-        shader.append("ambientSpotLightPos[").append(i).append("] = vec3(")
-          .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
-        RGBColor color = light.getColor();
-        color.scale(light.getIntensity());
-        shader.append("ambientSpotLightColor[").append(i).append("] = vec3(")
-          .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        Vec3 dir = toView.timesDirection(ambientSpotLights.get(i).coords.getZDirection());
-        shader.append("ambientSpotLightDir[").append(i).append("] = vec3(")
-          .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
-        shader.append("ambientSpotLightDecayRate[").append(i).append("] = ")
-          .append(light.getDecayRate()).append(";\n");
-        shader.append("ambientSpotLightCutoff[").append(i).append("] = ")
-          .append(light.getAngleCosine()).append(";\n");
-        shader.append("ambientSpotLightExponent[").append(i).append("] = ")
-          .append(light.getExponent()).append(";\n");
-      }
-      shader.append(readFile("artofillusion/glrenderer/lights/ambientSpotLight.txt"));
-    }
-    shader.append(readFile("artofillusion/glrenderer/shaderMainEnd.txt"));
-    return shader.toString();
   }
 
   /** Vertices are accumulated in a buffer while rendering a displacement mapped object.
@@ -1026,36 +817,6 @@ public class GLRenderer implements Renderer, Runnable
     {
       GL gl = drawable.getGL();
       updateTime = System.currentTimeMillis();
-
-      try
-      {
-        int vertShader = createShader(gl, GL.GL_VERTEX_SHADER, readFile("artofillusion/glrenderer/vertexShader.txt"));
-        int fragShader = createShader(gl, GL.GL_FRAGMENT_SHADER, createLightingShader());
-        int program = gl.glCreateProgram();
-        gl.glAttachShader(program, vertShader);
-        gl.glAttachShader(program, fragShader);
-        gl.glLinkProgram(program);
-        int status[] = new int[1];
-        gl.glGetProgramiv(program, GL.GL_LINK_STATUS, status, 0);
-        if (status[0] != GL.GL_TRUE)
-        {
-          int size[] = new int [1];
-          gl.glGetProgramiv(program, GL.GL_INFO_LOG_LENGTH, size, 0);
-          byte log[] = new byte[size[0]];
-          gl.glGetProgramInfoLog(program, size[0], size, 0, log, 0);
-          throw new GLException("Error linking program:\n\n"+new String(log));
-        }
-        gl.glUseProgram(program);
-
-        diffuseColorId = gl.glGetUniformLocation(program, "diffuseColor");
-        hilightColorId = gl.glGetUniformLocation(program, "hilightColor");
-        emissiveColorId = gl.glGetUniformLocation(program, "emissiveColor");
-        roughnessId = gl.glGetUniformLocation(program, "roughness");
-      }
-      catch (Exception ex)
-      {
-        ex.printStackTrace();
-      }
 
       Color background = theScene.getEnvironmentColor().getColor();
       gl.glClearColor(background.getRed()/255.0f, background.getGreen()/255.0f, background.getBlue()/255.0f, 0.0f);

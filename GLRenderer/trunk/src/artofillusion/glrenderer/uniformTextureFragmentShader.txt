@@ -1,0 +1,12 @@
+uniform vec3 uniformDiffuseColor;
+uniform vec3 uniformHilightColor;
+uniform vec3 uniformEmissiveColor;
+uniform float uniformRoughness;
+
+void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness)
+{
+  diffuseColor = uniformDiffuseColor;
+  hilightColor = uniformHilightColor;
+  emissiveColor = uniformEmissiveColor;
+  roughness = uniformRoughness;
+}
