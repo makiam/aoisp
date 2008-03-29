@@ -112,19 +112,17 @@ public class ShaderGenerator
         int image = gl.glGetUniformLocation(program, "BumpImage");
         gl.glUniform1i(image, textureIndex++);
       }
-
-//      int image = gl.glGetUniformLocation(program, "Image");
-//      gl.glUniform1i(image, 0);
-//      gl.glActiveTexture(GL.GL_TEXTURE0);
-//      gl.glBindTexture(GL.GL_TEXTURE_2D, getImageId(gl, tex.diffuseColor.getImage(), tex.tileX, tex.tileY));
-
       int transform = gl.glGetUniformLocation(program, "TextureTransform");
       Mat4 fromView = info.coords.toLocal().times(theCamera.getViewToWorld());
       fromView = new Mat4(-fromView.m11, fromView.m12, -fromView.m13, fromView.m14,
                           -fromView.m21, fromView.m22, -fromView.m23, fromView.m24,
                           -fromView.m31, fromView.m32, -fromView.m33, fromView.m34,
                           -fromView.m41, fromView.m42, -fromView.m43, fromView.m44);
-      Mat4 mat = ((ProjectionMapping) info.object.getTextureMapping()).getTransform().times(fromView);
+      Mat4 mat;
+      if (info.object.getTextureMapping() instanceof ProjectionMapping)
+        mat = ((ProjectionMapping) info.object.getTextureMapping()).getTransform().times(fromView);
+      else
+        mat = ((NonlinearMapping2D) info.object.getTextureMapping()).getPreTransform().times(fromView);
       gl.glUniformMatrix4fv(transform, 1, true, new float [] {
         (float) mat.m11, (float) mat.m12, (float) mat.m13, (float) mat.m14,
         (float) mat.m21, (float) mat.m22, (float) mat.m23, (float) mat.m24,
@@ -467,7 +465,31 @@ public class ShaderGenerator
     shader.append("varying vec4 Position;\n");
     shader.append("uniform mat4 TextureTransform;\n");
     shader.append("void getTextureCoordinates(out vec3 coords) {\n");
-    shader.append("coords = (TextureTransform*Position).xyz;\n");
+    if (mapping instanceof ProjectionMapping)
+      shader.append("coords = (TextureTransform*Position).xyz;\n");
+    else if (mapping instanceof CylindricalMapping)
+    {
+      CylindricalMapping map = (CylindricalMapping) mapping;
+      shader.append("vec3 intermed = (TextureTransform*Position).xyz;\n");
+      shader.append("float theta = atan(intermed.z, intermed.x);\n");
+      Vec2 scale = map.getScale();
+      double ax = -180.0/(Math.PI*scale.x);
+      double ay = 1.0/scale.y;
+      shader.append("coords = vec3(theta*").append(ax).append(", intermed.y*").append(ay).append("+(").append(map.getOffset()).append("), 0.0);\n");
+    }
+    else if (mapping instanceof SphericalMapping)
+    {
+      SphericalMapping map = (SphericalMapping) mapping;
+      shader.append("vec3 intermed = (TextureTransform*Position).xyz;\n");
+      shader.append("float theta = atan(intermed.z, intermed.x);\n");
+      shader.append("float r2 = length(intermed);\n");
+      shader.append("float phi = acos(intermed.y/r2);\n");
+      Vec2 scale = map.getScale();
+      double ax = -180.0/(Math.PI*scale.x);
+      double ay = -180.0/(Math.PI*scale.y);
+      double dy = map.getOffset()*(Math.PI/180.0);
+      shader.append("coords = vec3(theta*").append(ax).append(", phi*").append(ay).append("+(").append(dy).append("), 0.0);\n");
+    }
     shader.append("}");
     int fragmentShader = createShader(gl, GL.GL_FRAGMENT_SHADER, shader.toString());
     mappingMap.put(mapping.getClass(), fragmentShader);
