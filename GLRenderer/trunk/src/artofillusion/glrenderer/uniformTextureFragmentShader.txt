@@ -3,7 +3,7 @@ uniform vec3 uniformHilightColor;
 uniform vec3 uniformEmissiveColor;
 uniform float uniformRoughness;
 
-void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness)
+void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness, inout vec3 normal)
 {
   diffuseColor = uniformDiffuseColor;
   hilightColor = uniformHilightColor;

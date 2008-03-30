@@ -421,7 +421,7 @@ public class ShaderGenerator
       shader.append("uniform sampler2D BumpImage;\n");
     char component[] = new char[] {'r', 'g', 'b', 'a'};
     shader.append("void getTextureCoordinates(out vec3 coords);\n");
-    shader.append("void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness) {\n");
+    shader.append("void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness, inout vec3 normal) {\n");
     shader.append("vec3 textureCoords;\n");
     shader.append("getTextureCoordinates(textureCoords);\n");
     shader.append("roughness = ").append(tex.roughness.getValue()).append(";\n");
@@ -449,6 +449,19 @@ public class ShaderGenerator
         append(emissive.getGreen()).append(", ").append(emissive.getBlue()).append(");\n");
     if (tex.emissiveColor.getImage() != null)
       shader.append("emissiveColor *= vec3(texture2D(EmissiveColorImage, textureCoords.xy));\n");
+    if (tex.bump.getImage() != null && tex.bump.getValue() != 0.0)
+    {
+      shader.append("float bump1 = texture2D(BumpImage, textureCoords.xy).").append(component[tex.bump.getComponent()]).append(";\n");
+      double dx = 1.0/tex.bump.getImage().getWidth();
+      double dy = 1.0/tex.bump.getImage().getHeight();
+      shader.append("float bump2 = texture2D(BumpImage, textureCoords.xy+vec2(").append(dx).append(", 0.0)).").append(component[tex.bump.getComponent()]).append(";\n");
+      shader.append("float bump3 = texture2D(BumpImage, textureCoords.xy-vec2(0.0, ").append(dy).append(")).").append(component[tex.bump.getComponent()]).append(";\n");
+      shader.append("vec3 bumpgrad = vec3((bump2-bump1)/").append(dx*25.0).append(", (bump3-bump1)/").append(dy*25.0).append(", 0.0);\n");
+      shader.append("bumpgrad *= ").append(tex.bump.getValue()).append(";\n");
+      shader.append("normal *= dot(bumpgrad, normal)+1.0;\n");
+      shader.append("normal -= bumpgrad;\n");
+      shader.append("normal = normalize(normal);\n");
+    }
     shader.append("}");
     int fragmentShader = createShader(gl, GL.GL_FRAGMENT_SHADER, shader.toString());
     int program = createProgram(gl, getVertexShader(gl), getLightingShader(gl), getMappingShader(gl, mapping), fragmentShader);

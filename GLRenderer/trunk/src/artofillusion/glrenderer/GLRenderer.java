@@ -415,6 +415,7 @@ public class GLRenderer implements Renderer, Runnable
   {
     if (!info.visible)
       return;
+    theCamera.setObjectTransform(info.coords.fromLocal());
     if (theCamera.visibility(info.getBounds()) == Camera.NOT_VISIBLE)
       return;
 //    Thread currentThread = Thread.currentThread();
@@ -452,7 +453,6 @@ public class GLRenderer implements Renderer, Runnable
       return;
 //    if (currentThread != renderThread)
 //      return;
-    theCamera.setObjectTransform(info.coords.fromLocal());
     Mat4 toView = theCamera.getObjectToView();
     gl.glMatrixMode(GL.GL_MODELVIEW);
     gl.glLoadMatrixd(new double [] {

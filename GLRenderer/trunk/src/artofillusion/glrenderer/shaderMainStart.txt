@@ -1,11 +1,12 @@
 varying vec4 Position;
 varying vec3 Normal;
 
-void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness);
+void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness, inout vec3 normal);
 
 void main()
 {
   vec3 diffuseColor, hilightColor, emissiveColor;
+  vec3 normal = Normal;
   float roughness;
-  getTexture(diffuseColor, hilightColor, emissiveColor, roughness);
+  getTexture(diffuseColor, hilightColor, emissiveColor, roughness, normal);
   vec3 hilightLight = vec3(0, 0, 0);
