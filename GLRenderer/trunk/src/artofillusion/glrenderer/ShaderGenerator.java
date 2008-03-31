@@ -55,11 +55,11 @@ public class ShaderGenerator
 
   public void prepareShader(GL gl, ObjectInfo info) throws IOException
   {
-    Texture texture = info.object.getTexture();
+    Texture texture = info.getObject().getTexture();
     if (texture instanceof ImageMapTexture)
     {
       ImageMapTexture tex = (ImageMapTexture) texture;
-      int program = getImageMappedTextureProgram(gl, info.object.getTextureMapping());
+      int program = getImageMappedTextureProgram(gl, info.getObject().getTextureMapping());
       gl.glUseProgram(program);
 
       int textureIndex = 0;
@@ -113,16 +113,16 @@ public class ShaderGenerator
         gl.glUniform1i(image, textureIndex++);
       }
       int transform = gl.glGetUniformLocation(program, "TextureTransform");
-      Mat4 fromView = info.coords.toLocal().times(theCamera.getViewToWorld());
+      Mat4 fromView = info.getCoords().toLocal().times(theCamera.getViewToWorld());
       fromView = new Mat4(-fromView.m11, fromView.m12, -fromView.m13, fromView.m14,
                           -fromView.m21, fromView.m22, -fromView.m23, fromView.m24,
                           -fromView.m31, fromView.m32, -fromView.m33, fromView.m34,
                           -fromView.m41, fromView.m42, -fromView.m43, fromView.m44);
       Mat4 mat;
-      if (info.object.getTextureMapping() instanceof ProjectionMapping)
-        mat = ((ProjectionMapping) info.object.getTextureMapping()).getTransform().times(fromView);
+      if (info.getObject().getTextureMapping() instanceof ProjectionMapping)
+        mat = ((ProjectionMapping) info.getObject().getTextureMapping()).getTransform().times(fromView);
       else
-        mat = ((NonlinearMapping2D) info.object.getTextureMapping()).getPreTransform().times(fromView);
+        mat = ((NonlinearMapping2D) info.getObject().getTextureMapping()).getPreTransform().times(fromView);
       gl.glUniformMatrix4fv(transform, 1, true, new float [] {
         (float) mat.m11, (float) mat.m12, (float) mat.m13, (float) mat.m14,
         (float) mat.m21, (float) mat.m22, (float) mat.m23, (float) mat.m24,
@@ -132,7 +132,7 @@ public class ShaderGenerator
     else
     {
       gl.glUseProgram(getUniformTextureProgram(gl));
-      texture.getAverageSpec(spec, theScene.getTime(), info.object.getAverageParameterValues());
+      texture.getAverageSpec(spec, theScene.getTime(), info.getObject().getAverageParameterValues());
       gl.glUniform3f(diffuseColorId, spec.diffuse.getRed(), spec.diffuse.getGreen(), spec.diffuse.getBlue());
       gl.glUniform3f(hilightColorId, spec.hilight.getRed(), spec.hilight.getGreen(), spec.hilight.getBlue());
       gl.glUniform3f(emissiveColorId, spec.emissive.getRed(), spec.emissive.getGreen(), spec.emissive.getBlue());
@@ -210,11 +210,11 @@ public class ShaderGenerator
     for (int i = 0; i < theScene.getNumObjects(); i++)
     {
       ObjectInfo info = theScene.getObject(i);
-      if (!(info.object instanceof Light))
+      if (!(info.getObject() instanceof Light))
         continue;
-      if (!info.visible)
+      if (!info.isVisible())
         continue;
-      Light light = (Light) info.object;
+      Light light = (Light) info.getObject();
       if (light instanceof DirectionalLight)
       {
         if (light.getType() == Light.TYPE_AMBIENT)
@@ -242,7 +242,7 @@ public class ShaderGenerator
     for (ObjectInfo info : ambientDirectionalLights)
     {
       RGBColor light = new RGBColor();
-      ((DirectionalLight) info.object).getLight(light, 0.0f);
+      ((DirectionalLight) info.getObject()).getLight(light, 0.0f);
       ambient.add(light);
     }
     shader.append("vec3 diffuseLight = vec3(").append(ambient.getRed()).append(", ").append(ambient.getGreen()).append(", ").append(ambient.getBlue()).append(");\n");
@@ -260,8 +260,8 @@ public class ShaderGenerator
       shader.append("float pointLightDecayRate[").append(pointLights.size()).append("];\n");
       for (int i = 0; i < pointLights.size(); i++)
       {
-        PointLight light = (PointLight) pointLights.get(i).object;
-        Vec3 pos = toView.times(pointLights.get(i).coords.getOrigin());
+        PointLight light = (PointLight) pointLights.get(i).getObject();
+        Vec3 pos = toView.times(pointLights.get(i).getCoords().getOrigin());
         shader.append("pointLightPos[").append(i).append("] = vec3(")
           .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
         RGBColor color = light.getColor();
@@ -281,8 +281,8 @@ public class ShaderGenerator
       shader.append("float ambientPointLightDecayRate[").append(ambientPointLights.size()).append("];\n");
       for (int i = 0; i < ambientPointLights.size(); i++)
       {
-        PointLight light = (PointLight) ambientPointLights.get(i).object;
-        Vec3 pos = toView.times(ambientPointLights.get(i).coords.getOrigin());
+        PointLight light = (PointLight) ambientPointLights.get(i).getObject();
+        Vec3 pos = toView.times(ambientPointLights.get(i).getCoords().getOrigin());
         shader.append("ambientPointLightPos[").append(i).append("] = vec3(")
           .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
         RGBColor color = light.getColor();
@@ -302,8 +302,8 @@ public class ShaderGenerator
       shader.append("vec3 directionalLightColor[").append(directionalLights.size()).append("];\n");
       for (int i = 0; i < directionalLights.size(); i++)
       {
-        DirectionalLight light = (DirectionalLight) directionalLights.get(i).object;
-        Vec3 dir = toView.timesDirection(directionalLights.get(i).coords.getZDirection());
+        DirectionalLight light = (DirectionalLight) directionalLights.get(i).getObject();
+        Vec3 dir = toView.timesDirection(directionalLights.get(i).getCoords().getZDirection());
         shader.append("directionalLightDir[").append(i).append("] = vec3(")
           .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
         dir.z -= 1.0;
@@ -328,15 +328,15 @@ public class ShaderGenerator
       shader.append("float spotLightExponent[").append(spotLights.size()).append("];\n");
       for (int i = 0; i < spotLights.size(); i++)
       {
-        SpotLight light = (SpotLight) spotLights.get(i).object;
-        Vec3 pos = toView.times(spotLights.get(i).coords.getOrigin());
+        SpotLight light = (SpotLight) spotLights.get(i).getObject();
+        Vec3 pos = toView.times(spotLights.get(i).getCoords().getOrigin());
         shader.append("spotLightPos[").append(i).append("] = vec3(")
           .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
         RGBColor color = light.getColor();
         color.scale(light.getIntensity());
         shader.append("spotLightColor[").append(i).append("] = vec3(")
           .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        Vec3 dir = toView.timesDirection(spotLights.get(i).coords.getZDirection());
+        Vec3 dir = toView.timesDirection(spotLights.get(i).getCoords().getZDirection());
         shader.append("spotLightDir[").append(i).append("] = vec3(")
           .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
         shader.append("spotLightDecayRate[").append(i).append("] = ")
@@ -359,15 +359,15 @@ public class ShaderGenerator
       shader.append("float ambientSpotLightExponent[").append(ambientSpotLights.size()).append("];\n");
       for (int i = 0; i < ambientSpotLights.size(); i++)
       {
-        SpotLight light = (SpotLight) ambientSpotLights.get(i).object;
-        Vec3 pos = toView.times(ambientSpotLights.get(i).coords.getOrigin());
+        SpotLight light = (SpotLight) ambientSpotLights.get(i).getObject();
+        Vec3 pos = toView.times(ambientSpotLights.get(i).getCoords().getOrigin());
         shader.append("ambientSpotLightPos[").append(i).append("] = vec3(")
           .append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(");\n");
         RGBColor color = light.getColor();
         color.scale(light.getIntensity());
         shader.append("ambientSpotLightColor[").append(i).append("] = vec3(")
           .append(color.getRed()).append(", ").append(color.getGreen()).append(", ").append(color.getBlue()).append(");\n");
-        Vec3 dir = toView.timesDirection(ambientSpotLights.get(i).coords.getZDirection());
+        Vec3 dir = toView.timesDirection(ambientSpotLights.get(i).getCoords().getZDirection());
         shader.append("ambientSpotLightDir[").append(i).append("] = vec3(")
           .append(-dir.x).append(", ").append(-dir.y).append(", ").append(-dir.z).append(");\n");
         shader.append("ambientSpotLightDecayRate[").append(i).append("] = ")
@@ -424,6 +424,31 @@ public class ShaderGenerator
     shader.append("void getTexture(out vec3 diffuseColor, out vec3 hilightColor, out vec3 emissiveColor, out float roughness, inout vec3 normal) {\n");
     shader.append("vec3 textureCoords;\n");
     shader.append("getTextureCoordinates(textureCoords);\n");
+    if (!tex.tileX)
+      shader.append("if (textureCoords.x < 0.0 || textureCoords.x > 1.0) discard;\n");
+    if (!tex.tileY)
+      shader.append("if (textureCoords.y < 0.0 || textureCoords.y > 1.0) discard;\n");
+    if (tex.mirrorX || tex.mirrorY)
+    {
+      String components, type;
+      if (tex.mirrorX && tex.mirrorY)
+      {
+        components = "textureCoords.xy";
+        type = "vec2";
+      }
+      else if (tex.mirrorX)
+      {
+        components = "textureCoords.x";
+        type = "float";
+      }
+      else
+      {
+        components = "textureCoords.y";
+        type = "float";
+      }
+      shader.append(type).append(" f = floor(mod(").append(components).append(", 2.0));\n");
+      shader.append(components).append(" = mix(-").append(components).append(", ").append(components).append(", f);\n");
+    }
     shader.append("roughness = ").append(tex.roughness.getValue()).append(";\n");
     if (tex.roughness.getImage() != null)
       shader.append("roughness *= texture2D(RoughnessImage, textureCoords.xy).").append(component[tex.roughness.getComponent()]).append(";\n");

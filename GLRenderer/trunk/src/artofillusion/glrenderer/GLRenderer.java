@@ -290,8 +290,8 @@ public class GLRenderer implements Renderer, Runnable
       {
         this.object = object;
         depth = theCamera.getObjectToView().times(object.getBounds().getCenter()).z;
-        if (object.object.getTexture() != null)
-          isTransparent = (object.object.getTexture().hasComponent(Texture.TRANSPARENT_COLOR_COMPONENT));
+        if (object.getObject().getTexture() != null)
+          isTransparent = (object.getObject().getTexture().hasComponent(Texture.TRANSPARENT_COLOR_COMPONENT));
       }
 
       public int compareTo(Object o)
@@ -319,7 +319,7 @@ public class GLRenderer implements Renderer, Runnable
     for (int i = 0; i < theScene.getNumObjects(); i++)
     {
       ObjectInfo obj = theScene.getObject(i);
-      theCamera.setObjectTransform(obj.coords.fromLocal());
+      theCamera.setObjectTransform(obj.getCoords().fromLocal());
       objects.add(new SortRecord(obj));
     }
     Collections.sort(objects);
@@ -387,7 +387,7 @@ public class GLRenderer implements Renderer, Runnable
       double dy = bounds.maxy-bounds.miny;
       double dz = bounds.maxz-bounds.minz;
       double size = 0.5*Math.sqrt(dx*dx+dy*dy+dz*dz);
-      double depth = toView.times(info.coords.getOrigin()).z;
+      double depth = toView.times(info.getCoords().getOrigin()).z;
       if (depth-size < min)
         min = depth-size;
       if (depth+size > max)
@@ -413,15 +413,15 @@ public class GLRenderer implements Renderer, Runnable
 
   private void renderObject(GL gl, ObjectInfo info)
   {
-    if (!info.visible)
+    if (!info.isVisible())
       return;
-    theCamera.setObjectTransform(info.coords.fromLocal());
+    theCamera.setObjectTransform(info.getCoords().fromLocal());
     if (theCamera.visibility(info.getBounds()) == Camera.NOT_VISIBLE)
       return;
 //    Thread currentThread = Thread.currentThread();
 //    if (currentThread != renderThread)
 //      return;
-    Object3D theObject = info.object;
+    Object3D theObject = info.getObject();
     while (theObject instanceof ObjectWrapper)
       theObject = ((ObjectWrapper) theObject).getWrappedObject();
     if (theObject instanceof ObjectCollection)
@@ -431,7 +431,7 @@ public class GLRenderer implements Renderer, Runnable
       {
         ObjectInfo elem = (ObjectInfo) objects.nextElement();
         ObjectInfo copy = elem.duplicate();
-        copy.coords.transformCoordinates(info.coords.fromLocal());
+        copy.getCoords().transformCoordinates(info.getCoords().fromLocal());
         renderObject(gl, copy);
       }
       return;
@@ -439,7 +439,7 @@ public class GLRenderer implements Renderer, Runnable
     double tol;
     if (adaptive)
     {
-      double dist = info.getBounds().distanceToPoint(info.coords.toLocal().times(theCamera.getCameraCoordinates().getOrigin()));
+      double dist = info.getBounds().distanceToPoint(info.getCoords().toLocal().times(theCamera.getCameraCoordinates().getOrigin()));
       double distToScreen = theCamera.getDistToScreen();
       if (dist < distToScreen)
         tol = surfaceError;
