@@ -1,5 +1,5 @@
 <?xml version="1.0" standalone="yes"?>
-<extension name="GLRenderer" version="0.1">
+<extension name="GLRenderer" version="0.2">
   <author>Peter Eastman</author>
   <date>2008</date>
   <filter experimental="hide"/>
