@@ -389,7 +389,7 @@ public class ShaderGenerator
     if (uniformTextureProgramId != -1)
       return uniformTextureProgramId;
     int fragmentShader = createShader(gl, GL.GL_FRAGMENT_SHADER, readFile("artofillusion/glrenderer/uniformTextureFragmentShader.txt"));
-    uniformTextureProgramId = createProgram(gl, getVertexShader(gl), getLightingShader(gl), fragmentShader);
+    uniformTextureProgramId = createProgram(gl, fragmentShader, getVertexShader(gl), getLightingShader(gl));
     diffuseColorId = gl.glGetUniformLocation(uniformTextureProgramId, "uniformDiffuseColor");
     hilightColorId = gl.glGetUniformLocation(uniformTextureProgramId, "uniformHilightColor");
     emissiveColorId = gl.glGetUniformLocation(uniformTextureProgramId, "uniformEmissiveColor");
@@ -489,7 +489,7 @@ public class ShaderGenerator
     }
     shader.append("}");
     int fragmentShader = createShader(gl, GL.GL_FRAGMENT_SHADER, shader.toString());
-    int program = createProgram(gl, getVertexShader(gl), getLightingShader(gl), getMappingShader(gl, mapping), fragmentShader);
+    int program = createProgram(gl, getMappingShader(gl, mapping), fragmentShader, getVertexShader(gl), getLightingShader(gl));
     textureMap.put(record, program);
     return program;
   }
