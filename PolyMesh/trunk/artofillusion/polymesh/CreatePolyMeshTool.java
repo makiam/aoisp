@@ -23,9 +23,9 @@ import javax.swing.ImageIcon;
 import javax.swing.JFormattedTextField;
 import javax.swing.JSpinner;
 
+import artofillusion.ArtOfIllusion;
 import artofillusion.Camera;
 import artofillusion.LayoutWindow;
-import artofillusion.ModellingApp;
 import artofillusion.Scene;
 import artofillusion.SceneViewer;
 import artofillusion.UndoRecord;
@@ -39,6 +39,7 @@ import artofillusion.object.ObjectInfo;
 import artofillusion.ui.EditingTool;
 import artofillusion.ui.EditingWindow;
 import artofillusion.ui.Translate;
+import artofillusion.ui.UIUtilities;
 import buoy.event.CommandEvent;
 import buoy.event.ValueChangedEvent;
 import buoy.event.WidgetMouseEvent;
@@ -170,9 +171,9 @@ public class CreatePolyMeshTool extends EditingTool
             ((SceneViewer) view).repaint();
             return;
         }
-        v1 = cam.convertScreenToWorld(clickPoint, ModellingApp.DIST_TO_SCREEN);
-        v2 = cam.convertScreenToWorld(new Point(dragPoint.x, clickPoint.y), ModellingApp.DIST_TO_SCREEN);
-        v3 = cam.convertScreenToWorld(dragPoint, ModellingApp.DIST_TO_SCREEN);
+        v1 = cam.convertScreenToWorld(clickPoint, cam.getDistToScreen());
+        v2 = cam.convertScreenToWorld(new Point(dragPoint.x, clickPoint.y), cam.getDistToScreen());
+        v3 = cam.convertScreenToWorld(dragPoint, cam.getDistToScreen());
         orig = v1.plus(v3).times(0.5);
         if (dragPoint.x < clickPoint.x)
             xdir = v1.minus(v2);
@@ -203,7 +204,7 @@ public class CreatePolyMeshTool extends EditingTool
         info.addTrack(new PositionTrack(info), 0);
         info.addTrack(new RotationTrack(info), 1);
         UndoRecord undo = new UndoRecord(theWindow, false);
-        undo.addCommandAtBeginning(UndoRecord.SET_SCENE_SELECTION, new Object [] {theScene.getSelection()});
+        undo.addCommandAtBeginning(UndoRecord.SET_SCENE_SELECTION, new Object [] {((LayoutWindow) theWindow).getSelectedIndices()});
         ((LayoutWindow) theWindow).addObject(info, undo);
         theWindow.setUndoRecord(undo);
         ((LayoutWindow) theWindow).setSelection(theScene.getNumObjects()-1);
@@ -258,7 +259,7 @@ public class CreatePolyMeshTool extends EditingTool
                 typeCombo.add( Translate.text("polymesh:cylinder" ) );
                 typeCombo.add( Translate.text("polymesh:flatMesh" ) );
                 templateStart = 5;
-                File templateDir = new File( ModellingApp.PLUGIN_DIRECTORY + File.separator + "PolyMeshTemplates" + File.separator );
+                File templateDir = new File( ArtOfIllusion.PLUGIN_DIRECTORY + File.separator + "PolyMeshTemplates" + File.separator );
                 if ( templateDir.isDirectory() )
                 {
                     String[] files = templateDir.list();
@@ -326,7 +327,7 @@ public class CreatePolyMeshTool extends EditingTool
                 }
             }
             pack();
-            ModellingApp.centerWindow( (Window) getComponent() );
+            UIUtilities.centerWindow( this );
             setVisible( true );
         }
         
@@ -433,7 +434,7 @@ public class CreatePolyMeshTool extends EditingTool
                 templateMesh = null;
                 try
                 {
-                    File file = new File( ModellingApp.PLUGIN_DIRECTORY + File.separator + "PolyMeshTemplates" + File.separator + (String)typeCombo.getSelectedValue() );
+                    File file = new File( ArtOfIllusion.PLUGIN_DIRECTORY + File.separator + "PolyMeshTemplates" + File.separator + (String)typeCombo.getSelectedValue() );
                     DataInputStream dis = new DataInputStream( new FileInputStream( file ) );
                     templateMesh = new PolyMesh( dis );
                     templateMesh.setSmoothingMethod( smoothingMethod );

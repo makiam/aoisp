@@ -7308,7 +7308,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 								newval[j] = oldval[paramVertexTable[j
 										- oldval.length]];
 							newParamVal[k] = new VertexParameterValue(newval);
-						} else if (oldParamVal[i] instanceof FaceVertexParameterValue) {
+						} else if (oldParamVal[k] instanceof FaceVertexParameterValue) {
 							FaceVertexParameterValue fvpv = (FaceVertexParameterValue) oldParamVal[i];
 							double newval[][] = new double[newFaces.length][];
 							for (int j = 0; j < newFaces.length; ++j) {
@@ -7319,7 +7319,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 								}
 								newval[j] = val;
 							}
-							newParamVal[i] = new FaceVertexParameterValue(
+							newParamVal[k] = new FaceVertexParameterValue(
 									newval);
 						} else
 							newParamVal[k] = oldParamVal[k].duplicate();

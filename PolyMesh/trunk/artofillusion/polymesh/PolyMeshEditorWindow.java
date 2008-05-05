@@ -32,11 +32,11 @@ import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.JSpinner.NumberEditor;
 
+import artofillusion.ArtOfIllusion;
 import artofillusion.Camera;
 import artofillusion.LayoutWindow;
 import artofillusion.MeshEditorWindow;
 import artofillusion.MeshViewer;
-import artofillusion.ModellingApp;
 import artofillusion.MoveViewTool;
 import artofillusion.RenderingMesh;
 import artofillusion.RotateViewTool;
@@ -68,6 +68,7 @@ import artofillusion.polymesh.PolyMesh.Wvertex;
 import artofillusion.polymesh.PolyMeshValueWidget.ValueWidgetOwner;
 import artofillusion.polymesh.ui.ColorButton;
 import artofillusion.texture.FaceParameterValue;
+import artofillusion.texture.VertexParameterValue;
 
 import artofillusion.texture.ParameterValue;
 import artofillusion.ui.ActionProcessor;
@@ -281,12 +282,16 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private static PolyMesh clipboardMesh;
 
 	protected boolean tolerant;
+	
+	private int lastSelectedJoint;
 
-	private TextureParameter hideFaceParam;
+	private TextureParameter faceIndexParam, jointWeightParam;
 
 	protected boolean hideFace[];
 
 	protected boolean hideVert[];
+	
+	protected boolean hideEdge[];
 
 	protected boolean[] selPoints;
 
@@ -492,7 +497,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		updateMenus();
 		realView = false;
 		realMirror = false;
-		addExtraParameter();
+		addExtraParameters();
 		doLevelContainerEnable();
 		selected = new boolean[((Mesh) objInfo.object).getVertices().length];
 		// addEventLink( WindowClosingEvent.class, this, "doCancel" );
@@ -909,7 +914,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				"polymesh:selectLoop", this, "doSelectLoop"));
 		edgePopupMenu.add(edgePopupMenuItem[8] = Translate.menu("polymesh:selectRing"));
 		popupRingMenuItem = new BMenuItem[6];
-		((BMenu) edgePopupMenuItem[8]).add(ringMenuItem[0] = Translate.menuItem(
+		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[0] = Translate.menuItem(
 				"polymesh:all", this, "doSelectRing"));
 		((BMenu) edgePopupMenuItem[8]).add(popupRingMenuItem[1] = Translate.menuItem(
 				"polymesh:two", this, "doSelectRing"));
@@ -1548,7 +1553,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				theMesh.setMaterial(((PolyMesh) oldMesh).getMaterial(),
 						((PolyMesh) oldMesh).getMaterialMapping());
 		}
-		removeExtraParameter();
+		removeExtraParameters();
 		if (oldMesh != theMesh)
 			oldMesh.copyObject(theMesh);
 		oldMesh = null;
@@ -3341,9 +3346,9 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	 * @return The extraParameter valueWidget.getValue()
 	 */
 
-	public TextureParameter getExtraParameter() {
-		return hideFaceParam;
-	}
+	//public TextureParameter getExtraParameter() {
+	//	return hideFaceParam;
+	//}
 
 	/**
 	 * Get which faces are hidden. This may be null, which means that all
@@ -3580,43 +3585,42 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	}
 
 	/**
-	 * Set which faces are hidden. Pass null to show all faces.
+	 * Set which faces are hidden.  Pass null to show all faces.
 	 * 
 	 * @param hidden
 	 *                The new hiddenFaces valueWidget.getValue()
 	 */
-
-	public void setHiddenFaces(boolean hidden[]) {
+	public void setHiddenFaces(boolean hidden[])
+	{
 		PolyMesh mesh = (PolyMesh) objInfo.object;
 		hideFace = hidden;
-		hideVert = new boolean[mesh.getVertices().length];
-		if (hideFace != null) {
+		hideVert = new boolean [mesh.getVertices().length];
+		if (hideFace != null)
+		{
 			for (int i = 0; i < hideVert.length; i++)
 				hideVert[i] = true;
 			Wface face[] = mesh.getFaces();
 			for (int i = 0; i < face.length; i++)
+
 				if (!hideFace[i]) {
 					int[] vf = mesh.getFaceVertices(face[i]);
 					for (int j = 0; j < vf.length; ++j)
 						hideVert[vf[j]] = false;
 				}
-			// addExtraParameter();
-			FaceParameterValue val = (FaceParameterValue) objInfo.object
-					.getParameterValue(hideFaceParam);
-			double param[] = val.getValue();
-			for (int i = 0; i < hideFace.length; i++)
-				param[i] = i;
-			val.setValue(param);
-			objInfo.object.setParameterValue(hideFaceParam, val);
-			objInfo.clearCachedMeshes();
-		} else {
-			// removeExtraParameter();
+		}
+		else
+		{
 			for (int i = 0; i < hideVert.length; i++)
 				hideVert[i] = false;
 		}
-
+		FaceParameterValue val = (FaceParameterValue) objInfo.object.getParameterValue(faceIndexParam);
+		double param[] = val.getValue();
+		for (int i = 0; i < param.length; i++)
+			param[i] = i;
+		val.setValue(param);
+		objInfo.object.setParameterValue(faceIndexParam, val);
+		objInfo.clearCachedMeshes();
 		updateImage();
-		repaint();
 	}
 	
 	public boolean selectOnlyVisible() {
@@ -3693,21 +3697,22 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		if (getSelectionMode() == PolyMeshEditorWindow.FACE_MODE
 				&& selected.length != obj.getFaces().length)
 			selected = new boolean[obj.getFaces().length];
-
-		if (hideFaceParam != null) {
-			FaceParameterValue val = (FaceParameterValue) getObject().object
-					.getParameterValue(hideFaceParam);
-			double param[] = val.getValue();
-			boolean oldHideFace[] = hideFace;
-			hideFace = new boolean[param.length];
-			if (oldHideFace != null && oldHideFace.length == hideFace.length)
-				for (int i = 0; i < param.length; i++)
-					hideFace[i] = oldHideFace[(int) param[i]];
-			for (int i = 0; i < param.length; i++)
-				param[i] = i;
-			val.setValue(param);
-			obj.resetMesh();
-		}
+		if (hideFace != null)
+	    {
+	      boolean oldHideFace[] = hideFace;
+	      FaceParameterValue val = (FaceParameterValue) getObject().object.getParameterValue(faceIndexParam);
+	      double param[] = val.getValue();
+	      hideFace = new boolean [obj.getFaces().length];
+	      for (int i = 0; i < param.length; i++)
+	      {
+	        int index = (int) param[i];
+	        if (index < oldHideFace.length)
+	          hideFace[i] = oldHideFace[index];
+	      }
+	    }
+		
+	    setHiddenFaces(hideFace);
+	    updateJointWeightParam();
 		findSelectionDistance();
 		currentTool.getWindow().updateMenus();
 		updateImage();
@@ -3724,60 +3729,107 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		super.objectChanged();
 	}
 
-	/**
-	 * Remove the extra texture parameter from the mesh which was used for
-	 * keeping track of which faces are hidden.
-	 */
+	/** Update the parameter which records weights for the currently selected joint. */
 
-	public void removeExtraParameter() {
-		if (hideFaceParam == null)
-			return;
-		hideFaceParam = null;
+	private void updateJointWeightParam()
+	{
 		PolyMesh mesh = (PolyMesh) objInfo.object;
-		TextureParameter params[] = mesh.getParameters();
-		TextureParameter newparams[] = new TextureParameter[params.length - 1];
-		ParameterValue values[] = mesh.getParameterValues();
-		ParameterValue newvalues[] = new ParameterValue[values.length - 1];
-		for (int i = 0; i < newparams.length; i++) {
-			newparams[i] = params[i];
-			newvalues[i] = values[i];
+		MeshVertex vert[] = mesh.getVertices();
+		double jointWeight[] = new double [vert.length];
+		int selJointId = ((MeshViewer) theView[currentView]).getSelectedJoint();
+		Joint selJoint = getObject().getSkeleton().getJoint(selJointId);
+		for (int i = 0; i < jointWeight.length; i++)
+		{
+			Joint vertJoint = getObject().getSkeleton().getJoint(vert[i].ikJoint);
+			if (selJoint == null)
+				jointWeight[i] = 0.0;
+			else if (vert[i].ikJoint == selJointId)
+				jointWeight[i] = (selJoint.parent == null ? 1.0 : vert[i].ikWeight);
+			else if (vertJoint != null && vertJoint.parent == selJoint)
+				jointWeight[i] = 1.0-vert[i].ikWeight;
+			else
+				jointWeight[i] = 0.0;
 		}
-		mesh.setParameters(newparams);
-		mesh.setParameterValues(newvalues);
-		objInfo.clearCachedMeshes();
+		VertexParameterValue value = (VertexParameterValue) getObject().object.getParameterValue(jointWeightParam);
+		value.setValue(jointWeight);
+		getObject().object.setParameterValues(getObject().object.getParameterValues());
+		lastSelectedJoint = selJointId;
+		objInfo.clearCachedMeshes();    
+	}
+	
+	/** Get the extra texture parameter which was added to the mesh to keep track of
+    face indices in the editor. */
+
+	public TextureParameter getFaceIndexParameter()
+	{
+		return faceIndexParam;
 	}
 
-	/**
-	 * Add an extra texture parameter to the mesh which will be used for
-	 * keeping track of which faces are hidden.
-	 */
+	/** Get the extra texture parameter which was added to the mesh to keep track of
+    joint weighting. */
 
-	private void addExtraParameter() {
-		if (hideFaceParam != null)
+	public TextureParameter getJointWeightParam()
+	{
+		return jointWeightParam;
+	}
+
+	/** Add extra texture parameters to the mesh which will be used for keeping track of face
+    and vertex indices. */
+
+	private void addExtraParameters()
+	{
+		if (faceIndexParam != null)
 			return;
-		hideFaceParam = new TextureParameter(this, "Hide Face", 0.0, 1.0, 0.0);
+		faceIndexParam = new TextureParameter(this, "Face Index", 0.0, Double.MAX_VALUE, 0.0);
+		jointWeightParam = new TextureParameter(this, "Joint Weight", 0.0, 1.0, 0.0);
 		PolyMesh mesh = (PolyMesh) getObject().object;
 		TextureParameter params[] = mesh.getParameters();
-		TextureParameter newparams[] = new TextureParameter[params.length + 1];
+		TextureParameter newparams[] = new TextureParameter [params.length+2];
 		ParameterValue values[] = mesh.getParameterValues();
-		ParameterValue newvalues[] = new ParameterValue[values.length + 1];
-		for (int i = 0; i < params.length; i++) {
+		ParameterValue newvalues[] = new ParameterValue [values.length+2];
+		for (int i = 0; i < params.length; i++)
+		{
 			newparams[i] = params[i];
 			newvalues[i] = values[i];
 		}
-		newparams[params.length] = hideFaceParam;
-		double[] value = new double[mesh.getFaces().length];
-		for (int i = 0; i < value.length; i++)
-			value[i] = hideFaceParam.defaultVal;
-		newvalues[values.length] = new FaceParameterValue(value);
-		double index[] = new double[mesh.getFaces().length];
-		for (int i = 0; i < index.length; i++)
-			index[i] = i;
-		((FaceParameterValue) newvalues[values.length]).setValue(index);
+		newparams[params.length] = faceIndexParam;
+		newvalues[values.length] = new FaceParameterValue(mesh, faceIndexParam);
+		double faceIndex[] = new double [mesh.getFaces().length];
+		for (int i = 0; i < faceIndex.length; i++)
+			faceIndex[i] = i;
+		((FaceParameterValue) newvalues[values.length]).setValue(faceIndex);
+		newparams[params.length+1] = jointWeightParam;
+		newvalues[values.length+1] = new VertexParameterValue(mesh, jointWeightParam);
+		mesh.setParameters(newparams);
+		mesh.setParameterValues(newvalues);
+		getObject().clearCachedMeshes();
+		updateJointWeightParam();
+	}
+
+	/** Remove the extra texture parameters from the mesh which were used for keeping track of
+    face and vertex indices. */
+
+	public void removeExtraParameters()
+	{
+		if (faceIndexParam == null)
+			return;
+		faceIndexParam = null;
+		jointWeightParam = null;
+		PolyMesh mesh = (PolyMesh) getObject().object;
+		TextureParameter params[] = mesh.getParameters();
+		TextureParameter newparams[] = new TextureParameter [params.length-2];
+		ParameterValue values[] = mesh.getParameterValues();
+		ParameterValue newvalues[] = new ParameterValue [values.length-2];
+		for (int i = 0; i < newparams.length; i++)
+		{
+			newparams[i] = params[i];
+			newvalues[i] = values[i];
+		}
 		mesh.setParameters(newparams);
 		mesh.setParameterValues(newvalues);
 		getObject().clearCachedMeshes();
 	}
+
 
 	/**
 	 * Selects complete boundaries based on vertex or edge selection. If
@@ -4329,7 +4381,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 	private void doSaveAsTemplate() {
 		BFileChooser chooser;
 
-		File templateDir = new File(ModellingApp.PLUGIN_DIRECTORY
+		File templateDir = new File(ArtOfIllusion.PLUGIN_DIRECTORY
 				+ File.separator + "PolyMeshTemplates");
 		if (!templateDir.exists()) {
 			if (!templateDir.mkdir()) {
@@ -4835,7 +4887,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
 			okButton.setEnabled(false);
 			pack();
-			ModellingApp.centerWindow((Window) this.getComponent());
+			UIUtilities.centerWindow(this);
 			ok = false;
 			setVisible(true);
 		}
@@ -4956,7 +5008,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			cancelButton.addEventLink(CommandEvent.class, this, "doCancel");
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
 			pack();
-			ModellingApp.centerWindow((Window) this.getComponent());
+			UIUtilities.centerWindow(this);
 			doTolValueChanged();
 			setVisible(true);
 		}
@@ -5031,7 +5083,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			okButton.addEventLink(CommandEvent.class, this, "doOK");
 			cancelButton.addEventLink(CommandEvent.class, this, "doCancel");
 			pack();
-			ModellingApp.centerWindow((Window) this.getComponent());
+			UIUtilities.centerWindow(this);
 			setVisible(true);
 		}
 
@@ -5124,7 +5176,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			cancelButton.addEventLink(CommandEvent.class, this, "doCancel");
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
 			pack();
-			ModellingApp.centerWindow((Window) this.getComponent());
+			UIUtilities.centerWindow(this);
 			setVisible(true);
 		}
 
@@ -5185,7 +5237,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			setContent(borderContainer1);
 			dismiss.addEventLink(CommandEvent.class, this, "doDismiss");
 			pack();
-			ModellingApp.centerWindow((Window) this.getComponent());
+			UIUtilities.centerWindow(this);
 			PolyMesh mesh = (PolyMesh) objInfo.object;
 			textArea.append(mesh.checkMesh());
 			setVisible(true);
@@ -5353,8 +5405,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			}
 			pack();
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
-			ModellingApp.centerWindow((Window) PolyMeshEditorWindow.this
-					.getComponent());
+			UIUtilities.centerWindow(PolyMeshEditorWindow.this);
 			setVisible(true);
 
 		}
@@ -5507,8 +5558,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			}
 			pack();
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
-			ModellingApp.centerDialog((Dialog) this.getComponent(),
-					(Window) PolyMeshEditorWindow.this.getComponent());
+			UIUtilities.centerDialog(this,PolyMeshEditorWindow.this);
 			setVisible(true);
 
 		}
@@ -5614,8 +5664,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 			cancelled = false;
 			pack();
 			addEventLink(WindowClosingEvent.class, this, "doCancel");
-			ModellingApp.centerDialog((Dialog) this.getComponent(),
-					(Window) PolyMeshEditorWindow.this.getComponent());
+			UIUtilities.centerDialog(this,PolyMeshEditorWindow.this);
 			advancedButton.setVisible(false);
 			progressBar.setProgressText("");
 			progressBar.setEnabled(false);

@@ -43,7 +43,7 @@ public class PMOBJTranslator implements Translator
 
     public boolean canExport()
     {
-        return false;
+        return true;
     }
 
 
@@ -55,6 +55,6 @@ public class PMOBJTranslator implements Translator
 
      public void exportFile( BFrame parent, Scene theScene )
     {
-        //do nothing
+    	 PMOBJExporter.exportFile( parent, theScene );
     }
 }

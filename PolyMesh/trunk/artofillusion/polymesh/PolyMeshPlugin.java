@@ -14,8 +14,8 @@ import java.io.InputStream;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
+import artofillusion.ArtOfIllusion;
 import artofillusion.LayoutWindow;
-import artofillusion.ModellingApp;
 import artofillusion.Plugin;
 import artofillusion.Scene;
 import artofillusion.keystroke.KeystrokeManager;
@@ -52,7 +52,7 @@ public class PolyMeshPlugin implements Plugin
     {
         if ( message == Plugin.APPLICATION_STARTING )
         {
-        	resources = ResourceBundle.getBundle( "polymesh", ModellingApp.getPreferences().getLocale() );
+        	resources = ResourceBundle.getBundle( "polymesh", ArtOfIllusion.getPreferences().getLocale() );
         	KeystrokeRecord[] keys = KeystrokeManager.getAllRecords();
             boolean keysImplemented = false;
             for (int i = 0; i  < keys.length; i++)

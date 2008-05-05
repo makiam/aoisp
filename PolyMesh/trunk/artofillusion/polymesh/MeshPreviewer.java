@@ -10,8 +10,8 @@
 
 package artofillusion.polymesh;
 
+import artofillusion.ArtOfIllusion;
 import artofillusion.Camera;
-import artofillusion.ModellingApp;
 import artofillusion.RenderListener;
 import artofillusion.Renderer;
 import artofillusion.Scene;
@@ -149,7 +149,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
 	    public void hierarchyChanged(HierarchyEvent ev) {
 		if ((ev.getChangeFlags() & HierarchyEvent.DISPLAYABILITY_CHANGED) != 0)
 		    if (!getComponent().isDisplayable()) {
-			Renderer rend = ModellingApp.getPreferences()
+			Renderer rend = ArtOfIllusion.getPreferences()
 				.getTexturePreviewRenderer();
 			if (rend != null)
 			    rend.cancelRendering(theScene);
@@ -193,7 +193,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
     /** Render the preview. */
 
     public synchronized void render() {
-	Renderer rend = ModellingApp.getPreferences()
+	Renderer rend = ArtOfIllusion.getPreferences()
 		.getTexturePreviewRenderer();
 	if (rend == null)
 	    return;
@@ -212,7 +212,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
     /** Cancel rendering. */
 
     public synchronized void cancelRendering() {
-	Renderer rend = ModellingApp.getPreferences()
+	Renderer rend = ArtOfIllusion.getPreferences()
 		.getTexturePreviewRenderer();
 	if (rend != null)
 	    rend.cancelRendering(theScene);
@@ -318,7 +318,7 @@ public class MeshPreviewer extends CustomWidget implements RenderListener {
     private void mousePressed(MousePressedEvent e) {
 	Graphics g = getComponent().getGraphics();
 	clickPoint = e.getPoint();
-	Renderer rend = ModellingApp.getPreferences()
+	Renderer rend = ArtOfIllusion.getPreferences()
 		.getTexturePreviewRenderer();
 	if (rend != null)
 	    rend.cancelRendering(theScene);

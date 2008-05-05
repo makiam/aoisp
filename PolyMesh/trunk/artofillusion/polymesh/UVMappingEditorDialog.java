@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-import artofillusion.ModellingApp;
 import artofillusion.image.BMPEncoder;
 import artofillusion.math.Vec2;
 import artofillusion.object.FacetedMesh;
@@ -41,6 +40,7 @@ import artofillusion.texture.UVMapping;
 import artofillusion.ui.ActionProcessor;
 import artofillusion.ui.ComponentsDialog;
 import artofillusion.ui.Translate;
+import artofillusion.ui.UIUtilities;
 import artofillusion.ui.ValueField;
 import buoy.event.CommandEvent;
 import buoy.event.MouseDraggedEvent;
@@ -752,7 +752,7 @@ public class UVMappingEditorDialog extends BDialog {
 		pieceList.setMultipleSelectionEnabled(false);
 		pieceList.setSelected(0, true);
 		addEventLink(WindowClosingEvent.class, this, "doCancel");
-		ModellingApp.centerWindow((Window) getComponent());
+		UIUtilities.centerWindow(this);
 		mappingCanvas.addEventLink(MousePressedEvent.class, this,
 				"processMousePressed");
 		mappingCanvas.addEventLink(MouseReleasedEvent.class, this,

@@ -21,6 +21,8 @@ import java.util.Iterator;
 import artofillusion.MeshEditorWindow;
 import artofillusion.MeshViewer;
 import artofillusion.RenderingMesh;
+import artofillusion.TextureParameter;
+import artofillusion.TriMeshEditorWindow;
 import artofillusion.UndoRecord;
 import artofillusion.ViewerCanvas;
 import artofillusion.animation.SkeletonTool;
@@ -39,6 +41,7 @@ import artofillusion.ui.EditingTool;
 import artofillusion.ui.MeshEditController;
 import artofillusion.view.ConstantVertexShader;
 import artofillusion.view.FlatVertexShader;
+import artofillusion.view.ParameterVertexShader;
 import artofillusion.view.SelectionVertexShader;
 import artofillusion.view.SmoothVertexShader;
 import artofillusion.view.TexturedVertexShader;
@@ -134,7 +137,7 @@ public class PolyMeshViewer extends MeshViewer {
 	 * 
 	 */
 	protected void drawObject() {
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		PolyMesh viewMesh = mesh;
 		boolean mirror = false;
 		if (mesh.getMirrorState() != PolyMesh.NO_MIRROR) {
@@ -211,8 +214,71 @@ public class PolyMeshViewer extends MeshViewer {
 	/**
 	 * Draw the surface of the object.
 	 */
+	private void drawSurface()
+	  {
+	    if (!showSurface)
+	      return;
+	    boolean hide[] = null;
+	    int faceIndex[] = null;
+	    PolyMesh polymesh = (PolyMesh) getController().getObject().getObject();
+	    ObjectInfo objInfo = controller.getObject();
+	    if (controller instanceof PolyMeshEditorWindow && ((PolyMeshEditorWindow) controller).getFaceIndexParameter() != null)
+	    {
+	      RenderingMesh mesh = objInfo.getPreviewMesh();
+	      TextureParameter faceIndexParameter = ((PolyMeshEditorWindow) controller).getFaceIndexParameter();
+	      double param[] = null;
+	      for (int i = 0; i < mesh.param.length; i++)
+	        if (objInfo.getObject().getParameters()[i] == faceIndexParameter)
+	          param = ((FaceParameterValue) mesh.param[i]).getValue();
+	      faceIndex = new int [param.length];
+	      for (int i = 0; i < faceIndex.length; i++)
+	        faceIndex[i] = (int) param[i];
+	      boolean hideFace[] = ((PolyMeshEditorWindow) controller).hideFace;
+	      if (hideFace != null)
+	      {
+	        hide = new boolean [param.length];
+	        for (int i = 0; i < hide.length; i++)
+	          hide[i] = hideFace[faceIndex[i]];
+	      }
+	    }
+	    if (renderMode == RENDER_WIREFRAME)
+	      renderWireframe(objInfo.getWireframePreview(), theCamera, surfaceColor);
+	    else if (renderMode == RENDER_TRANSPARENT)
+	    {
+	      VertexShader shader = new ConstantVertexShader(transparentColor);
+	      if (faceIndex != null && controller.getSelectionMode() == PolyMeshEditorWindow.FACE_MODE)
+	        shader = new SelectionVertexShader(new RGBColor(1.0, 0.4, 1.0), shader, faceIndex, controller.getSelection());
+	      renderMeshTransparent(objInfo.getPreviewMesh(), shader, theCamera, theCamera.getViewToWorld().timesDirection(Vec3.vz()), hide);
+	    }
+	    else
+	    {
+	      RenderingMesh mesh = objInfo.getPreviewMesh();
+	      Vec3 viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
+	      VertexShader shader;
+	      if (renderMode == RENDER_FLAT)
+	        shader = new FlatVertexShader(mesh, surfaceRGBColor, viewDir);
+	      else if (surfaceColoringParameter != null)
+	      {
+	        shader = null;
+	        TextureParameter params[] = objInfo.getObject().getParameters();
+	        for (int i = 0; i < params.length; i++)
+	          if (params[i].equals(surfaceColoringParameter))
+	          {
+	            shader = new ParameterVertexShader(mesh, mesh.param[i], lowValueColor, highValueColor, surfaceColoringParameter.minVal, surfaceColoringParameter.maxVal, viewDir);
+	            break;
+	          }
+	      }
+	      else if (renderMode == RENDER_SMOOTH)
+	        shader = new SmoothVertexShader(mesh, surfaceRGBColor, viewDir);
+	      else
+	        shader = new TexturedVertexShader(mesh, objInfo.getObject(), 0.0, viewDir).optimize();
+	      if (faceIndex != null && controller.getSelectionMode() == PolyMeshEditorWindow.FACE_MODE)
+	        shader = new SelectionVertexShader(new RGBColor(1.0, 0.4, 1.0), shader, faceIndex, controller.getSelection());
+	      renderMesh(mesh, shader, theCamera, objInfo.getObject().isClosed(), hide);
+	    }
+	  }
 
-	private void drawSurface() {
+	/*private void oldDrawSurface() {
 		if (!showSurface)
 			return;
 		boolean hide[] = null;
@@ -269,7 +335,7 @@ public class PolyMeshViewer extends MeshViewer {
 			renderMesh(rmesh, shader, theCamera, objInfo.object.isClosed(),
 					hide);
 		}
-	}
+	}*/
 
 	/**
 	 * Draw the vertices of the control mesh.
@@ -283,7 +349,7 @@ public class PolyMeshViewer extends MeshViewer {
 	private void drawVertices() {
 		if (!showMesh)
 			return;
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		PolyMesh viewMesh = mesh;
 		Color vertColor = mesh.getVertColor();
 		Color selectedVertColor = vertColor;
@@ -414,7 +480,7 @@ public class PolyMeshViewer extends MeshViewer {
 		double divScreenZ[] = null;
 		Vec2 divPos[] = null;
 		boolean hideFace[] = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller).hideFace : null);
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		Color seamColor = mesh.getSeamColor();
 		Color selectedSeamColor = seamColor;
 		Color edgeColor = mesh.getEdgeColor();
@@ -731,7 +797,7 @@ public class PolyMeshViewer extends MeshViewer {
 			return;
 		}
 
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		MeshVertex v[] = (MeshVertex[]) mesh.getVertices();
 		Wedge ed[] = mesh.getEdges();
 		Wface f[] = mesh.getFaces();
@@ -951,7 +1017,7 @@ public class PolyMeshViewer extends MeshViewer {
 			((PolyMeshEditorWindow) getController()).triggerPopupEvent(e);
 			return;
 		}
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		boolean selected[] = controller.getSelection();
 		PolyMesh viewMesh = mesh;
 		int ref = 0;
@@ -1133,7 +1199,7 @@ public class PolyMeshViewer extends MeshViewer {
 	 */
 
 	public int findClickTarget(Point pos, Vec3 uvw) {
-		PolyMesh polymesh = (PolyMesh) getController().getObject().object;
+		PolyMesh polymesh = (PolyMesh) getController().getObject().getObject();
 		int loose = (controller instanceof PolyMeshEditorWindow ? ((PolyMeshEditorWindow) controller)
 				.getLooseSelectionRange()
 				: 0);
@@ -1424,7 +1490,7 @@ public class PolyMeshViewer extends MeshViewer {
 			return true;
 		}
 		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		Wvertex[] verts = (Wvertex[]) mesh.getVertices();
 		Wedge[] edges = mesh.getEdges();
 		Vec3[] normals = mesh.getFaceNormals();
@@ -1451,7 +1517,7 @@ public class PolyMeshViewer extends MeshViewer {
 			return true;
 		}
 		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		Wedge[] edges = mesh.getEdges();
 		Vec3[] normals = mesh.getFaceNormals();
 		boolean visibleEdge = false;
@@ -1475,7 +1541,7 @@ public class PolyMeshViewer extends MeshViewer {
 			return true;
 		}
 		Vec3 viewDir = getCamera().getViewToWorld().timesDirection(Vec3.vz());
-		PolyMesh mesh = (PolyMesh) getController().getObject().object;
+		PolyMesh mesh = (PolyMesh) getController().getObject().getObject();
 		Vec3[] normals = mesh.getFaceNormals();
 		if (normals[index].dot(viewDir) > 0.0001) {
 			return false;

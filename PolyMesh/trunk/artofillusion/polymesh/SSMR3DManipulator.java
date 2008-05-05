@@ -13,7 +13,6 @@ import javax.swing.ImageIcon;
 import artofillusion.Camera;
 import artofillusion.MeshEditorWindow;
 import artofillusion.MeshViewer;
-import artofillusion.ModellingApp;
 import artofillusion.ViewerCanvas;
 import artofillusion.math.CoordinateSystem;
 import artofillusion.math.Mat4;
@@ -1095,7 +1094,7 @@ extends SSMRManipulator
                             Vec3 orig = new Vec3(center);
                             Vec3 zdir = null;
                             Vec3 updir = null;
-                            double distance = (view.isPerspective() ? camera.getCameraCoordinates().getOrigin().length() : ModellingApp.DIST_TO_SCREEN);
+                            double distance = (view.isPerspective() ? camera.getCameraCoordinates().getOrigin().length() : camera.getDistToScreen());
                             switch(handle)
                             {
                                 case X_MOVE:
@@ -1152,7 +1151,7 @@ extends SSMRManipulator
                             Vec3 orig = new Vec3(center);
                             Vec3 zdir = null;
                             Vec3 updir = null;
-                            double distance = (view.isPerspective() ? camera.getCameraCoordinates().getOrigin().length() : ModellingApp.DIST_TO_SCREEN);
+                            double distance = (view.isPerspective() ? camera.getCameraCoordinates().getOrigin().length() : camera.getDistToScreen());
                             switch(handle)
                             {
                                 case X_MOVE:

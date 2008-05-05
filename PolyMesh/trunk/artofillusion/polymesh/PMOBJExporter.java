@@ -19,7 +19,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Locale;
 
-import artofillusion.ModellingApp;
+import artofillusion.ArtOfIllusion;
 import artofillusion.Scene;
 import artofillusion.math.Mat4;
 import artofillusion.math.RGBColor;
@@ -27,6 +27,9 @@ import artofillusion.math.Vec2;
 import artofillusion.math.Vec3;
 import artofillusion.object.MeshVertex;
 import artofillusion.object.ObjectInfo;
+import artofillusion.polymesh.PolyMesh.Wedge;
+import artofillusion.polymesh.PolyMesh.Wface;
+import artofillusion.polymesh.PolyMesh.Wvertex;
 import artofillusion.texture.Mapping2D;
 import artofillusion.texture.TextureSpec;
 import artofillusion.ui.ComponentsDialog;
@@ -100,15 +103,15 @@ public class PMOBJExporter
 
         BFileChooser fc = new BFileChooser( BFileChooser.SAVE_FILE, Translate.text( "exportToOBJ" ) );
         fc.setSelectedFile( new File( "Untitled.obj" ) );
-        if ( ModellingApp.currentDirectory != null )
-            fc.setDirectory( new File( ModellingApp.currentDirectory ) );
+        if ( ArtOfIllusion.getCurrentDirectory() != null )
+            fc.setDirectory( new File( ArtOfIllusion.getCurrentDirectory() ) );
         if ( !fc.showDialog( parent ) )
             return;
         File dir = fc.getDirectory();
         File f = fc.getSelectedFile();
         String name = f.getName();
         String baseName = ( name.endsWith( ".obj" ) ? name.substring( 0, name.length() - 4 ) : name );
-        ModellingApp.currentDirectory = dir.getAbsolutePath();
+        ArtOfIllusion.setCurrentDirectory(dir.getAbsolutePath());
 
         // Create the output files.
 
@@ -156,7 +159,7 @@ public class PMOBJExporter
 
         // Write the header information.
 
-        out.println( "#Produced by Art of Illusion " + ModellingApp.VERSION + ", PolyMesh Plugin, " + ( new Date() ).toString() );
+        //out.println( "#Produced by Art of Illusion " + ArtOfIllusion.VERSION + ", PolyMesh Plugin, " + ( new Date() ).toString() );
         if ( mtlFilename != null )
             out.println( "mtllib " + mtlFilename );
 
@@ -186,105 +189,21 @@ public class PMOBJExporter
             if ( mesh == null )
                 continue;
 
-            // Select a name for the group.
-
-            String baseName = info.name.replace( ' ', '_' );
-            String name = baseName;
-            int append = 1;
-            while ( groupNames.get( name ) != null )
-                name = baseName + "_" + ( append++ );
-            groupNames.put( name, "" );
-
-            // Write out the object.
-
-            out.println( "g " + name );
-            TextureImageInfo ti = null;
-            if ( textureExporter != null )
-            {
-                ti = textureExporter.getTextureInfo( info.object.getTexture() );
-                if ( ti != null )
-                    out.println( "usemtl " + ti.name );
+            Wvertex[] vertices = (Wvertex[]) mesh.getVertices();
+            out.println(vertices.length);
+            for (int j = 0; j < vertices.length; j++) {
+            	out.println(vertices[j].r.x + " " + vertices[j].r.y + " " + vertices[j].r.z + " " + vertices[j].edge);
             }
-            Mat4 trans = info.coords.fromLocal();
-            MeshVertex vert[] = mesh.getVertices();
-            for ( int j = 0; j < vert.length; j++ )
-            {
-                Vec3 v = trans.times( vert[j].r );
-                out.println( "v " + nf.format( v.x ) + " " + nf.format( v.y ) + " " + nf.format( v.z ) );
+            Wedge[] edges = mesh.getEdges();
+            out.println(edges.length);
+            for (int j = 0; j < edges.length; j++) {
+            	out.println(edges[j].vertex + " " + edges[j].next + " " + edges[j].hedge + " " + edges[j].face);
             }
-            Vec3 norm[] = mesh.getNormals();
-            for ( int j = 0; j < norm.length; j++ )
-            {
-                if ( norm[j] == null )
-                    out.println( "vn 1 0 0" );
-                else
-                {
-                    Vec3 v = trans.timesDirection( norm[j] );
-                    out.println( "vn " + nf.format( v.x ) + " " + nf.format( v.y ) + " " + nf.format( v.z ) );
-                }
+            Wface[] faces = mesh.getFaces();
+            out.println(faces.length);
+            for (int j = 0; j < faces.length; j++) {
+            	out.println(faces[j].edge);
             }
-            PolyMesh.Wface face[] = mesh.getFaces();
-            //no per face vertew texture mapping.
-            /*
-             *  if (ti != null && mesh.getTextureMapping() instanceof UVMapping && ((UVMapping) mesh.getTextureMapping()).isPerFaceVertex(mesh))
-             *  {
-             *  / A per-face-vertex texture mapping.
-             *  Vec2 coords[][] = ((UVMapping) mesh.getTextureMapping()).findFaceTextureCoordinates(mesh);
-             *  double uscale = (ti.maxu == ti.minu ? 1.0 : 1.0/(ti.maxu-ti.minu));
-             *  double vscale = (ti.maxv == ti.minv ? 1.0 : 1.0/(ti.maxv-ti.minv));
-             *  for (int j = 0; j < face.length; j++)
-             *  for (int k = 0; k < 3; k++)
-             *  {
-             *  double u = (coords[k][j].x-ti.minu)*uscale;
-             *  double v = (coords[k][j].y-ti.minv)*vscale;
-             *  out.println("vt "+nf.format(u)+" "+nf.format(v));
-             *  }
-             *  for (int j = 0; j < face.length; j++)
-             *  out.println("f "+(face[j].v1+numVert+1)+"/"+((j*3)+numTexVert+1)+"/"+(face[j].v1+numNorm+1)+" "+
-             *  (face[j].v2+numVert+1)+"/"+((j*3)+numTexVert+2)+"/"+(face[j].v2+numNorm+1)+" "+
-             *  (face[j].v3+numVert+1)+"/"+((j*3)+numTexVert+3)+"/"+(face[j].v3+numNorm+1));
-             *  numTexVert += face.length*3;
-             *  }
-             *  else
-             */
-            if ( ti != null && mesh.getTextureMapping() instanceof Mapping2D )
-            {
-                // A per-vertex texture mapping.
-
-                Vec2 coords[] = ( (Mapping2D) mesh.getTextureMapping() ).findTextureCoordinates( mesh );
-                double uscale = ( ti.maxu == ti.minu ? 1.0 : 1.0 / ( ti.maxu - ti.minu ) );
-                double vscale = ( ti.maxv == ti.minv ? 1.0 : 1.0 / ( ti.maxv - ti.minv ) );
-                for ( int j = 0; j < coords.length; j++ )
-                {
-                    double u = ( coords[j].x - ti.minu ) * uscale;
-                    double v = ( coords[j].y - ti.minv ) * vscale;
-                    out.println( "vt " + nf.format( u ) + " " + nf.format( v ) );
-                }
-                for ( int j = 0; j < face.length; j++ )
-                {
-                    int fv[] = mesh.getFaceVertices( face[j] );
-                    out.print( "f " );
-                    for ( int k = 0; k < fv.length; ++k )
-                        out.print( ( fv[k] + numVert + 1 ) + "/" + ( fv[k] + numTexVert + 1 ) + "/" + ( fv[k] + numNorm + 1 ) + " " );
-                    out.println( "" );
-                }
-                numTexVert += coords.length;
-            }
-            else
-            {
-                // No texture coordinates.
-
-                for ( int j = 0; j < face.length; j++ )
-                {
-                    int fv[] = mesh.getFaceVertices( face[j] );
-                    out.print( "f " );
-                    for ( int k = 0; k < fv.length; ++k )
-                        out.print( ( fv[k] + numVert + 1 ) + "//" + ( fv[k] + numNorm + 1 ) + " " );
-                    out.println( "" );
-                }
-            }
-            numVert += vert.length;
-            numNorm += norm.length;
         }
     }
 
@@ -312,7 +231,7 @@ public class PMOBJExporter
 
         // Write out the .mtl file.
 
-        out.println( "#Produced by Art of Illusion " + ModellingApp.VERSION + ", PolyMesh Plugin, " + ( new Date() ).toString() );
+        out.println( "#Produced by Art of Illusion " + ArtOfIllusion.getVersion() + ", PolyMesh Plugin, " + ( new Date() ).toString() );
         Enumeration enumerate = textureExporter.getTextures();
         Hashtable names = new Hashtable();
         TextureSpec spec = new TextureSpec();
