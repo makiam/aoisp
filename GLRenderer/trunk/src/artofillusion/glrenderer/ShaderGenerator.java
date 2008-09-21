@@ -242,7 +242,7 @@ public class ShaderGenerator
     for (ObjectInfo info : ambientDirectionalLights)
     {
       RGBColor light = new RGBColor();
-      ((DirectionalLight) info.getObject()).getLight(light, 0.0f);
+      ((DirectionalLight) info.getObject()).getLight(light, new Vec3());
       ambient.add(light);
     }
     shader.append("vec3 diffuseLight = vec3(").append(ambient.getRed()).append(", ").append(ambient.getGreen()).append(", ").append(ambient.getBlue()).append(");\n");
