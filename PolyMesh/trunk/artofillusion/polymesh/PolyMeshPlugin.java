@@ -86,8 +86,7 @@ public class PolyMeshPlugin implements Plugin
             palette.toggleDefaultTool();
             palette.toggleDefaultTool();
             BMenuItem menuItem = Translate.menuItem( "polymesh:convertToPolyMesh", new ConvertObject( layout ), "doConvert" );
-            BMenuBar menuBar = layout.getMenuBar();
-            BMenu toolsMenu = menuBar.getChild( 2 );
+            BMenu toolsMenu = layout.getObjectMenu();
             int count = toolsMenu.getChildCount();
             MenuWidget[] mw = new MenuWidget[count];
             for (int i = count - 1; i >= 0; i-- )

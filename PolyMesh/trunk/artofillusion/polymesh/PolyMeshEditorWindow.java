@@ -4365,6 +4365,51 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 
 	private void doCopy() {
 		clipboardMesh = (PolyMesh) ((PolyMesh) objInfo.object).duplicate();
+		int selCount = 0;
+
+		if (selected != null)
+			for (int i = 0; i < selected.length; i++)
+				if (!selected[i])
+					++selCount;
+		if (selCount > 0) {
+			if (selectMode == POINT_MODE) {
+				int[] indices = new int[selCount];
+				int count = 0;
+				for (int i = 0; i < selected.length; ++i)
+					if (!selected[i])
+						indices[count++] = i;
+				if (clipboardMesh.getVertices().length - indices.length < 3) {
+					//back to original mesh
+					clipboardMesh = (PolyMesh) ((PolyMesh) objInfo.object).duplicate();
+				} else {
+					clipboardMesh.deleteVertices(indices);				
+				}
+			} else if (selectMode == EDGE_MODE) {
+				int count = 0;
+				int[] indices = new int[selCount];
+				for (int i = 0; i < selected.length; ++i)
+					if (!selected[i])
+						indices[count++] = i;
+				if (clipboardMesh.getEdges().length - indices.length < 3) {
+					//back to original mesh
+					clipboardMesh = (PolyMesh) ((PolyMesh) objInfo.object).duplicate();
+				} else {
+					clipboardMesh.deleteEdges(indices);
+				}
+			} else {
+				int count = 0;
+				int[] indices = new int[selCount];
+				for (int i = 0; i < selected.length; ++i)
+					if (!selected[i])
+						indices[count++] = i;
+				if (clipboardMesh.getFaces().length - indices.length < 1) {
+					//back to original mesh
+					clipboardMesh = (PolyMesh) ((PolyMesh) objInfo.object).duplicate();
+				} else {
+					clipboardMesh.deleteFaces(indices);
+				}
+			}
+		}
 		eventSource.dispatchEvent(new CopyEvent(this));
 	}
 

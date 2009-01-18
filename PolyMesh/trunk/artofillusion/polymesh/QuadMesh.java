@@ -241,8 +241,6 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 				return e2;
 			if (f.e1 == e3 || f.e2 == e3 || f.e3 == e3 || f.e4 == e3)
 				return e3;
-			if (f.e1 == e3 || f.e2 == e3 || f.e3 == e3 || f.e4 == e3)
-				return e3;
 			if (f.e1 == e4 || f.e2 == e4 || f.e3 == e4 || f.e4 == e4)
 				return e4;
 			return -1;
@@ -531,7 +529,7 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 				}
 				norm[faces[i].v3].add(faceNorm.times(Math.acos(dot)));
 			}
-			faceNorm = edge4.cross(edge1);
+			faceNorm = edge4.cross(edge3);
 			length = faceNorm.length();
 			if (length != 0.0) {
 				faceNorm.scale(-1.0 / length);
