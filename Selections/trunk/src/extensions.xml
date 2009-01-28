@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<extension name="Selections" version="1.0">
+  <author>Peter Eastman</author>
+  <date>2009</date>
+  <description>
+This plugin allows you to record sets of selected objects.  You can then
+perform various operations on the objects in a set, such as selecting,
+showing, hiding, or locking them.
+  </description>
+  <comments>
+  </comments>
+  <plugin class="artofillusion.selections.SelectionsPlugin"/>
+  <resource type="TranslateBundle" id="selectionsPlugin" name="selections"/>
+</extension>
+
