@@ -1,0 +1,13 @@
+<?xml version="1.0" standalone="yes"?>
+<extension name="Rodin" version="0.1">
+  <author>Peter Eastman</author>
+  <date>2009</date>
+  <description>
+This is a very early prototype of a voxel modeling tool.  It allows you to edit
+objects as if they were made of clay, drawing on the surface to reshape them.
+  </description>
+  <comments>
+  </comments>
+  <plugin class="artofillusion.rodin.CreateVoxelsTool"/>
+</extension>
+
