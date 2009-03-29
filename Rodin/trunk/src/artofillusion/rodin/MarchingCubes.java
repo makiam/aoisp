@@ -15,6 +15,11 @@ import artofillusion.math.*;
 import java.util.*;
 import java.util.List;
 
+/**
+ * This class implements the marching cubes algorithm for generating a mesh from a VoxelOctree.
+ * This is partly based on a public domain C implementation by Cory Bloyd.
+ */
+
 public class MarchingCubes
 {
   private static final int vertexOffset[][] = new int[][]
@@ -313,11 +318,21 @@ public class MarchingCubes
           {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
   };
 
-  public static void generateMesh(VoxelOctree voxels, double scale, float cutoff, List<Vec3> vertices, List<Vec3> normals, List<int[]> faces)
+  /**
+   * Construct a mesh from a VoxelOctree.
+   *
+   * @param voxels     the VoxelOctree for which to create a mesh
+   * @param scale      the size of the mesh that should be generated
+   * @param cutoff     the voxel value dividing the inside of the object from the outside
+   * @param vertices   the coordinates of mesh vertices will be added to this List
+   * @param faces      an int[3] will be added to this List containing the vertex indices for each mesh face
+   */
+
+  public static void generateMesh(VoxelOctree voxels, double scale, float cutoff, List<Vec3> vertices, List<int[]> faces)
   {
     int width = 1<<voxels.getDepth();
     double cellSize = scale/(width-1);
-    float values[] = new float[8];
+    float cornerValues[] = new float[8];
     int edgeVertIndex[] = new int[12];
     HashMap<Integer, Integer> xEdgeVertMap = new HashMap<Integer, Integer>();
     HashMap<Integer, Integer> yEdgeVertMap = new HashMap<Integer, Integer>();
@@ -329,20 +344,33 @@ public class MarchingCubes
     int maxy = Math.min(width-1, bounds[3]);
     int minz = Math.max(0, bounds[4]-1);
     int maxz = Math.min(width-1, bounds[5]);
+    int ysize = maxy-miny+2;
+    int zsize = maxz-minz+2;
+
+    // Look up the values for the x==minx plane.
+
+    float values[][] = new float[2][ysize*zsize];
+    for (int j = 0; j < ysize; j++)
+      for (int k = 0; k < zsize; k++)
+        values[0][j*zsize+k] = voxels.getValue(minx, j+miny, k+minz);
     for (int i = minx; i < maxx; i++)
     {
+      // Look up the values for the next plane.
+
+      for (int j = 0; j < ysize; j++)
+        for (int k = 0; k < zsize; k++)
+          values[1][j*zsize+k] = voxels.getValue(i+1, j+miny, k+minz);
       for (int j = miny; j < maxy; j++)
       {
         for (int k = minz; k < maxz; k++)
         {
+          // Record the values at the four corners of this cell, and record which ones are outside.
+
           int flagIndex = 0;
           for (int corner = 0; corner < 8; corner++)
           {
-            if (corner < 4 && k > 0)
-              values[corner] = values[corner+4]; // We just looked this value up for the last cell.
-            else
-              values[corner] = voxels.getValue(i+vertexOffset[corner][0], j+vertexOffset[corner][1], k+vertexOffset[corner][2]);
-            if (values[corner] < cutoff)
+            cornerValues[corner] = values[vertexOffset[corner][0]][(j-miny+vertexOffset[corner][1])*zsize+k-minz+vertexOffset[corner][2]];
+            if (cornerValues[corner] < cutoff)
               flagIndex += 1<<corner;
           }
           int edgeFlag = cubeEdgeFlags[flagIndex];
@@ -351,6 +379,9 @@ public class MarchingCubes
           double baseX = cellSize*i-0.5*scale;
           double baseY = cellSize*j-0.5*scale;
           double baseZ = cellSize*k-0.5*scale;
+
+          // Compute a vertex for each edge of the cell that intersects the surface.
+
           for (int edge = 0; edge < 12; edge++)
           {
             if ((edgeFlag&(1<<edge)) != 0)
@@ -360,6 +391,9 @@ public class MarchingCubes
               int corner2 = edgeConnection[edge][1];
               int vert2 = width*width*(i+vertexOffset[corner2][0])+width*(j+vertexOffset[corner2][1])+(k+vertexOffset[corner2][2]);
               Integer firstVert = (vert1 < vert2 ? vert1 : vert2);
+
+              // See if we already created a vertex for this edge.
+
               if (edgeDirection[edge][0] != 0.0)
               {
                 Integer vertIndex = xEdgeVertMap.get(firstVert);
@@ -393,8 +427,11 @@ public class MarchingCubes
                   continue;
                 }
               }
+
+              // Create a new vertex.
+
               edgeVertIndex[edge] = vertices.size();
-              double offset = findOffset(values[edgeConnection[edge][0]], values[edgeConnection[edge][1]], cutoff);
+              double offset = findOffset(cornerValues[edgeConnection[edge][0]], cornerValues[edgeConnection[edge][1]], cutoff);
               vertices.add(new Vec3(
                   baseX+(vertexOffset[edgeConnection[edge][0]][0]+offset*edgeDirection[edge][0])*cellSize,
                   baseY+(vertexOffset[edgeConnection[edge][0]][1]+offset*edgeDirection[edge][1])*cellSize,
@@ -402,6 +439,9 @@ public class MarchingCubes
               ));
             }
           }
+
+          // Create new faces.
+
           for (int face = 0; face < 5; face++)
           {
             if (triangleConnectionTable[flagIndex][3*face] < 0)
@@ -414,6 +454,9 @@ public class MarchingCubes
           }
         }
       }
+
+      // Clean up the edge vertex maps, deleting records for vertices that we don't need any more.
+
       int firstNeeded = width*width*(i+1);
       Iterator<Map.Entry<Integer, Integer>> xiter = xEdgeVertMap.entrySet().iterator();
       while (xiter.hasNext())
@@ -427,6 +470,12 @@ public class MarchingCubes
       while (ziter.hasNext())
         if (ziter.next().getKey() < firstNeeded)
           ziter.remove();
+
+      // Swap the value arrays so the values for x==i+1 will be in values[0].
+
+      float temp[] = values[0];
+      values[0] = values[1];
+      values[1] = temp;
     }
   }
 

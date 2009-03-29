@@ -129,7 +129,7 @@ public class VoxelObject extends ImplicitObject
       return cachedMesh;
     ArrayList<Vec3> vertices = new ArrayList<Vec3>();
     ArrayList<int[]> faces = new ArrayList<int[]>();
-    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, null, faces);
+    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, faces);
     RenderingTriangle tri[] = new RenderingTriangle[faces.size()];
     Vec3 vert[] = vertices.toArray(new Vec3[vertices.size()]);
     for (int i = 0; i < tri.length; i++)
@@ -189,7 +189,7 @@ public class VoxelObject extends ImplicitObject
   {
     ArrayList<Vec3> vertices = new ArrayList<Vec3>();
     ArrayList<int[]> faces = new ArrayList<int[]>();
-    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, null, faces);
+    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, faces);
     Vec3 vert[] = vertices.toArray(new Vec3[vertices.size()]);
     int face[][] = faces.toArray(new int[faces.size()][]);
     return new TriangleMesh(vert, face);

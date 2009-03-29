@@ -12,6 +12,10 @@ package artofillusion.rodin;
 
 import artofillusion.math.*;
 
+/**
+ * This class is used for tracing rays through a VoxelObject.
+ */
+
 public class VoxelTracer
 {
   private VoxelObject obj;
@@ -50,6 +54,11 @@ public class VoxelTracer
     maxz = Math.min(width-1, bounds[5]);
   }
 
+  /**
+   * This should be called whenever a block of values in the VoxelObject have changed.
+   * It updates internal data structures accordingly.
+   */
+
   public void updateFlags(int fromx, int tox, int fromy, int toy, int fromz, int toz)
   {
     VoxelOctree voxels = obj.getVoxels();
@@ -60,7 +69,7 @@ public class VoxelTracer
     }
     findBounds();
     float cutoff = 0.5f;
-    float values[] = new float[8];
+    float cornerValues[] = new float[8];
     if (fromx < 0)
       fromx = 0;
     if (fromy < 0)
@@ -73,8 +82,22 @@ public class VoxelTracer
       toy = width-1;
     if (toz >= width)
       toz = width-1;
+    int ysize = toy-fromy+3;
+    int zsize = toz-fromz+3;
+
+    // Look up the values for the x==fromx plane.
+
+    float values[][] = new float[2][ysize*zsize];
+    for (int j = 0; j < ysize; j++)
+      for (int k = 0; k < zsize; k++)
+        values[0][j*zsize+k] = voxels.getValue(fromx, j+fromy, k+fromz);
     for (int i = fromx; i <= tox; i++)
     {
+      // Look up the values for the next plane.
+
+      for (int j = 0; j < ysize; j++)
+        for (int k = 0; k < zsize; k++)
+          values[1][j*zsize+k] = voxels.getValue(i+1, j+fromy, k+fromz);
       for (int j = fromy; j <= toy; j++)
       {
         for (int k = fromz; k <= toz; k++)
@@ -82,11 +105,10 @@ public class VoxelTracer
           int numBelow = 0;
           for (int corner = 0; corner < 8; corner++)
           {
-            if (corner < 4 && k > 0)
-              values[corner] = values[corner+4]; // We just looked this value up for the last cell.
-            else
-              values[corner] = voxels.getValue(i+vertexOffset[corner][0], j+vertexOffset[corner][1], k+vertexOffset[corner][2]);
-            if (values[corner] < cutoff)
+            // Record the values at the four corners of this cell, and see how many are outside.
+
+            cornerValues[corner] = values[vertexOffset[corner][0]][(j-fromy+vertexOffset[corner][1])*zsize+k-fromz+vertexOffset[corner][2]];
+            if (cornerValues[corner] < cutoff)
               numBelow++;
           }
           int index = i*width*width+j*width+k;
@@ -96,8 +118,25 @@ public class VoxelTracer
             flags[index/32] &= 0xFFFFFFFF-(1<<(index%32));
         }
       }
+
+      // Swap the value arrays so the values for x==i+1 will be in values[0].
+
+      float temp[] = values[0];
+      values[0] = values[1];
+      values[1] = temp;
     }
   }
+
+  /**
+   * Find where a ray intersects the VoxelObject.
+   *
+   * @param origin     the ray origin in the VoxelObject's local coordinate system
+   * @param direction  the ray direction in the VoxelObject's local coordinate system
+   * @param normal     if this is not null, the surface normal at the intersection point
+   *                   will be stored in it
+   * @return the distance from the ray origin to the intersection point, or 0 if there was
+   * no intersection
+   */
 
   public double findRayIntersection(Vec3 origin, Vec3 direction, Vec3 normal)
   {
@@ -209,7 +248,7 @@ public class VoxelTracer
     if (dx < 0.0)
     {
       stepx = -1;
-      finalx = -1;
+      finalx = minx-1;
       tdeltax = -1.0/dx;
       tmaxx = (x-ox)/dx;
     }
@@ -230,7 +269,7 @@ public class VoxelTracer
     if (dy < 0.0)
     {
       stepy = -1;
-      finaly = -1;
+      finaly = miny-1;
       tdeltay = -1.0/dy;
       tmaxy = (y-oy)/dy;
     }
@@ -251,7 +290,7 @@ public class VoxelTracer
     if (dz < 0.0)
     {
       stepz = -1;
-      finalz = -1;
+      finalz = minz-1;
       tdeltaz = -1.0/dz;
       tmaxz = (z-oz)/dz;
     }
@@ -438,7 +477,7 @@ public class VoxelTracer
             return 0.0;
           tmaxz += tdeltaz;
         }
-      }      
+      }
     }
   }
 }
