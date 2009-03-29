@@ -157,7 +157,7 @@ public class PaintVoxelsTool extends EditingTool
     int maxz = (int) Math.ceil(pos.z+radius);
     while (minx < 0 || maxx >= width || miny < 0 || maxy >= width || minz < 0 || maxz >= width)
     {
-      voxels.growGrid(0.0f);
+      voxels.growGrid();
       minx += width/2;
       maxx += width/2;
       miny += width/2;
@@ -178,19 +178,24 @@ public class PaintVoxelsTool extends EditingTool
           double dy = pos.y-y;
           double dz = pos.z-z;
           double dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-          double weight;
           if (dist >= radius+1.0)
             continue;
-          if (dist <= radius-1.0)
-            weight = 1.0;
-          else
-            weight = 0.5*(radius+1.0-dist);
-          float oldValue = voxels.getValue(x, y, z);
-          float newValue;
+          byte oldValue = voxels.getValue(x, y, z);
+          byte newValue;
           if (negative)
-            newValue = (float) Math.min(oldValue, 1.0-weight);
+          {
+            if (dist <= radius-1.0)
+              newValue= Byte.MIN_VALUE;
+            else
+              newValue = (byte) Math.min(oldValue, Byte.MAX_VALUE*(dist-radius));
+          }
           else
-            newValue = (float) Math.max(oldValue, weight);
+          {
+            if (dist <= radius-1.0)
+              newValue= Byte.MAX_VALUE;
+            else
+              newValue = (byte) Math.max(oldValue, Byte.MAX_VALUE*(radius-dist));
+          }
           if (newValue != oldValue)
             voxels.setValue(x, y, z, newValue);
         }
@@ -299,19 +304,24 @@ public class PaintVoxelsTool extends EditingTool
           if (u < 0.0 || u > length)
             continue;
           double dist = Math.sqrt(pos.length2()-u*u);
-          double weight;
           if (dist >= radius+1.0)
             continue;
-          if (dist <= radius-1.0)
-            weight = 1.0;
-          else
-            weight = 0.5*(radius+1.0-dist);
-          float oldValue = voxels.getValue(x, y, z);
-          float newValue;
+          byte oldValue = voxels.getValue(x, y, z);
+          byte newValue;
           if (negative)
-            newValue = (float) Math.min(oldValue, 1.0-weight);
+          {
+            if (dist <= radius-1.0)
+              newValue= Byte.MIN_VALUE;
+            else
+              newValue = (byte) Math.min(oldValue, Byte.MAX_VALUE*(dist-radius));
+          }
           else
-            newValue = (float) Math.max(oldValue, weight);
+          {
+            if (dist <= radius-1.0)
+              newValue= Byte.MAX_VALUE;
+            else
+              newValue = (byte) Math.max(oldValue, Byte.MAX_VALUE*(radius-dist));
+          }
           if (newValue != oldValue)
             voxels.setValue(x, y, z, newValue);
         }

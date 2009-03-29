@@ -323,16 +323,15 @@ public class MarchingCubes
    *
    * @param voxels     the VoxelOctree for which to create a mesh
    * @param scale      the size of the mesh that should be generated
-   * @param cutoff     the voxel value dividing the inside of the object from the outside
    * @param vertices   the coordinates of mesh vertices will be added to this List
    * @param faces      an int[3] will be added to this List containing the vertex indices for each mesh face
    */
 
-  public static void generateMesh(VoxelOctree voxels, double scale, float cutoff, List<Vec3> vertices, List<int[]> faces)
+  public static void generateMesh(VoxelOctree voxels, double scale, List<Vec3> vertices, List<int[]> faces)
   {
     int width = 1<<voxels.getDepth();
     double cellSize = scale/(width-1);
-    float cornerValues[] = new float[8];
+    byte cornerValues[] = new byte[8];
     int edgeVertIndex[] = new int[12];
     HashMap<Integer, Integer> xEdgeVertMap = new HashMap<Integer, Integer>();
     HashMap<Integer, Integer> yEdgeVertMap = new HashMap<Integer, Integer>();
@@ -349,7 +348,7 @@ public class MarchingCubes
 
     // Look up the values for the x==minx plane.
 
-    float values[][] = new float[2][ysize*zsize];
+    byte values[][] = new byte[2][ysize*zsize];
     for (int j = 0; j < ysize; j++)
       for (int k = 0; k < zsize; k++)
         values[0][j*zsize+k] = voxels.getValue(minx, j+miny, k+minz);
@@ -370,7 +369,7 @@ public class MarchingCubes
           for (int corner = 0; corner < 8; corner++)
           {
             cornerValues[corner] = values[vertexOffset[corner][0]][(j-miny+vertexOffset[corner][1])*zsize+k-minz+vertexOffset[corner][2]];
-            if (cornerValues[corner] < cutoff)
+            if (cornerValues[corner] < 0)
               flagIndex += 1<<corner;
           }
           int edgeFlag = cubeEdgeFlags[flagIndex];
@@ -431,7 +430,7 @@ public class MarchingCubes
               // Create a new vertex.
 
               edgeVertIndex[edge] = vertices.size();
-              double offset = findOffset(cornerValues[edgeConnection[edge][0]], cornerValues[edgeConnection[edge][1]], cutoff);
+              double offset = findOffset(cornerValues[edgeConnection[edge][0]], cornerValues[edgeConnection[edge][1]]);
               vertices.add(new Vec3(
                   baseX+(vertexOffset[edgeConnection[edge][0]][0]+offset*edgeDirection[edge][0])*cellSize,
                   baseY+(vertexOffset[edgeConnection[edge][0]][1]+offset*edgeDirection[edge][1])*cellSize,
@@ -473,18 +472,18 @@ public class MarchingCubes
 
       // Swap the value arrays so the values for x==i+1 will be in values[0].
 
-      float temp[] = values[0];
+      byte temp[] = values[0];
       values[0] = values[1];
       values[1] = temp;
     }
   }
 
-  private static double findOffset(float value1, float value2, float cutoff)
+  private static double findOffset(byte value1, byte value2)
   {
     double delta = value2-value1;
     if (delta == 0.0)
       return 0.5;
-    double offset = (cutoff-value1)/delta;
+    double offset = -value1/delta;
 
     // Don't let the offset go all the way to either end, to avoid creating degenerate triangles.
 

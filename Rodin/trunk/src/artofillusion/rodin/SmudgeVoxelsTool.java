@@ -235,11 +235,11 @@ public class SmudgeVoxelsTool extends EditingTool
                 int xindex = lastxbase+i;
                 int yindex = lastybase+j;
                 int zindex = lastzbase+k;
-                voxels.setValue(xindex, yindex, zindex, voxels.getValue(xindex, yindex, zindex)-transfer);
+                voxels.setValue(xindex, yindex, zindex, (byte) (voxels.getValue(xindex, yindex, zindex)-transfer));
                 xindex = xbase+i;
                 yindex = ybase+j;
                 zindex = zbase+k;
-                voxels.setValue(xindex, yindex, zindex, voxels.getValue(xindex, yindex, zindex)+transfer);
+                voxels.setValue(xindex, yindex, zindex, (byte) (voxels.getValue(xindex, yindex, zindex)+transfer));
               }
       lastx = x;
       lasty = y;
@@ -381,7 +381,7 @@ public class SmudgeVoxelsTool extends EditingTool
     int gridWidth = voxels.getWidth();
     while (minx < 0 || maxx >= gridWidth || miny < 0 || maxy >= gridWidth || minz < 0 || maxz >= gridWidth)
     {
-      voxels.growGrid(0.0f);
+      voxels.growGrid();
       minx += gridWidth/2;
       maxx += gridWidth/2;
       miny += gridWidth/2;

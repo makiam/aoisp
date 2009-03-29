@@ -68,8 +68,7 @@ public class VoxelTracer
       return;
     }
     findBounds();
-    float cutoff = 0.5f;
-    float cornerValues[] = new float[8];
+    byte cornerValues[] = new byte[8];
     if (fromx < 0)
       fromx = 0;
     if (fromy < 0)
@@ -87,7 +86,7 @@ public class VoxelTracer
 
     // Look up the values for the x==fromx plane.
 
-    float values[][] = new float[2][ysize*zsize];
+    byte values[][] = new byte[2][ysize*zsize];
     for (int j = 0; j < ysize; j++)
       for (int k = 0; k < zsize; k++)
         values[0][j*zsize+k] = voxels.getValue(fromx, j+fromy, k+fromz);
@@ -108,7 +107,7 @@ public class VoxelTracer
             // Record the values at the four corners of this cell, and see how many are outside.
 
             cornerValues[corner] = values[vertexOffset[corner][0]][(j-fromy+vertexOffset[corner][1])*zsize+k-fromz+vertexOffset[corner][2]];
-            if (cornerValues[corner] < cutoff)
+            if (cornerValues[corner] < 0)
               numBelow++;
           }
           int index = i*width*width+j*width+k;
@@ -121,7 +120,7 @@ public class VoxelTracer
 
       // Swap the value arrays so the values for x==i+1 will be in values[0].
 
-      float temp[] = values[0];
+      byte temp[] = values[0];
       values[0] = values[1];
       values[1] = temp;
     }
@@ -312,7 +311,7 @@ public class VoxelTracer
     // Step through the voxels, looking for intersections.
 
     VoxelOctree voxels = obj.getVoxels();
-    float values[] = new float[8];
+    byte values[] = new byte[8];
     while (true)
     {
       int index = x*width*width+y*width+z;
@@ -421,12 +420,12 @@ public class VoxelTracer
                            +values[5]*xexit*(1.0-yexit)*zexit
                            +values[6]*xexit*yexit*(1.0-zexit)
                            +values[7]*xexit*yexit*zexit;
-        if ((enterValue > 0.5 && exitValue <= 0.5) || (enterValue <= 0.5 && exitValue > 0.5))
+        if ((enterValue > 0 && exitValue <= 0) || (enterValue <= 0 && exitValue > 0))
         {
           // Find the intersection point.
 
-          double weight1 = Math.abs(exitValue-0.5);
-          double weight2 = Math.abs(enterValue-0.5);
+          double weight1 = Math.abs(exitValue);
+          double weight2 = Math.abs(enterValue);
           double d = 1.0/(weight1+weight2);
           weight1 *= d;
           weight2 *= d;

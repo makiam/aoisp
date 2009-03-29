@@ -21,21 +21,28 @@ public class VoxelOctree
 {
   private VoxelTreeNode root;
   private int depth;
+  private static final VoxelTreeNode leafNode[];
+
+  static
+  {
+    leafNode = new VoxelTreeNode[256];
+    for (int i = 0; i < leafNode.length; i++)
+      leafNode[i] = new VoxelTreeNode((byte) (i+Byte.MIN_VALUE));
+  }
 
   /**
    * Create a VoxelOctree.
    *
    * @param depth    the depth of the octree.  The width of the grid along each dimension
    *                 is 2^depth.
-   * @param value    the initial value to store at every grid point
    */
 
-  public VoxelOctree(int depth, float value)
+  public VoxelOctree(int depth)
   {
     if (depth < 1)
       throw new IllegalArgumentException("Illegal depth value: "+depth);
     this.depth = depth;
-    root = new VoxelTreeNode(value);
+    root = leafNode[0];
   }
 
   /**
@@ -60,7 +67,7 @@ public class VoxelOctree
    * Get the value of a point on the grid, specified by its x, y, and z coordinates.
    */
 
-  public float getValue(int x, int y, int z)
+  public byte getValue(int x, int y, int z)
   {
     VoxelTreeNode node = root;
     int currentDepth = depth;
@@ -71,8 +78,6 @@ public class VoxelOctree
       int j = y>>currentDepth;
       int k = z>>currentDepth;
       int child = (i&1)*4 + (j&1)*2 + (k&1);
-      if (node.children[child] == null)
-        return node.value;
       node = node.children[child];
     }
     return node.value;
@@ -82,56 +87,42 @@ public class VoxelOctree
    * Set the value of a point on the grid, specified by its x, y, and z coordinates.
    */
 
-  public void setValue(int x, int y, int z, float value)
+  public void setValue(int x, int y, int z, byte value)
   {
-    setValue(root, depth, x, y, z, value);
+    root = setValue(root, depth, x, y, z, value);
   }
 
-  private void setValue(VoxelTreeNode node, int depth, int x, int y, int z, float value)
+  private VoxelTreeNode setValue(VoxelTreeNode node, int depth, int x, int y, int z, byte value)
   {
     if (depth == 0)
-    {
-      node.value = value;
-      node.children = null;
-      return;
-    }
+      return leafNode[value-Byte.MIN_VALUE];
     if (node.children == null)
     {
       if (node.value == value)
-        return;
-      node.children = new VoxelTreeNode[8];
+        return node;
+      VoxelTreeNode oldNode = node;
+      node = new VoxelTreeNode();
+      for (int i = 0; i < node.children.length; i++)
+        node.children[i] = leafNode[oldNode.value-Byte.MIN_VALUE];
     }
     depth--;
     int i = x>>depth;
     int j = y>>depth;
     int k = z>>depth;
     int child = (i&1)*4 + (j&1)*2 + (k&1);
-    VoxelTreeNode childNode = node.children[child];
-    if (childNode == null)
-      childNode = node.children[child] = new VoxelTreeNode(node.value);
-    setValue(childNode, depth, x, y, z, value);
-    if (childNode.children == null && childNode.value == node.value)
-      node.children[child] = null;
+    node.children[child] = setValue(node.children[child], depth, x, y, z, value);
     boolean uniform = true;
-    float firstValue = (node.children[0] == null ? node.value : node.children[0].value);
     for (int m = 0; uniform && m < 8; m++)
-    {
-      if (node.children[m] != null && node.children[m].children != null)
+      if (node.children[m].children != null || node.children[m].value != value)
         uniform = false;
-      float childValue = (node.children[m] == null ? node.value : node.children[m].value);
-      if (childValue != firstValue)
-        uniform = false;
-    }
     if (uniform)
-    {
-      node.value = firstValue;
-      node.children = null;
-    }
+      return leafNode[value-Byte.MIN_VALUE];
+    return node;
   }
 
   /**
-   * Find the range of grid points that contain non-zero values.  It is returned as
-   * the array [minx, maxx, miny, maxy, minz, maxz].
+   * Find the range of grid points that contain values greater than Byte.MIN_VALUE.
+   * It is returned as the array [minx, maxx, miny, maxy, minz, maxz].
    */
 
   public int[] findDataBounds()
@@ -149,7 +140,7 @@ public class VoxelOctree
   {
     if (node.children == null)
     {
-      if (node.value != 0.0f)
+      if (node.value != Byte.MIN_VALUE)
       {
         if (x < bounds[0])
           bounds[0] = x;
@@ -169,7 +160,7 @@ public class VoxelOctree
       {
         if (node.children[i] == null)
         {
-          if (node.value != 0.0f)
+          if (node.value != Byte.MIN_VALUE)
           {
             if (childx < bounds[0])
               bounds[0] = childx;
@@ -189,7 +180,7 @@ public class VoxelOctree
   {
     if (node.children == null)
     {
-      if (node.value != 0.0f)
+      if (node.value != Byte.MIN_VALUE)
       {
         if (x > bounds[1])
           bounds[1] = x;
@@ -209,7 +200,7 @@ public class VoxelOctree
       {
         if (node.children[i] == null)
         {
-          if (node.value != 0.0f)
+          if (node.value != Byte.MIN_VALUE)
           {
             if (childx > bounds[1])
               bounds[1] = childx;
@@ -231,7 +222,7 @@ public class VoxelOctree
 
   public VoxelOctree duplicate()
   {
-    VoxelOctree copy = new VoxelOctree(depth, 0.0f);
+    VoxelOctree copy = new VoxelOctree(depth);
     copy.root = duplicateNode(root);
     return copy; 
   }
@@ -239,27 +230,18 @@ public class VoxelOctree
   /**
    * Double the size of the grid along each dimension.  This is done symmetrically,
    * such that the old grid values occupy the center of the new grid.
-   *
-   * @param value    the value to store at the newly created grid points
    */
 
-  public void growGrid(float value)
+  public void growGrid()
   {
-    VoxelTreeNode newRoot = new VoxelTreeNode(value);
-    newRoot.children = new VoxelTreeNode[8];
+    if (root.children == null)
+      return;
+    VoxelTreeNode newRoot = new VoxelTreeNode();
     for (int i = 0; i < 8; i++)
     {
-      newRoot.children[i] = new VoxelTreeNode(value);
-      if (root.children != null && root.children[i] != null)
-      {
-        newRoot.children[i].children = new VoxelTreeNode[8];
-        newRoot.children[i].children[7-i] = root.children[i];
-      }
-      else if (root.value != value)
-      {
-        newRoot.children[i].children = new VoxelTreeNode[8];
-        newRoot.children[i].children[7-i] = new VoxelTreeNode(root.value);
-      }
+      newRoot.children[i] = new VoxelTreeNode();
+      for (int j = 0; j < 8; j++)
+        newRoot.children[i].children[j] = (j == 7-i ? root.children[i] : leafNode[0]);
     }
     root = newRoot;
     depth++;
@@ -273,22 +255,21 @@ public class VoxelOctree
 
   public void shrinkGrid()
   {
-    if (depth == 1)
+    if (depth == 1 || root.children == null)
       return;
-    VoxelTreeNode newRoot = new VoxelTreeNode(root.value);
-    if (root.children != null)
+    if (depth == 2)
     {
-      newRoot.children = new VoxelTreeNode[8];
-      for (int i = 0; i < 8; i++)
-      {
-        if (root.children[i] != null)
-        {
-          if (root.children[i].children == null)
-            newRoot.children[i] = root.children[i];
-          else
-            newRoot.children[i] = root.children[i].children[7-i];
-        }
-      }
+      root = leafNode[0];
+      depth = 1;
+      return;
+    }
+    VoxelTreeNode newRoot = new VoxelTreeNode();
+    for (int i = 0; i < 8; i++)
+    {
+      if (root.children[i].children == null)
+        newRoot.children[i] = root.children[i];
+      else
+        newRoot.children[i] = root.children[i].children[7-i];
     }
     root = newRoot;
     depth--;
@@ -296,25 +277,27 @@ public class VoxelOctree
 
   private static VoxelTreeNode duplicateNode(VoxelTreeNode node)
   {
-    VoxelTreeNode copy = new VoxelTreeNode(node.value);
-    if (node.children != null)
-    {
-      copy.children = new VoxelTreeNode[8];
-      for (int i = 0; i < 8; i++)
-        if (node.children[i] != null)
-          copy.children[i] = duplicateNode(node.children[i]);
-    }
+    if (node.children == null)
+      return node;
+    VoxelTreeNode copy = new VoxelTreeNode();
+    for (int i = 0; i < 8; i++)
+      copy.children[i] = duplicateNode(node.children[i]);
     return copy;
   }
 
   private static class VoxelTreeNode
   {
-    public float value;
+    public byte value;
     public VoxelTreeNode children[];
 
-    public VoxelTreeNode(float value)
+    public VoxelTreeNode(byte value)
     {
       this.value = value;
+    }
+
+    public VoxelTreeNode()
+    {
+      children = new VoxelTreeNode[8];
     }
   }
 }

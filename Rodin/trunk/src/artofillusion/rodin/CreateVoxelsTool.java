@@ -33,11 +33,11 @@ public class CreateVoxelsTool implements ModellingTool
         {
             float radius = (float) Math.sqrt((i-center)*(i-center)+(j-center)*(j-center)+(k-center)*(k-center));
             if (radius < size-3)
-              obj.getVoxels().setValue(i, j, k, 1);
+              obj.getVoxels().setValue(i, j, k, Byte.MAX_VALUE);
             else if (radius > size-1)
-              obj.getVoxels().setValue(i, j, k, 0);
+              obj.getVoxels().setValue(i, j, k, Byte.MIN_VALUE);
             else
-              obj.getVoxels().setValue(i, j, k, 0.5f*(size-1-radius));
+              obj.getVoxels().setValue(i, j, k, (byte) (Byte.MAX_VALUE*(size-2-radius)));
 
         }
     window.addObject(obj, new CoordinateSystem(), "Voxel object", null);

@@ -24,11 +24,12 @@ public class VoxelObject extends ImplicitObject
   private double scale;
   private WireframeMesh cachedWire;
   private RenderingMesh cachedMesh;
+  private BoundingBox cachedBounds;
   private boolean voxelsAreShared;
 
   public VoxelObject(int depth)
   {
-    voxels = new VoxelOctree(depth, 0.0f);
+    voxels = new VoxelOctree(depth);
     scale = 1.0;
   }
 
@@ -79,7 +80,7 @@ public class VoxelObject extends ImplicitObject
   @Override
   public double getCutoff()
   {
-    return 0.5;
+    return 0.0;
   }
 
   public Object3D duplicate()
@@ -102,8 +103,19 @@ public class VoxelObject extends ImplicitObject
 
   public BoundingBox getBounds()
   {
-    double halfSize = 0.5*scale;
-    return new BoundingBox(-halfSize, halfSize, -halfSize, halfSize, -halfSize, halfSize);
+    if (cachedBounds == null)
+    {
+      int[] bounds = voxels.findDataBounds();
+      double boundsScale = scale/voxels.getWidth();
+      double boundsOffset = scale*0.5;
+      cachedBounds = new BoundingBox(bounds[0]*boundsScale-boundsOffset,
+          bounds[1]*boundsScale-boundsOffset,
+          bounds[2]*boundsScale-boundsOffset,
+          bounds[3]*boundsScale-boundsOffset,
+          bounds[4]*boundsScale-boundsOffset,
+          bounds[5]*boundsScale-boundsOffset);
+    }
+    return cachedBounds;
   }
 
   public void setSize(double xsize, double ysize, double zsize)
@@ -129,7 +141,7 @@ public class VoxelObject extends ImplicitObject
       return cachedMesh;
     ArrayList<Vec3> vertices = new ArrayList<Vec3>();
     ArrayList<int[]> faces = new ArrayList<int[]>();
-    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, faces);
+    MarchingCubes.generateMesh(voxels, scale, vertices, faces);
     RenderingTriangle tri[] = new RenderingTriangle[faces.size()];
     Vec3 vert[] = vertices.toArray(new Vec3[vertices.size()]);
     for (int i = 0; i < tri.length; i++)
@@ -189,7 +201,7 @@ public class VoxelObject extends ImplicitObject
   {
     ArrayList<Vec3> vertices = new ArrayList<Vec3>();
     ArrayList<int[]> faces = new ArrayList<int[]>();
-    MarchingCubes.generateMesh(voxels, scale, 0.5f, vertices, faces);
+    MarchingCubes.generateMesh(voxels, scale, vertices, faces);
     Vec3 vert[] = vertices.toArray(new Vec3[vertices.size()]);
     int face[][] = faces.toArray(new int[faces.size()][]);
     return new TriangleMesh(vert, face);
@@ -209,5 +221,6 @@ public class VoxelObject extends ImplicitObject
   {
     cachedWire = null;
     cachedMesh = null;
+    cachedBounds = null;
   }
 }
