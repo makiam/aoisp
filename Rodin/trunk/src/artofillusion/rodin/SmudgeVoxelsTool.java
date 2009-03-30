@@ -290,9 +290,8 @@ public class SmudgeVoxelsTool extends EditingTool
 
     VoxelObjectEditorWindow win = (VoxelObjectEditorWindow) theWindow;
     win.objectChanged();
-    win.getVoxelTracer().updateFlags(minx, maxx, miny, maxy, minz, maxz);
-//    theWindow.updateImage();
-    view.repaint();
+    win.voxelsChanged(minx, maxx, miny, maxy, minz, maxz);
+    theWindow.updateImage();
   }
 
   @Override

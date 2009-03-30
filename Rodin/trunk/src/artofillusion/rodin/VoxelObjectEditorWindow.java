@@ -141,6 +141,15 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
     ((VoxelObject) getObject().getObject()).clearCachedMeshes();
   }
 
+  /** This should be called whenever a block of values in the VoxelObject have changed. */
+
+  public void voxelsChanged(int fromx, int tox, int fromy, int toy, int fromz, int toz)
+  {
+    tracer.updateFlags(fromx, tox, fromy, toy, fromz, toz);
+    for (int i = 0; i < theView.length; i++)
+      ((VoxelObjectViewer) theView[i]).voxelsChanged(fromx, tox, fromy, toy, fromz, toz);
+  }
+
   /** Get the radius to use for drawing. */
 
   public double getRadius()

@@ -64,16 +64,14 @@ public class PaintVoxelsTool extends EditingTool
     VoxelObject copy = (VoxelObject) obj.duplicate();
     undo = new UndoRecord(theWindow, false, UndoRecord.COPY_OBJECT, new Object [] {obj, copy});
     tracer = new VoxelTracer(copy);
-//    tracer = mv.getWindow().getVoxelTracer().clone();
     int range[] = paintPoint(lastPos, obj);
     VoxelObjectEditorWindow win = (VoxelObjectEditorWindow) theWindow;
     win.objectChanged();
     VoxelOctree voxels = obj.getVoxels();
-    win.getVoxelTracer().updateFlags(Math.max(0, range[0]-1), Math.min(voxels.getWidth()-1, range[1]+1),
+    win.voxelsChanged(Math.max(0, range[0]-1), Math.min(voxels.getWidth()-1, range[1]+1),
         Math.max(0, range[2]-1), Math.min(voxels.getWidth()-1, range[3]+1), Math.max(0, range[4]-1),
         Math.min(voxels.getWidth()-1, range[5]+1));
     theWindow.updateImage();
-//    view.repaint();
   }
 
   @Override
@@ -95,12 +93,11 @@ public class PaintVoxelsTool extends EditingTool
     VoxelObjectEditorWindow win = (VoxelObjectEditorWindow) theWindow;
     win.objectChanged();
     VoxelOctree voxels = obj.getVoxels();
-    win.getVoxelTracer().updateFlags(Math.max(0, range[0]-1), Math.min(voxels.getWidth()-1, range[1]+1),
+    win.voxelsChanged(Math.max(0, range[0]-1), Math.min(voxels.getWidth()-1, range[1]+1),
         Math.max(0, range[2]-1), Math.min(voxels.getWidth()-1, range[3]+1), Math.max(0, range[4]-1),
         Math.min(voxels.getWidth()-1, range[5]+1));
     lastPos = pos;
     theWindow.updateImage();
-//    view.repaint();
   }
 
   @Override

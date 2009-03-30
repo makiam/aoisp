@@ -19,15 +19,22 @@ import buoy.event.*;
 
 import java.awt.*;
 import java.awt.image.*;
+import java.util.*;
 
 public class VoxelObjectViewer extends ViewerCanvas
 {
   private VoxelObjectEditorWindow window;
+  private CoordinateSystem lastCoords;
+  private boolean lastPerspective;
+  private double lastScale;
+  private ArrayList<BoundingBox> changedRegions;
+  private int pixel[];
 
   public VoxelObjectViewer(VoxelObjectEditorWindow window, RowContainer controls)
   {
     super(false);
     this.window = window;
+    changedRegions = new ArrayList<BoundingBox>();
     buildChoices(controls);
   }
 
@@ -41,46 +48,99 @@ public class VoxelObjectViewer extends ViewerCanvas
     return new double[0];
   }
 
+  /** This should be called whenever a block of values in the VoxelObject have changed. */
+
+  public void voxelsChanged(int fromx, int tox, int fromy, int toy, int fromz, int toz)
+  {
+    VoxelObject obj = (VoxelObject) window.getObject().getObject();
+    int width = obj.getVoxels().getWidth();
+    double scale = obj.getScale()/(width-1);
+    changedRegions.add(new BoundingBox((fromx-1-0.5*(width-1))*scale, (tox+1-0.5*(width-1))*scale,
+        (fromy-1-0.5*(width-1))*scale, (toy+1-0.5*(width-1))*scale, (fromz-1-0.5*(width-1))*scale,
+        (toz+1-0.5*(width-1))*scale));
+  }
+
   @Override
   public void updateImage()
   {
     super.updateImage();
 
-    // Draw the rest of the objects in the scene.
-
-//    if (showScene && window.getScene() != null)
-//    {
-//      Scene theScene = window.getScene();
-//      Vec3 viewdir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
-//      for (int i = 0; i < theScene.getNumObjects(); i++)
-//      {
-//        ObjectInfo obj = theScene.getObject(i);
-//        if (!obj.isVisible() || obj == thisObjectInScene)
-//          continue;
-//        Mat4 objectTransform = obj.getCoords().fromLocal();
-//        if (!useWorldCoords && thisObjectInScene != null)
-//          objectTransform = thisObjectInScene.getCoords().toLocal().times(objectTransform);
-//        theCamera.setObjectTransform(objectTransform);
-//        obj.getObject().renderObject(obj, this, viewdir);
-//      }
-//    }
-
-    // Draw the object being edited.
-
-//    theCamera.setObjectTransform(getDisplayCoordinates().fromLocal());
-//    drawObject();
-
-//    theCamera.setObjectTransform(window.getObject().getCoords().fromLocal());
-//    RenderingMesh mesh = window.getObject().getPreviewMesh();
-//    Vec3 viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
-//    VertexShader shader = new FlatVertexShader(mesh, surfaceRGBColor, viewDir);
-//    renderMesh(window.getObject().getPreviewMesh(), shader, theCamera, true, null);
+    // If the view has changed size, we need to recreate the buffer.
 
     Rectangle bounds = getBounds();
-    ThreadManager threads = getWindow().getThreadManager();
-    threads.setNumIndices(bounds.width*bounds.height);
-    threads.setTask(new RenderTask());
-    threads.run();
+    if (pixel == null || pixel.length != bounds.width*bounds.height)
+    {
+      pixel = new int[bounds.width*bounds.height];
+      lastCoords = null;
+    }
+
+    // Identify the range of pixels that need to be updated.
+
+    int minx, maxx, miny, maxy;
+    if (lastCoords == null || !lastCoords.getOrigin().equals(theCamera.getCameraCoordinates().getOrigin())
+        || !lastCoords.getUpDirection().equals(theCamera.getCameraCoordinates().getUpDirection())
+        || !lastCoords.getZDirection().equals(theCamera.getCameraCoordinates().getZDirection())
+        || lastPerspective != theCamera.isPerspective()
+        || lastScale != theCamera.getScale())
+    {
+      // Update the whole image.
+
+      lastCoords = theCamera.getCameraCoordinates().duplicate();
+      lastPerspective = theCamera.isPerspective();
+      lastScale = theCamera.getScale();
+      minx = miny = 0;
+      maxx = bounds.width;
+      maxy = bounds.height;
+    }
+    else
+    {
+      // Find a box containing all changed regions.
+
+      minx = miny = Integer.MAX_VALUE;
+      maxx = maxy = Integer.MIN_VALUE;
+      theCamera.setObjectTransform(window.getObject().getCoords().fromLocal());
+      Mat4 toScreen = theCamera.getObjectToScreen();
+      for (BoundingBox region : changedRegions)
+      {
+        BoundingBox screenRegion = region.transformAndOutset(toScreen);
+        if (screenRegion.minx < minx)
+          minx = (int) screenRegion.minx;
+        if (screenRegion.maxx > maxx)
+          maxx = (int) screenRegion.maxx;
+        if (screenRegion.miny < miny)
+          miny = (int) screenRegion.miny;
+        if (screenRegion.maxy > maxy)
+          maxy = (int) screenRegion.maxy;
+      }
+      if (minx < 0)
+        minx = 0;
+      if (maxx > bounds.width)
+        maxx = bounds.width;
+      if (miny < 0)
+        miny = 0;
+      if (maxy > bounds.height)
+        maxy = bounds.height;
+    }
+    changedRegions.clear();
+
+    // Update the image of the VoxelObject.
+
+    if (maxx > minx)
+    {
+      ThreadManager threads = getWindow().getThreadManager();
+      threads.setNumIndices((maxx-minx)*(maxy-miny));
+      threads.setTask(new RenderTask(minx, maxx, miny));
+      threads.run();
+    }
+
+    // Draw the VoxelObject into the canvas.
+
+    SoftwareCanvasDrawer drawer = (SoftwareCanvasDrawer) getCanvasDrawer();
+    int viewPixel[] = ((DataBufferInt) ((BufferedImage) drawer.getImage()).getRaster().getDataBuffer()).getData();
+    for (int i = 0; i < bounds.width; i++)
+        for (int j = 0; j < bounds.height; j++)
+          if (pixel[i+j*bounds.width] != 0)
+            viewPixel[i+j*bounds.width] = pixel[i+j*bounds.width];
 
     // Finish up.
 
@@ -120,9 +180,8 @@ public class VoxelObjectViewer extends ViewerCanvas
 
   private class RenderTask implements ThreadManager.Task
   {
-    private int width;
+    private int viewWidth, regionWidth, xoffset, yoffset;
     private Vec3 origin, direction, base, dx, dy, viewDir;
-    private int[] pixel;
     private VoxelTracer tracer;
     ThreadLocal<ThreadInfo> threadInfo = new ThreadLocal<ThreadInfo>() {
       @Override
@@ -137,7 +196,7 @@ public class VoxelObjectViewer extends ViewerCanvas
       }
     };
 
-    public RenderTask()
+    public RenderTask(int minx, int maxx, int miny)
     {
       Mat4 toLocal = getWindow().getObject().getCoords().toLocal();
       if (theCamera.isPerspective())
@@ -158,17 +217,18 @@ public class VoxelObjectViewer extends ViewerCanvas
         dx = theCamera.convertScreenToWorld(new Point(1, 0), 0.0, false).minus(base);
         dy = theCamera.convertScreenToWorld(new Point(0, 1), 0.0, false).minus(base);
       }
-      width = getBounds().width;
+      xoffset = minx;
+      yoffset = miny;
+      regionWidth = maxx-minx;
+      viewWidth = getBounds().width;
       viewDir = theCamera.getViewToWorld().timesDirection(Vec3.vz());
-      SoftwareCanvasDrawer drawer = (SoftwareCanvasDrawer) getCanvasDrawer();
-      pixel = ((DataBufferInt) ((BufferedImage) drawer.getImage()).getRaster().getDataBuffer()).getData();
       tracer = getWindow().getVoxelTracer();
     }
 
     public void execute(int index)
     {
-      int i = index%width;
-      int j = index/width;
+      int i = index%regionWidth+xoffset;
+      int j = index/regionWidth+yoffset;
       ThreadInfo info = threadInfo.get();
       if (theCamera.isPerspective())
       {
@@ -185,8 +245,10 @@ public class VoxelObjectViewer extends ViewerCanvas
       {
         info.color.copy(surfaceRGBColor);
         info.color.scale(0.1f+0.8f*Math.abs((float) viewDir.dot(info.normal)));
-        pixel[i+j*width] = info.color.getARGB();
+        pixel[i+j*viewWidth] = info.color.getARGB();
       }
+      else
+        pixel[i+j*viewWidth] = 0;
     }
 
     public void cleanup()
