@@ -17,6 +17,7 @@ import artofillusion.ui.*;
 import artofillusion.animation.*;
 
 import java.util.*;
+import java.io.*;
 
 public class VoxelObject extends ImplicitObject
 {
@@ -222,5 +223,59 @@ public class VoxelObject extends ImplicitObject
     cachedWire = null;
     cachedMesh = null;
     cachedBounds = null;
+  }
+
+  /**
+   * Create a VoxelObject from the data stored in a file.
+   */
+
+  public VoxelObject(DataInputStream in, Scene theScene) throws IOException
+  {
+    super(in, theScene);
+    scale = in.readDouble();
+    voxels = new VoxelOctree(in.readInt());
+    int minx = in.readInt();
+    int maxx = in.readInt();
+    int miny = in.readInt();
+    int maxy = in.readInt();
+    for (int i = minx; i <= maxx; i++)
+      for (int j = miny; j <= maxy; j++)
+      {
+        int first = in.readShort();
+        int count = in.readShort();
+        for (int k = 0; k < count; k++)
+          voxels.setValue(i, j, first+k, in.readByte());
+      }
+  }
+
+  /**
+   * Save the object to a file.
+   */
+
+  public void writeToFile(DataOutputStream out, Scene theScene) throws IOException
+  {
+    super.writeToFile(out, theScene);
+    out.writeDouble(scale);
+    int depth = voxels.getDepth();
+    out.writeInt(depth);
+    int bounds[] = voxels.findDataBounds();
+    out.writeInt(bounds[0]);
+    out.writeInt(bounds[1]);
+    out.writeInt(bounds[2]);
+    out.writeInt(bounds[3]);
+    for (int i = bounds[0]; i <= bounds[1]; i++)
+      for (int j = bounds[2]; j <= bounds[3]; j++)
+      {
+        int first, last;
+        for (first = bounds[4]; first <= bounds[5] && voxels.getValue(i, j, first) == Byte.MIN_VALUE; first++);
+        if (first > bounds[5])
+          last = first-1;
+        else
+          for (last = bounds[5]; voxels.getValue(i, j, last) == Byte.MIN_VALUE; last--);
+        out.writeShort(first-1);
+        out.writeShort(last-first+1);
+        for (int k = first; k <= last; k++)
+          out.writeByte(voxels.getValue(i, j, k));
+      }
   }
 }
