@@ -11,6 +11,8 @@
 package artofillusion.rodin;
 
 import artofillusion.*;
+import artofillusion.ui.*;
+import artofillusion.object.*;
 import artofillusion.util.*;
 import artofillusion.view.*;
 import artofillusion.math.*;
@@ -46,6 +48,13 @@ public class VoxelObjectViewer extends ViewerCanvas
   public double[] estimateDepthRange()
   {
     return new double[0];
+  }
+
+  /** This should be called whenever the VoxelObject has changed. */
+
+  public void voxelsChanged()
+  {
+    lastCoords = null;
   }
 
   /** This should be called whenever a block of values in the VoxelObject have changed. */
@@ -172,6 +181,23 @@ public class VoxelObjectViewer extends ViewerCanvas
   {
     activeTool.mouseReleased(e, this);
     currentTool.getWindow().updateMenus();
+  }
+
+  public void previewObject()
+  {
+    Scene sc = new Scene();
+    Renderer rend = ArtOfIllusion.getPreferences().getObjectPreviewRenderer();
+
+    if (rend == null)
+      return;
+    sc.addObject(new DirectionalLight(new RGBColor(1.0f, 1.0f, 1.0f), 0.8f), theCamera.getCameraCoordinates(), "", null);
+    ObjectInfo obj = window.getObject();
+    sc.addObject(obj.duplicate(obj.getObject().duplicate()), null);
+    adjustCamera(true);
+    rend.configurePreview();
+    ObjectInfo cameraInfo = new ObjectInfo(new SceneCamera(), theCamera.getCameraCoordinates(), "");
+    new RenderingDialog(UIUtilities.findFrame(this), rend, sc, theCamera, cameraInfo);
+    adjustCamera(isPerspective());
   }
 
   /**

@@ -38,6 +38,7 @@ public class VoxelTracer
   private void initialize()
   {
     width = obj.getVoxels().getWidth()-1;
+    flags = null;
     flags = new int[(width*width*width+31)/32];
     findBounds();
     updateFlags(minx, maxx, miny, maxy, minz, maxz);
@@ -52,6 +53,15 @@ public class VoxelTracer
     maxy = Math.min(width-1, bounds[3]);
     minz = Math.max(0, bounds[4]-1);
     maxz = Math.min(width-1, bounds[5]);
+  }
+
+  /**
+   * This updates internal data structures for the entire VoxelObject.
+   */
+
+  public void updateFlags()
+  {
+    initialize();
   }
 
   /**

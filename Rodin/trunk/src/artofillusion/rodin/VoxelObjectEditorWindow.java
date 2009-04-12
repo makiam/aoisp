@@ -20,6 +20,8 @@ import java.awt.*;
 
 public class VoxelObjectEditorWindow extends ObjectEditorWindow
 {
+  protected BMenu editMenu, viewMenu;
+  protected BMenuItem undoItem, redoItem, templateItem, axesItem, splitViewItem;
   private VoxelObject oldObject;
   private VoxelTracer tracer;
   private ThreadManager threads;
@@ -62,6 +64,8 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
       view.setMetaTool(metaTool);
       view.setAltTool(altTool);
     }
+    createEditMenu();
+    createViewMenu();
     recursivelyAddListeners(this);
     UIUtilities.applyDefaultFont(content);
     UIUtilities.applyDefaultBackground(content);
@@ -70,6 +74,30 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
     setBounds(new Rectangle((screenBounds.width-windowDim.width)/2, (screenBounds.height-windowDim.height)/2, windowDim.width, windowDim.height));
     tools.requestFocus();
     updateMenus();
+  }
+
+  void createEditMenu()
+  {
+    editMenu = Translate.menu("edit");
+    menubar.add(editMenu);
+    editMenu.add(undoItem = Translate.menuItem("undo", this, "undoCommand"));
+    editMenu.add(redoItem = Translate.menuItem("redo", this, "redoCommand"));
+  }
+
+  protected void createViewMenu()
+  {
+    viewMenu = Translate.menu("view");
+    menubar.add(viewMenu);
+    viewMenu.add(splitViewItem = Translate.menuItem(numViewsShown == 1 ? "fourViews" : "oneView", this, "toggleViewsCommand"));
+    viewMenu.add(Translate.menuItem("grid", this, "setGridCommand"));
+    viewMenu.add(axesItem = Translate.menuItem(theView[currentView].getShowAxes() ? "hideCoordinateAxes" : "showCoordinateAxes", this, "showAxesCommand"));
+    viewMenu.add(templateItem = Translate.menuItem("showTemplate", this, "showTemplateCommand"));
+    viewMenu.add(Translate.menuItem("setTemplate", this, "setTemplateCommand"));
+    if (ArtOfIllusion.getPreferences().getObjectPreviewRenderer() != null)
+    {
+      viewMenu.addSeparator();
+      viewMenu.add(Translate.menuItem("renderPreview", this, "renderPreviewCommand"));
+    }
   }
 
   protected ViewerCanvas createViewerCanvas(int index, RowContainer controls)
@@ -105,6 +133,13 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
 
   public void updateMenus()
   {
+    VoxelObjectViewer view = (VoxelObjectViewer) theView[currentView];
+    undoItem.setEnabled(undoStack.canUndo());
+    redoItem.setEnabled(undoStack.canRedo());
+    templateItem.setEnabled(view.getTemplateImage() != null);
+    templateItem.setText(view.getTemplateShown() ? Translate.text("menu.hideTemplate") : Translate.text("menu.showTemplate"));
+    splitViewItem.setText(numViewsShown == 1 ? Translate.text("menu.fourViews") : Translate.text("menu.oneView"));
+    axesItem.setText(Translate.text(view.getShowAxes() ? "menu.hideCoordinateAxes" : "menu.showCoordinateAxes"));
   }
 
   public Scene getScene()
@@ -141,6 +176,15 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
     ((VoxelObject) getObject().getObject()).clearCachedMeshes();
   }
 
+  /** This should be called whenever the VoxelObject has changed. */
+
+  public void voxelsChanged()
+  {
+    tracer.updateFlags();
+    for (int i = 0; i < theView.length; i++)
+      ((VoxelObjectViewer) theView[i]).voxelsChanged();
+  }
+
   /** This should be called whenever a block of values in the VoxelObject have changed. */
 
   public void voxelsChanged(int fromx, int tox, int fromy, int toy, int fromz, int toz)
@@ -155,5 +199,30 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
   public double getRadius()
   {
     return radiusSlider.getValue();
+  }
+
+  /** Render a preview of the object. */
+
+  public void renderPreviewCommand()
+  {
+    ((VoxelObjectViewer) theView[currentView]).previewObject();
+  }
+
+  @Override
+  public void undoCommand()
+  {
+    super.undoCommand();
+    objectChanged();
+    voxelsChanged();
+    updateImage();
+  }
+
+  @Override
+  public void redoCommand()
+  {
+    super.redoCommand();
+    objectChanged();
+    voxelsChanged();
+    updateImage();
   }
 }
