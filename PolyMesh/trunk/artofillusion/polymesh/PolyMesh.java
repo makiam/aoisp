@@ -5669,6 +5669,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 			if (quad) {
 				//System.out.println("quad mesh direct smoothing");
 				QuadMesh qmesh = getQuadMesh();
+				//qmesh.dumpMesh();
 				//long time = new Date().getTime();
 				qmesh.smoothMesh(tol, calcProjectedEdges, maxNs);
 				projectedEdges = qmesh.getProjectedEdges();
