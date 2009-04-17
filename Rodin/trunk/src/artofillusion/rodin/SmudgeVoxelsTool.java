@@ -39,6 +39,14 @@ public class SmudgeVoxelsTool extends EditingTool
   {
     super.activate();
     theWindow.setHelpText(Translate.text("reshapeMeshTool.helpText"));
+    ((VoxelObjectEditorWindow) theWindow).setShowBrush(true);
+  }
+
+  @Override
+  public void deactivate()
+  {
+    super.deactivate();
+    ((VoxelObjectEditorWindow) theWindow).setShowBrush(false);
   }
 
   @Override

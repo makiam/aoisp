@@ -26,7 +26,7 @@ public class PaintVoxelsTool extends EditingTool
   private VoxelTracer tracer;
   private UndoRecord undo;
 
-  public PaintVoxelsTool(EditingWindow win, boolean negative)
+  public PaintVoxelsTool(VoxelObjectEditorWindow win, boolean negative)
   {
     super(win);
     this.negative = negative;
@@ -38,6 +38,14 @@ public class PaintVoxelsTool extends EditingTool
   {
     super.activate();
     theWindow.setHelpText(Translate.text("reshapeMeshTool.helpText"));
+    ((VoxelObjectEditorWindow) theWindow).setShowBrush(true);
+  }
+
+  @Override
+  public void deactivate()
+  {
+    super.deactivate();
+    ((VoxelObjectEditorWindow) theWindow).setShowBrush(false);
   }
 
   @Override

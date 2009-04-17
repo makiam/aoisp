@@ -20,6 +20,7 @@ import buoy.widget.*;
 import buoy.event.*;
 
 import java.awt.*;
+import java.awt.geom.*;
 import java.awt.image.*;
 import java.util.*;
 
@@ -38,6 +39,7 @@ public class VoxelObjectViewer extends ViewerCanvas
     this.window = window;
     changedRegions = new ArrayList<BoundingBox>();
     buildChoices(controls);
+    addEventLink(MouseMovedEvent.class, this, "mouseMoved");
   }
 
   public VoxelObjectEditorWindow getWindow()
@@ -181,6 +183,52 @@ public class VoxelObjectViewer extends ViewerCanvas
   {
     activeTool.mouseReleased(e, this);
     currentTool.getWindow().updateMenus();
+  }
+
+  protected void mouseMoved(MouseMovedEvent e)
+  {
+    if (window.getShowBrush())
+    {
+      Point mousePos = e.getPoint();
+      Vec3 pos = findMouseLocation(mousePos, window.getVoxelTracer());
+      if (pos != null)
+      {
+        VoxelObject obj = (VoxelObject) window.getObject().getObject();
+        double scale = 1.0/theCamera.findDragVector(pos, 1.0, 0.0).length();
+        double radius = scale*window.getRadius()*obj.getScale()/obj.getVoxels().getWidth();
+        drawDraggedShape(new Ellipse2D.Double(mousePos.x-radius, mousePos.y-radius, 2*radius, 2*radius));
+      }
+      else
+        repaint();
+    }
+  }
+
+  /**
+   * Given a screen location, find the point in the object it is on top of.
+   */
+
+  private Vec3 findMouseLocation(Point pos, VoxelTracer tracer)
+  {
+    Camera camera = getCamera();
+    Vec3 origin, direction;
+    if (camera.isPerspective())
+    {
+      origin = camera.getCameraCoordinates().getOrigin();
+      direction = camera.convertScreenToWorld(pos, 1.0, false).minus(origin);
+      direction.normalize();
+    }
+    else
+    {
+      origin = camera.convertScreenToWorld(pos, 0.0, false);
+      direction = camera.getCameraCoordinates().getZDirection();
+    }
+    ObjectInfo info = getWindow().getObject();
+    info.getCoords().toLocal().transform(origin);
+    info.getCoords().toLocal().transformDirection(direction);
+    double dist = tracer.findRayIntersection(origin, direction, null);
+    if (dist == 0.0)
+      return null;
+    return origin.plus(direction.times(dist));
   }
 
   public void previewObject()

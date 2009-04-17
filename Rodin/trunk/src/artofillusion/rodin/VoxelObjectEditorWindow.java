@@ -27,6 +27,7 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
   private ThreadManager threads;
   private ValueSlider radiusSlider;
   private Runnable onClose;
+  private boolean showBrush;
 
   public VoxelObjectEditorWindow(EditingWindow parent, String title, ObjectInfo obj, Runnable onClose)
   {
@@ -199,6 +200,20 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
   public double getRadius()
   {
     return radiusSlider.getValue();
+  }
+
+  /** Get whether a circle should be shown at the cursor location indicating the bounds for drawing. */
+
+  public boolean getShowBrush()
+  {
+    return showBrush;
+  }
+
+  /** Set whether a circle should be shown at the cursor location indicating the bounds for drawing. */
+
+  public void setShowBrush(boolean show)
+  {
+    showBrush = show;
   }
 
   /** Render a preview of the object. */
