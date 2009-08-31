@@ -74,22 +74,17 @@ public class GLRenderer implements Renderer, Runnable
     theCamera = camera.duplicate();
     if (sceneCamera == null)
     {
-      depthOfField = 0.0;
-      focalDist = theCamera.getDistToScreen();
-      depthNeeded = false;
+      sceneCamera = new SceneCamera();
+      sceneCamera.setDepthOfField(0.0);
+      sceneCamera.setFocalDistance(theCamera.getDistToScreen());
     }
-    else
-    {
-      depthOfField = sceneCamera.getDepthOfField();
-      focalDist = sceneCamera.getFocalDistance();
-      depthNeeded = ((sceneCamera.getComponentsForFilters()&ComplexImage.DEPTH) != 0);
-    }
+    depthOfField = sceneCamera.getDepthOfField();
+    focalDist = sceneCamera.getFocalDistance();
+    depthNeeded = ((sceneCamera.getComponentsForFilters()&ComplexImage.DEPTH) != 0);
     time = theScene.getTime();
     width = dim.width;
     height = dim.height;
-    theCamera.setSize(width, height);
-    theCamera.setDistToScreen(theCamera.getDistToScreen());
-    theCamera.setClipDistance(theCamera.getClipDistance());
+    theCamera.setScreenTransform(sceneCamera.getScreenTransform(width, height), width, height);
     image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
     shaderGenerator = new ShaderGenerator(theScene, theCamera);
     renderThread = new Thread(this, "OpenGL Renderer Main Thread");
