@@ -9,6 +9,8 @@
  */
 package artofillusion.polymesh;
 
+import artofillusion.polymesh.ui.*;
+
 import java.awt.Component;
 import java.awt.Dialog;
 import java.awt.Dimension;
@@ -469,11 +471,11 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 		tolerant = lastTolerant;
 		projectOntoSurface = lastProjectOntoSurface;
 		toolsContainer.add(modes = new ToolPalette(1, 3), 0, 1);
-		modes.addTool(pointTool = new GenericTool(this, "polymesh:point",
+		modes.addTool(pointTool = new GenericTool(this, "polymesh:pmpoint",
 			    Translate.text("pointSelectionModeTool.tipText")));
-		modes.addTool(edgeTool = new GenericTool(this, "polymesh:edge",
+		modes.addTool(edgeTool = new GenericTool(this, "polymesh:pmedge",
 				Translate.text("edgeSelectionModeTool.tipText")));
-		modes.addTool(faceTool = new GenericTool(this, "polymesh:face",
+		modes.addTool(faceTool = new GenericTool(this, "polymesh:pmface",
 				Translate.text("faceSelectionModeTool.tipText")));
 		setSelectionMode(modes.getSelection());
 		UIUtilities.applyDefaultFont(content);
@@ -1682,7 +1684,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				if (selected[i])
 					++selCount;
 		if (selCount > 0) {
-			((RotateViewTool) altTool).setUseSelectionCenter(true);
+			//((RotateViewTool) altTool).setUseSelectionCenter(true);
 			any = true;
 			for (int j = 0; j < vertexMenuItem.length; ++j) {
 				((Widget) vertexMenuItem[j]).setEnabled(true);
@@ -1748,7 +1750,7 @@ public class PolyMeshEditorWindow extends MeshEditorWindow implements
 				break;
 			}
 		} else {
-			((RotateViewTool) altTool).setUseSelectionCenter(false);
+			//((RotateViewTool) altTool).setUseSelectionCenter(false);
 			for (int j = 0; j < vertexMenuItem.length; ++j) {
 				((Widget) vertexMenuItem[j]).setEnabled(false);
 				((Widget) vertexPopupMenuItem[j]).setEnabled(false);

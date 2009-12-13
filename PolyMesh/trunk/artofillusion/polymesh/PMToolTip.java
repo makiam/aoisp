@@ -32,7 +32,7 @@ public class PMToolTip extends BToolTip
 
 
     /**
-     *  Create a new TapBToolTip.
+     *  Create a new PMToolTip.
      *
      *@param  text  the text to display in the tool tip
      */

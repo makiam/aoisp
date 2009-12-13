@@ -147,8 +147,8 @@ public class PMBevelExtrudeTool extends EditingTool
         Vec3 camZ = view.getCamera().getCameraCoordinates().getZDirection();
         //width = 0.5 * dragVec.x;
         //height = dragVec.y;
-        width = ( dragPoint.x - clickPoint.x ) / cam.getScale();
-        height = ( clickPoint.y - dragPoint.y ) / cam.getScale();
+        width = ( dragPoint.x - clickPoint.x ) / view.getScale();
+        height = ( clickPoint.y - dragPoint.y ) / view.getScale();
         boolean shiftMod =  ( ( e.getModifiers() & ActionEvent.SHIFT_MASK ) != 0 ) &&  ( ( e.getModifiers() & ActionEvent.CTRL_MASK ) != 0);
         boolean ctrlMod = ( ( e.getModifiers() & ActionEvent.SHIFT_MASK ) == 0 ) &&  ( ( e.getModifiers() & ActionEvent.CTRL_MASK ) != 0);
         /*if ( controller.getSelectionMode() == PolyMeshEditorWindow.FACE_MODE && ctrlMod )

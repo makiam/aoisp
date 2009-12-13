@@ -5666,6 +5666,7 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 					break;
 				}
 			}
+			quad = false;
 			if (quad) {
 				//System.out.println("quad mesh direct smoothing");
 				QuadMesh qmesh = getQuadMesh();
@@ -5973,7 +5974,8 @@ public class PolyMesh extends Object3D implements Mesh, FacetedMesh {
 					break;
 				default:
 					//new vertex is marked as corner
-					newVert[i].type = Wvertex.CORNER;
+					//newVert[i].type = Wvertex.CORNER;
+					newVert[i].r = new Vec3(vertices[i].r);
 					break;
 				}
 				if (tol > 0 ) {

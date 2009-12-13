@@ -679,7 +679,7 @@ public class MeshUnfolder {
 		}
 		constraints = new double[ntri + 2 * nint];
 		//set up matrix and constraints
-		System.out.println(ntri+2*nint);
+		//System.out.println(ntri+2*nint);
 		FlexCompRowMatrix newMat = new FlexCompRowMatrix(ntri + 2*nint, 3*ntri);
 		FlexCompRowMatrix newMatTMat = new FlexCompRowMatrix( 2*nint + ntri, 2*nint + ntri);
 		double[] newConstraints = new double[ntri + 2 * nint];
@@ -697,6 +697,15 @@ public class MeshUnfolder {
 			addToMatTMat(newMat, newMatTMat, i, faces[i].v2, faces[i].v3, faces[i].v1, 3*i+1, ntri, nint);
 			addToMatTMat(newMat, newMatTMat, i, faces[i].v3, faces[i].v1, faces[i].v2, 3*i+2, ntri, nint);
 		}
+		/*for (int i = 0; i < ntri + 2*nint; i++) {
+			System.out.println("c " + i + " : " + newConstraints[i]);
+		}
+		for (int i = 0; i < ntri + 2*nint; i++) {
+			for (int j = 0; j < ntri + 2*nint; j++) {
+				System.out.print(newMatTMat.get(i, j)+" ");
+			}
+			System.out.println(" ");
+		}*/
 		DenseVector sol = new DenseVector(ntri + 2*nint);
 		CG cg = new CG(sol);
 		DenseVector newcons = new DenseVector(newConstraints);
@@ -708,6 +717,9 @@ public class MeshUnfolder {
 			return false;
 		}
 		double[] soldata = sol.getData();
+		/*for (int i = 0; i < ntri + 2*nint; i++) {
+			System.out.println("sol " + i + " : " + soldata[i]);
+		}*/
 		for (int i = 0; i < var.length; i++) {
 			var[i] = 0;
 		}
@@ -718,14 +730,18 @@ public class MeshUnfolder {
 			matVecI = newMat.getRow(i);
 			ind = matVecI.getIndex();
 			idata = matVecI.getData();
+			//System.out.println("Row : " + i);
 			for (int j = 0; j < ind.length; j++) {
+				//System.out.println("colonne " + ind[j] + " : " + idata[j]);
 				var[ind[j]] += soldata[i]*idata[j];
 			}
 		}
+		//System.out.println("result");	
 		for (int i = 0; i < var.length; i++) {
 			var[i] = (var[i]+1)*angles[i];
+			//System.out.print(var[i]+" ");
 		}
-			
+		//System.out.println(" ");	
 		totaltime = new Date().getTime() - totaltime;
 		textArea.append("Mesh unfolded : "
 				+ Math.round(totaltime / 1000.0) + "s\n");
@@ -1058,7 +1074,7 @@ public class MeshUnfolder {
 		// then rebuild 2D mesh positions according
 		// to ABF++ procedure
 		int nvars = 2 * (vertices.length - 2); // number of variables
-		System.out.println("nvar: " + nvars);
+		//System.out.println("nvar: " + nvars);
 		SparseVector b = new SparseVector(6 * faces.length);
 		FlexCompColMatrix mat = new FlexCompColMatrix(6 * faces.length, nvars);
 		FlexCompRowMatrix matTmat = new FlexCompRowMatrix(nvars, nvars);
@@ -1107,6 +1123,7 @@ public class MeshUnfolder {
 //			v1 = faces[i].v1;
 //			v2 = faces[i].v2;
 //			v3 = faces[i].v3;
+			//System.out.println(v1 + " " + v2 + " " +v3 + " " + a1 + " " + a2 + " " + a3);
 			s = Math.sin(a2); // / Math.sin(a3);
 			cs1 = s * Math.cos(a1);
 			sn1 = s * Math.sin(a1);
@@ -1229,9 +1246,15 @@ public class MeshUnfolder {
 		}
 		DenseVector vsol = new DenseVector(nvars);
 		SparseVector mtb = new SparseVector(nvars);
+		//for (int i = 0; i < 6*faces.length; i++)
+		//	System.out.println("b("+i+") : "+b.get(i));
 		mtb = (SparseVector) mat.transMult(b, mtb);
+		//for (int i = 0; i < nvars; i++)
+		//	System.out.println("righthand("+i+") : "+mtb.get(i));
 		CG qmr = new CG(mtb);
 		qmr.solve(matTmat, mtb, vsol);
+		//for (int i = 0; i < nvars; i++)
+		//	System.out.println("sol("+i+") : "+vsol.get(i));
 		Vec2 center = new Vec2();
 		for (int i = 2; i < vertices.length; i++) {
 			vertices[i].r.x = vsol.get((i - 2) * 2);
@@ -1477,7 +1500,7 @@ public class MeshUnfolder {
 		DenseVector vsol = new DenseVector(nvars);
 		SparseVector mtb = new SparseVector(nvars);
 		long time = new Date().getTime();
-		System.out.println("transMult en cours ");
+		//System.out.println("transMult en cours ");
 		System.out.flush();
 		mtb = (SparseVector) mat.transMult(b, mtb);
 		
@@ -1529,15 +1552,15 @@ public class MeshUnfolder {
 //		}
 		//mat.transAmult(mat, newmat);
 		time = new Date().getTime() - time;
-		System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
+		//System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
+		//System.out.flush();
 		time = new Date().getTime();
 		CG qmr = new CG(mtb);
 		qmr.solve(matTmat, mtb, vsol);
 		//qmr.solve(newmat, mtb, vsol);
 		time = new Date().getTime() - time;
-		System.out.println("solved: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
+		//System.out.println("solved: " + Math.round(time / 1000) + "s\n");
+		//System.out.flush();
 		Vec2 center = new Vec2();
 		for (int i = 2; i < vertices.length; i++) {
 			vertices[i].r.x = vsol.get((i - 2) * 2);
@@ -1673,8 +1696,8 @@ public class MeshUnfolder {
 		
 		SparseVector mtb = new SparseVector(nvars);
 		long time = new Date().getTime();
-		System.out.println("transMult en cours ");
-		System.out.flush();
+		//System.out.println("transMult en cours ");
+		//System.out.flush();
 		//mtb = (SparseVector) mat.transMult(rh, mtb);
 		
 		/******/
@@ -1716,15 +1739,15 @@ public class MeshUnfolder {
 		}
 		//mat.transAmult(mat, newmat);
 		time = new Date().getTime() - time;
-		System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
+		//System.out.println("transMult: " + Math.round(time / 1000) + "s\n");
+		//System.out.flush();
 		time = new Date().getTime();
 		QMR qmr = new QMR(mtb);
 		qmr.solve(matTmat, mtb, vsol);
 		//qmr.solve(newmat, mtb, vsol);
 		time = new Date().getTime() - time;
-		System.out.println("solved: " + Math.round(time / 1000) + "s\n");
-		System.out.flush();
+		//System.out.println("solved: " + Math.round(time / 1000) + "s\n");
+		//System.out.flush();
 		Vec2 center = new Vec2();
 		for (int i = 0; i < vertices.length; i++) {
 			vertices[i].r.x = vsol.get(i * 2);

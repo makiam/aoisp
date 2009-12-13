@@ -1257,6 +1257,7 @@ public class QuadMesh extends Object3D implements FacetedMesh {
 				default:
 					//new vertex is marked as corner
 					nverts[i].type = Wvertex.CORNER;
+					pos = new Vec3(vertices[i].r);
 					break;
 				}
 				if (nverts[i].type != Wvertex.CORNER) {

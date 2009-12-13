@@ -135,8 +135,8 @@ public class MouseDragManipulator extends Manipulator
         }
         Camera cam = view.getCamera();
         Point dragPoint = e.getPoint();
-        double width = ( dragPoint.x - baseClick.x ) / cam.getScale();
-        double height = ( baseClick.y - dragPoint.y ) / cam.getScale();
+        double width = ( dragPoint.x - baseClick.x ) / view.getScale();
+        double height = ( baseClick.y - dragPoint.y ) / view.getScale();
         if ( ((MeshViewer)view).getController().getSelectionMode() == MeshEditorWindow.FACE_MODE )
         {
             if ( ( ( e.getModifiers() & ActionEvent.SHIFT_MASK ) != 0 ) &&  ( ( e.getModifiers() & ActionEvent.CTRL_MASK ) == 0) )

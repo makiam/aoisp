@@ -114,10 +114,14 @@ extends SSMRManipulator
             specificHandleImages[Y_SCALE] = ThemeManager.getIcon( "polymesh:yscale" ).getImage();
             specificHandleImages[Z_MOVE] = ThemeManager.getIcon( "polymesh:nhandle" ).getImage();
             specificHandleImages[Z_SCALE] = ThemeManager.getIcon( "polymesh:zscale" ).getImage();
-            moveToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:moveToolTip3d.tipText"),40);
+            /*moveToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:moveToolTip3d.tipText"),40);
             scaleToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:scaleToolTip3d.tipText"),40);
             rotateToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:rotateToolTip3d.tipText"),40);
-            centerToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:centerToolTip3d.tipText"),40);
+            centerToolTip = PMToolTip.areaToolTip(Translate.text("polymesh:centerToolTip3d.tipText"),40);*/
+            moveToolTip = new BToolTip(Translate.text("polymesh:moveToolTip3d.tipText"));
+            scaleToolTip = new BToolTip(Translate.text("polymesh:scaleToolTip3d.tipText"));
+            rotateToolTip = new BToolTip(Translate.text("polymesh:rotateToolTip3d.tipText"));
+            centerToolTip = new BToolTip(Translate.text("polymesh:centerToolTip3d.tipText"));
         }
         xaxis = Vec3.vx();
         yaxis = Vec3.vy();
