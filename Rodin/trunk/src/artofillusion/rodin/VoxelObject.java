@@ -157,6 +157,68 @@ public class VoxelObject extends ImplicitObject
     return mesh;
   }
 
+  public void optimizeValues()
+  {
+    int bounds[] = voxels.findDataBounds();
+    if (bounds[5]-bounds[4] < 2)
+        return;
+
+    // Record values for faster access.
+
+    int xsize = bounds[1]-bounds[0]+1;
+    int ysize = bounds[3]-bounds[2]+1;
+    byte values[][][] = new byte[3][xsize+2][ysize+2];
+    for (int x = 0; x < xsize; x++)
+      for (int y = 0; y < ysize; y++)
+        for (int z = 0; z < 3; z++)
+          values[z][x][y] = Byte.MIN_VALUE;
+    for (int x = 1; x <= xsize; x++)
+      for (int y = 1; y <= ysize; y++)
+      {
+        values[1][x][y] = voxels.getValue(bounds[0]+x-1, bounds[2]+y-1, bounds[4]);
+        values[2][x][y] = voxels.getValue(bounds[0]+x-1, bounds[2]+y-1, bounds[4]+1);
+      }
+
+    // Loop over values and find ones that can be set to Byte.MIN_VALUE or Byte.MAX_VALUE.
+
+    for (int z = bounds[4]; z <= bounds[5]; z++)
+    {
+      for (int x = 1; x <= xsize; x++)
+        for (int y = 1; y <= ysize; y++)
+        {
+          // Count the number of positive and negative values surrounding this point.
+
+          int numNegative = 0;
+          int numPositive = 0;
+          for (int i = -1; i < 2; i++)
+            for (int j = -1; j < 2; j++)
+              for (int k = 0; k < 3; k++)
+              {
+                byte val = values[k][x+i][y+j];
+                if (val < 0)
+                  numNegative++;
+                else if (val > 0)
+                  numPositive++;
+              }
+          if (numNegative == 27)
+            voxels.setValue(x+bounds[0]-1, y+bounds[2]-1, z, Byte.MIN_VALUE);
+          else if (numPositive == 27)
+            voxels.setValue(x+bounds[0]-1, y+bounds[2]-1, z, Byte.MAX_VALUE);
+        }
+
+      // Load the next layer of values.
+
+      byte temp[][] = values[0];
+      values[0] = values[1];
+      values[1] = values[2];
+      values[2] = temp;
+      for (int x = 1; x <= xsize; x++)
+        for (int y = 1; y <= ysize; y++)
+          values[2][x][y] = voxels.getValue(bounds[0]+x-1, bounds[2]+y-1, z+2);
+    }
+  }
+
+
   public Keyframe getPoseKeyframe()
   {
     return null;

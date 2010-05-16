@@ -92,13 +92,13 @@ public class VoxelObjectViewer extends ViewerCanvas
         || !lastCoords.getUpDirection().equals(theCamera.getCameraCoordinates().getUpDirection())
         || !lastCoords.getZDirection().equals(theCamera.getCameraCoordinates().getZDirection())
         || lastPerspective != theCamera.isPerspective()
-        || lastScale != theCamera.getScale())
+        || lastScale != getScale())
     {
       // Update the whole image.
 
       lastCoords = theCamera.getCameraCoordinates().duplicate();
       lastPerspective = theCamera.isPerspective();
-      lastScale = theCamera.getScale();
+      lastScale = getScale();
       minx = miny = 0;
       maxx = bounds.width;
       maxy = bounds.height;
