@@ -1,4 +1,4 @@
-/* Copyright (C) 2009 by Peter Eastman
+/* Copyright (C) 2009-2010 by Peter Eastman
 
    This program is free software; you can redistribute it and/or modify it under the
    terms of the GNU General Public License as published by the Free Software
@@ -11,36 +11,29 @@
 package artofillusion.rodin;
 
 import artofillusion.*;
-import artofillusion.math.*;
+import artofillusion.object.*;
+import artofillusion.ui.*;
+import buoy.widget.*;
 
 public class CreateVoxelsTool implements ModellingTool
 {
   public String getName()
   {
-    return "Create Voxel Object";
+    return "Convert to Voxel Object...";
   }
 
   public void commandSelected(LayoutWindow window)
   {
-    int depth = 6;
-    int width = 1<<depth;
-    int center = width/2;
-    int size = center-5;
-    VoxelObject obj = new VoxelObject(depth);
-    for (int i = 0; i < width; i++)
-      for (int j = 0; j < width; j++)
-        for (int k = 0; k < width; k++)
-        {
-            float radius = (float) Math.sqrt((i-center)*(i-center)+(j-center)*(j-center)+(k-center)*(k-center));
-            if (radius < size-3)
-              obj.getVoxels().setValue(i, j, k, Byte.MAX_VALUE);
-            else if (radius > size-1)
-              obj.getVoxels().setValue(i, j, k, Byte.MIN_VALUE);
-            else
-              obj.getVoxels().setValue(i, j, k, (byte) (Byte.MAX_VALUE*(size-2-radius)));
-
-        }
-    window.addObject(obj, new CoordinateSystem(), "Voxel object", null);
+    ObjectInfo obj = window.getSelectedObjects().iterator().next();
+    ValueField errorField = new ValueField(0.01, ValueField.POSITIVE);
+    ComponentsDialog dlg = new ComponentsDialog(window, Translate.text("Convert to Voxel Object"),
+        new Widget[] {errorField}, new String [] {Translate.text("Voxel Size")});
+    if (!dlg.clickedOk())
+      return;
+    UndoRecord undo = new UndoRecord(window, false, UndoRecord.COPY_OBJECT_INFO, new Object [] {obj, obj.duplicate()});
+    VoxelObject voxelObject = VoxelObjectConverter.convertObject(obj, errorField.getValue());
+    window.getScene().replaceObject(obj.getObject(), voxelObject, undo);
+    window.setUndoRecord(undo);
     window.updateImage();
     window.updateMenus();
   }

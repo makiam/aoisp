@@ -121,7 +121,8 @@ public class VoxelObject extends ImplicitObject
 
   public void setSize(double xsize, double ysize, double zsize)
   {
-    scale = xsize;
+    Vec3 size = getBounds().getSize();
+    scale *= Math.max(Math.max(xsize/size.x, ysize/size.y), zsize/size.z);
     clearCachedMeshes();
   }
 
