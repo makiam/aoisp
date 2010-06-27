@@ -13,7 +13,10 @@ package artofillusion.rodin;
 import artofillusion.*;
 import artofillusion.object.*;
 import artofillusion.ui.*;
+import buoy.event.*;
 import buoy.widget.*;
+
+import java.awt.*;
 
 public class CreateVoxelsTool implements ModellingTool
 {
@@ -22,19 +25,53 @@ public class CreateVoxelsTool implements ModellingTool
     return "Convert to Voxel Object...";
   }
 
-  public void commandSelected(LayoutWindow window)
+  public void commandSelected(final LayoutWindow window)
   {
-    ObjectInfo obj = window.getSelectedObjects().iterator().next();
-    ValueField errorField = new ValueField(0.01, ValueField.POSITIVE);
+    final ObjectInfo obj = window.getSelectedObjects().iterator().next();
+    final ValueField errorField = new ValueField(0.01, ValueField.POSITIVE);
     ComponentsDialog dlg = new ComponentsDialog(window, Translate.text("Convert to Voxel Object"),
         new Widget[] {errorField}, new String [] {Translate.text("Voxel Size")});
     if (!dlg.clickedOk())
       return;
-    UndoRecord undo = new UndoRecord(window, false, UndoRecord.COPY_OBJECT_INFO, new Object [] {obj, obj.duplicate()});
-    VoxelObject voxelObject = VoxelObjectConverter.convertObject(obj, errorField.getValue());
-    window.getScene().replaceObject(obj.getObject(), voxelObject, undo);
-    window.setUndoRecord(undo);
-    window.updateImage();
-    window.updateMenus();
+    final BProgressBar progress = new BProgressBar();
+    progress.setShowProgressText(true);
+    final BDialog progressDialog = new BDialog(window, false);
+    BorderContainer content = new BorderContainer();
+    progressDialog.setContent(content);
+    content.add(progress, BorderContainer.CENTER);
+    BButton cancel = new BButton(Translate.text("Cancel"));
+    content.add(cancel, BorderContainer.SOUTH, new LayoutInfo(LayoutInfo.CENTER, LayoutInfo.NONE, new Insets(5, 5, 5, 5), null));
+    progressDialog.pack();
+    progressDialog.setVisible(true);
+    final Thread convertThread = new Thread() {
+      @Override
+      public void run()
+      {
+        final UndoRecord undo = new UndoRecord(window, false, UndoRecord.COPY_OBJECT_INFO, new Object [] {obj, obj.duplicate()});
+        final VoxelObject voxelObject = VoxelObjectConverter.convertObject(obj, errorField.getValue(), progress);
+        final boolean interrupted = Thread.currentThread().isInterrupted();
+        EventQueue.invokeLater(new Runnable()
+        {
+          public void run()
+          {
+            progressDialog.setVisible(false);
+            if (!interrupted)
+            {
+              window.getScene().replaceObject(obj.getObject(), voxelObject, undo);
+              window.setUndoRecord(undo);
+              window.updateImage();
+              window.updateMenus();
+            }
+          }
+        });
+      }
+    };
+    cancel.addEventLink(CommandEvent.class, new Object() {
+      void processEvent()
+      {
+        convertThread.interrupt();
+      }
+    });
+    convertThread.start();
   }
 }
