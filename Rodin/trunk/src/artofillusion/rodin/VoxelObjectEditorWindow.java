@@ -50,11 +50,10 @@ public class VoxelObjectEditorWindow extends ObjectEditorWindow
     buttons.add(Translate.button("ok", this, "doOk"));
     buttons.add(Translate.button("cancel", this, "doCancel"));
     content.add(buttons, 0, 3, 2, 1, new LayoutInfo());
-    content.add(tools = new ToolPalette(1, 8), 0, 0);
+    content.add(tools = new ToolPalette(1, 7), 0, 0);
     EditingTool metaTool, altTool;
     tools.addTool(defaultTool = new PaintVoxelsTool(this, false));
     tools.addTool(new PaintVoxelsTool(this, true));
-    tools.addTool(new SmudgeVoxelsTool(this));
     tools.addTool(new SmoothVoxelsTool(this));
     tools.addTool(new FillVoxelsTool(this));
     tools.addTool(new SandVoxelsTool(this));

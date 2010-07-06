@@ -1,4 +1,4 @@
-/* Copyright (C) 2009 by Peter Eastman
+/* Copyright (C) 2009-2010 by Peter Eastman
 
    This program is free software; you can redistribute it and/or modify it under the
    terms of the GNU General Public License as published by the Free Software
@@ -190,14 +190,14 @@ public class PaintVoxelsTool extends EditingTool
           if (negative)
           {
             if (dist <= radius-1.0)
-              newValue= Byte.MIN_VALUE;
+              newValue = Byte.MIN_VALUE;
             else
               newValue = (byte) Math.min(oldValue, Byte.MAX_VALUE*(dist-radius));
           }
           else
           {
             if (dist <= radius-1.0)
-              newValue= Byte.MAX_VALUE;
+              newValue = Byte.MAX_VALUE;
             else
               newValue = (byte) Math.max(oldValue, Byte.MAX_VALUE*(radius-dist));
           }
@@ -213,133 +213,23 @@ public class PaintVoxelsTool extends EditingTool
     VoxelOctree voxels = obj.getVoxels();
     int width = voxels.getWidth();
     double scale = (width-1)/obj.getScale();
-    start = new Vec3(start.x*scale+0.5*(width-1), start.y*scale+0.5*(width-1), start.z*scale+0.5*(width-1));
-    end = new Vec3(end.x*scale+0.5*(width-1), end.y*scale+0.5*(width-1), end.z*scale+0.5*(width-1));
-
-    // Find the primary axis, and the range of voxels along that axis to paint.
-
-    int startx = (int) Math.floor(Math.min(start.x, end.x));
-    int endx = (int) Math.ceil(Math.max(start.x, end.x));
-    int starty = (int) Math.floor(Math.min(start.y, end.y));
-    int endy = (int) Math.ceil(Math.max(start.y, end.y));
-    int startz = (int) Math.floor(Math.min(start.z, end.z));
-    int endz = (int) Math.ceil(Math.max(start.z, end.z));
-    int axis, startIndex, endIndex;
-    double xlength = Math.abs(end.x-start.x);
-    double ylength = Math.abs(end.y-start.y);
-    double zlength = Math.abs(end.z-start.z);
-    if (xlength >= ylength && xlength >= zlength)
-    {
-      axis = 0;
-      startIndex = startx;
-      endIndex = endx;
-    }
-    else if (ylength >= xlength && ylength >= zlength)
-    {
-      axis = 1;
-      startIndex = starty;
-      endIndex = endy;
-    }
-    else
-    {
-      axis = 2;
-      startIndex = startz;
-      endIndex = endz;
-    }
-    Vec3 udir = end.minus(start);
-    double length = udir.length();
-    udir.scale(1.0/length);
-
-    // Walk along the primary axis, painting a disk at each point.
-
+    int numPoints = (int) Math.ceil(scale*Math.max(Math.max(Math.abs(end.x-start.x), Math.abs(end.y-start.y)), Math.abs(end.z-start.z)));
+    Vec3 offset = end.minus(start).times(1.0/numPoints);
     Vec3 pos = new Vec3();
-    double radius = ((VoxelObjectEditorWindow) theWindow).getRadius();
-    double r = radius*Math.sqrt(2.0);
-    for (int i = startIndex; i <= endIndex; i++)
+
+    // Walk along the line, painting a sphere at each point.
+
+    for (int i = 0; i < numPoints; i++)
     {
-      // Convert (x,y,z) to (u,v,w) where u is the primary axis and v and w are perpendicular to it.
-
-      double fract, posv, posw;
-      if (axis == 0)
-      {
-        fract = (i-start.x)/(end.x-start.x);
-        posv = start.y + (end.y-start.y)*fract;
-        posw = start.z + (end.z-start.z)*fract;
-      }
-      else if (axis == 1)
-      {
-        fract = (i-start.y)/(end.y-start.y);
-        posv = start.z + (end.z-start.z)*fract;
-        posw = start.x + (end.x-start.x)*fract;
-      }
-      else
-      {
-        fract = (i-start.z)/(end.z-start.z);
-        posv = start.x + (end.x-start.x)*fract;
-        posw = start.y + (end.y-start.y)*fract;
-      }
-      int minv = (int) Math.floor(posv -r);
-      int maxv = (int) Math.ceil(posv +r);
-      int minw = (int) Math.floor(posw -r);
-      int maxw = (int) Math.ceil(posw +r);
-      for (int v = minv; v <= maxv; v++)
-        for (int w = minw; w <= maxw; w++)
-        {
-          int x, y, z;
-          if (axis == 0)
-          {
-            x = i;
-            y = v;
-            z = w;
-          }
-          else if (axis == 1)
-          {
-            y = i;
-            z = v;
-            x = w;
-          }
-          else
-          {
-            z = i;
-            x = v;
-            y = w;
-          }
-          pos.set(x-start.x, y-start.y, z-start.z);
-          double u = pos.dot(udir);
-          if (u < 0.0 || u > length)
-            continue;
-          double dist = Math.sqrt(pos.length2()-u*u);
-          if (dist >= radius+1.0)
-            continue;
-          byte oldValue = voxels.getValue(x, y, z);
-          byte newValue;
-          if (negative)
-          {
-            if (dist <= radius-1.0)
-              newValue= Byte.MIN_VALUE;
-            else
-              newValue = (byte) Math.min(oldValue, Byte.MAX_VALUE*(dist-radius));
-          }
-          else
-          {
-            if (dist <= radius-1.0)
-              newValue= Byte.MAX_VALUE;
-            else
-              newValue = (byte) Math.max(oldValue, Byte.MAX_VALUE*(radius-dist));
-          }
-          if (newValue != oldValue)
-            voxels.setValue(x, y, z, newValue);
-        }
+      pos.set(start.x+offset.x*i, start.y+offset.y*i, start.z+offset.z*i);
+      int pointRange[] = paintPoint(pos, obj);
+      range[0] = Math.min(range[0], pointRange[0]);
+      range[1] = Math.max(range[1], pointRange[1]);
+      range[2] = Math.min(range[2], pointRange[2]);
+      range[3] = Math.max(range[3], pointRange[3]);
+      range[4] = Math.min(range[4], pointRange[4]);
+      range[5] = Math.max(range[5], pointRange[5]);
     }
-
-    // Find the range of values that were modified.
-    
-    range[0] = Math.min(range[0], (int) Math.floor(Math.min(start.x, end.x)-radius));
-    range[1] = Math.max(range[1], (int) Math.ceil(Math.max(start.x, end.x)+radius));
-    range[2] = Math.min(range[2], (int) Math.floor(Math.min(start.y, start.y)-radius));
-    range[3] = Math.max(range[3], (int) Math.ceil(Math.max(start.y, start.y)+radius));
-    range[4] = Math.min(range[4], (int) Math.floor(Math.min(start.z, start.z)-radius));
-    range[5] = Math.max(range[5], (int) Math.ceil(Math.max(start.z, start.z)+radius));
     return range;
   }
 }
