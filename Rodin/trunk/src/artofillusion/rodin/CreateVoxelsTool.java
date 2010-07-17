@@ -17,20 +17,32 @@ import buoy.event.*;
 import buoy.widget.*;
 
 import java.awt.*;
+import java.util.*;
 
 public class CreateVoxelsTool implements ModellingTool
 {
   public String getName()
   {
-    return "Convert to Voxel Object...";
+    return Translate.text("rodin:convertToVoxelObject")+"...";
   }
 
   public void commandSelected(final LayoutWindow window)
   {
-    final ObjectInfo obj = window.getSelectedObjects().iterator().next();
+    final Collection<ObjectInfo> selected = window.getSelectedObjects();
+    if (selected.size() != 1)
+    {
+      new BStandardDialog("", Translate.text("rodin:selectSingleObject"), BStandardDialog.ERROR).showMessageDialog(window);
+      return;
+    }
+    final ObjectInfo obj = selected.iterator().next();
+    if (obj.object.canConvertToTriangleMesh() == Object3D.CANT_CONVERT || !obj.object.isClosed())
+    {
+      new BStandardDialog("", Translate.text("rodin:notClosedObject"), BStandardDialog.ERROR).showMessageDialog(window);
+      return;
+    }
     final ValueField errorField = new ValueField(0.01, ValueField.POSITIVE);
-    ComponentsDialog dlg = new ComponentsDialog(window, Translate.text("Convert to Voxel Object"),
-        new Widget[] {errorField}, new String [] {Translate.text("Voxel Size")});
+    ComponentsDialog dlg = new ComponentsDialog(window, Translate.text("rodin:convertToVoxelObject"),
+        new Widget[] {errorField}, new String [] {Translate.text("rodin:voxelSize")});
     if (!dlg.clickedOk())
       return;
     final BProgressBar progress = new BProgressBar();

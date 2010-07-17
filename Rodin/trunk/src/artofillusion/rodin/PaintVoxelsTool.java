@@ -30,14 +30,14 @@ public class PaintVoxelsTool extends EditingTool
   {
     super(win);
     this.negative = negative;
-    initButton("movePoints");
+    initButton(negative ? "rodin:removeVoxels" : "rodin:addVoxels");
   }
 
   @Override
   public void activate()
   {
     super.activate();
-    theWindow.setHelpText(Translate.text("reshapeMeshTool.helpText"));
+    theWindow.setHelpText(Translate.text(negative ? "rodin:removeVoxels.helpText" : "rodin:addVoxels.helpText"));
     ((VoxelObjectEditorWindow) theWindow).setShowBrush(true);
   }
 
@@ -57,7 +57,7 @@ public class PaintVoxelsTool extends EditingTool
   @Override
   public String getToolTipText()
   {
-    return Translate.text("reshapeMeshTool.tipText");
+    return Translate.text(negative ? "rodin:removeVoxels.tipText" : "rodin:addVoxels.tipText");
   }
 
   @Override

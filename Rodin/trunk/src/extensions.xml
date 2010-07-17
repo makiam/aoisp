@@ -1,5 +1,5 @@
 <?xml version="1.0" standalone="yes"?>
-<extension name="Rodin" version="0.2">
+<extension name="Rodin" version="0.3">
   <author>Peter Eastman</author>
   <date>2009</date>
   <description>
@@ -9,5 +9,7 @@ objects as if they were made of clay, drawing on the surface to reshape them.
   <comments>
   </comments>
   <plugin class="artofillusion.rodin.CreateVoxelsTool"/>
+  <resource type="TranslateBundle" id="rodin" name="rodin"/>
+  <resource type="UITheme" id="rodin" name="artofillusion/rodin/icons/RodinTheme.xml"/>
 </extension>
 

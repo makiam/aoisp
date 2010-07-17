@@ -18,7 +18,20 @@ public class FillVoxelsTool extends EditVoxelsTool
   public FillVoxelsTool(EditingWindow win)
   {
     super(win);
-    initButton("movePoints");
+    initButton("rodin:fill");
+  }
+
+  @Override
+  public void activate()
+  {
+    super.activate();
+    theWindow.setHelpText(Translate.text("rodin:fill.helpText"));
+  }
+
+  @Override
+  public String getToolTipText()
+  {
+    return Translate.text("rodin:fill.tipText");
   }
 
   protected void computePadding(double radius)

@@ -34,7 +34,6 @@ public abstract class EditVoxelsTool extends EditingTool
   public void activate()
   {
     super.activate();
-    theWindow.setHelpText(Translate.text("reshapeMeshTool.helpText"));
     ((VoxelObjectEditorWindow) theWindow).setShowBrush(true);
   }
 
@@ -49,12 +48,6 @@ public abstract class EditVoxelsTool extends EditingTool
   public int whichClicks()
   {
     return ALL_CLICKS;
-  }
-
-  @Override
-  public String getToolTipText()
-  {
-    return Translate.text("reshapeMeshTool.tipText");
   }
 
   @Override

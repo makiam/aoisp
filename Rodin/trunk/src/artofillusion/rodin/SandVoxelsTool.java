@@ -18,7 +18,20 @@ public class SandVoxelsTool extends EditVoxelsTool
   public SandVoxelsTool(EditingWindow win)
   {
     super(win);
-    initButton("movePoints");
+    initButton("rodin:sand");
+  }
+
+  @Override
+  public void activate()
+  {
+    super.activate();
+    theWindow.setHelpText(Translate.text("rodin:sand.helpText"));
+  }
+
+  @Override
+  public String getToolTipText()
+  {
+    return Translate.text("rodin:sand.tipText");
   }
 
   protected void computePadding(double radius)

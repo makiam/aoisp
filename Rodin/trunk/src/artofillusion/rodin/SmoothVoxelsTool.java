@@ -18,7 +18,20 @@ public class SmoothVoxelsTool extends EditVoxelsTool
   public SmoothVoxelsTool(EditingWindow win)
   {
     super(win);
-    initButton("movePoints");
+    initButton("rodin:smooth");
+  }
+
+  @Override
+  public void activate()
+  {
+    super.activate();
+    theWindow.setHelpText(Translate.text("rodin:smooth.helpText"));
+  }
+
+  @Override
+  public String getToolTipText()
+  {
+    return Translate.text("rodin:smooth.tipText");
   }
 
   protected void computePadding(double radius)
