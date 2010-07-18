@@ -13,6 +13,7 @@ package artofillusion.rodin;
 import artofillusion.*;
 import artofillusion.math.*;
 import artofillusion.object.*;
+import artofillusion.ui.*;
 import buoy.widget.*;
 
 import java.util.*;
@@ -28,8 +29,10 @@ public class VoxelObjectConverter
   {
     Object3D obj = info.getObject();
     if (!obj.isClosed())
-      throw new IllegalArgumentException("Only closed surfaces can be converted to voxel objects");
-    BoundingBox bounds = obj.getBounds();
+      throw new IllegalArgumentException(Translate.text("rodin:notClosedObject"));
+    BoundingBox bounds = new BoundingBox(obj.getBounds());
+    double padding = 2*accuracy;
+    bounds.outset(padding);
     double xwidth = bounds.maxx-bounds.minx;
     double ywidth = bounds.maxy-bounds.miny;
     double zwidth = bounds.maxz-bounds.minz;
@@ -62,7 +65,7 @@ public class VoxelObjectConverter
 
     if (progress != null)
     {
-      progress.setProgressText("Identifying interior...");
+      progress.setProgressText(Translate.text("rodin:identifyingInterior"));
       progress.setMinimum(0);
       progress.setMaximum(xsize);
     }
@@ -109,7 +112,8 @@ public class VoxelObjectConverter
           if (u < -TOL || u > 1.0+TOL)
             continue;
           double z = u*v1.z + v*v2.z + w*v3.z;
-          sortedFaces.add(new SortRecord(z, mesh.faceNorm[face]));
+          if (!Double.isNaN(z) && !Double.isInfinite(z))
+            sortedFaces.add(new SortRecord(z, mesh.faceNorm[face]));
         }
 
         // Sort them, then walk through the list marking which voxels are inside.
@@ -145,7 +149,7 @@ public class VoxelObjectConverter
     for (int i = 0; i < faceDistance.length; i++)
         faceDistance[i] = mesh.faceNorm[i].dot(mesh.vert[mesh.triangle[i].v1]);
     if (progress != null)
-      progress.setProgressText("Creating surface...");
+      progress.setProgressText(Translate.text("rodin:creatingSurface"));
     for (int i = 0; i < xsize; i++)
     {
       if (progress != null)
@@ -213,7 +217,7 @@ public class VoxelObjectConverter
       }
     }
     voxel.copyTextureAndMaterial(obj);
-    voxel.setSize(xwidth, ywidth, zwidth);
+    voxel.setSize(xwidth-2*padding, ywidth-2*padding, zwidth-2*padding);
     return voxel;
   }
 

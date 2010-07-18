@@ -369,7 +369,7 @@ public class MarchingCubes
           for (int corner = 0; corner < 8; corner++)
           {
             cornerValues[corner] = values[vertexOffset[corner][0]][(j-miny+vertexOffset[corner][1])*zsize+k-minz+vertexOffset[corner][2]];
-            if (cornerValues[corner] < 0)
+            if (cornerValues[corner] <= 0)
               flagIndex += 1<<corner;
           }
           int edgeFlag = cubeEdgeFlags[flagIndex];

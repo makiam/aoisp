@@ -112,6 +112,7 @@ public class VoxelTracer
         for (int k = fromz; k <= toz; k++)
         {
           int numBelow = 0;
+          int numZero = 0;
           for (int corner = 0; corner < 8; corner++)
           {
             // Record the values at the four corners of this cell, and see how many are outside.
@@ -119,9 +120,11 @@ public class VoxelTracer
             cornerValues[corner] = values[vertexOffset[corner][0]][(j-fromy+vertexOffset[corner][1])*zsize+k-fromz+vertexOffset[corner][2]];
             if (cornerValues[corner] < 0)
               numBelow++;
+            else if (cornerValues[corner] == 0)
+              numZero++;
           }
           int index = i*width*width+j*width+k;
-          if (numBelow != 0 && numBelow != 8)
+          if ((numBelow != 0 && numBelow != 8) || numZero > 0)
             flags[index/32] |= 1<<(index%32);
           else
             flags[index/32] &= 0xFFFFFFFF-(1<<(index%32));

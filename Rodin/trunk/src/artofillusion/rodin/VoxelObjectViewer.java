@@ -75,6 +75,7 @@ public class VoxelObjectViewer extends ViewerCanvas
   public void updateImage()
   {
     super.updateImage();
+    adjustCamera(theCamera.isPerspective());
 
     // If the view has changed size, we need to recreate the buffer.
 
