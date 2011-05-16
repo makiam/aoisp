@@ -46,6 +46,7 @@ public class GLRenderer implements Renderer, Runnable
   private Thread renderThread;
   private double time, smoothing = 1.0, smoothScale, depthOfField, focalDist, surfaceError = 0.02, fogDist;
   private boolean fog, transparentBackground = false, adaptive = true, hideBackfaces = true, generateHDR = false, positionNeeded, depthNeeded, needCopyToUI = true;
+  private boolean isPreview;
   private int vertBufferId, indexBufferId;
   private int displacementBufferIndex;
   private FloatBuffer displacementBuffer;
@@ -67,6 +68,21 @@ public class GLRenderer implements Renderer, Runnable
 
   public synchronized void renderScene(Scene theScene, Camera camera, RenderListener rl, SceneCamera sceneCamera)
   {
+    if (renderThread != null && renderThread.isAlive())
+    {
+      // A render is currently in progress, so cancel it.
+
+      Thread oldRenderThread = renderThread;
+      renderThread = null;
+      try
+      {
+        oldRenderThread.join();
+      }
+      catch (InterruptedException ex)
+      {
+        // Ignore.
+      }
+    }
     Dimension dim = camera.getSize();
 
     listener = rl;
@@ -85,8 +101,6 @@ public class GLRenderer implements Renderer, Runnable
     width = dim.width;
     height = dim.height;
     theCamera.setScreenTransform(sceneCamera.getScreenTransform(width, height), width, height);
-    image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-    shaderGenerator = new ShaderGenerator(theScene, theCamera);
     renderThread = new Thread(this, "OpenGL Renderer Main Thread");
     renderThread.start();
   }
@@ -199,6 +213,7 @@ public class GLRenderer implements Renderer, Runnable
     generateHDR = hdrBox.getState();
     surfaceError = errorField.getValue();
     transparentBackground = transparentBox.getState();
+    isPreview = false;
     return true;
   }
 
@@ -218,6 +233,7 @@ public class GLRenderer implements Renderer, Runnable
   public void setConfiguration(String property, Object value)
   {
     needCopyToUI = true;
+    isPreview = false;
     if ("textureSmoothing".equals(property))
       smoothing = ((Number) value).doubleValue();
     else if ("reduceAccuracyForDistant".equals(property))
@@ -240,7 +256,8 @@ public class GLRenderer implements Renderer, Runnable
     smoothing = 1.0;
     adaptive = hideBackfaces = true;
     generateHDR = false;
-    surfaceError = 0.02;
+    surfaceError = ArtOfIllusion.getPreferences().getInteractiveSurfaceError();
+    isPreview = true;
   }
 
   /** Main method in which the image is rendered. */
@@ -251,6 +268,8 @@ public class GLRenderer implements Renderer, Runnable
     if (renderThread != thisThread)
       return;
     updateTime = System.currentTimeMillis();
+    image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    shaderGenerator = new ShaderGenerator(theScene, theCamera);
 
     // Record information about the scene.
 
@@ -443,7 +462,7 @@ public class GLRenderer implements Renderer, Runnable
     }
     else
       tol = surfaceError;
-    RenderingMesh mesh = info.getRenderingMesh(tol);
+    RenderingMesh mesh = (isPreview ? info.getPreviewMesh() : info.getRenderingMesh(tol));
     if (mesh == null)
       return;
 //    if (currentThread != renderThread)
