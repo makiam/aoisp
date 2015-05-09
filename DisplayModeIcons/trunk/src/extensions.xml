@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<extension name="DisplayModeIcons" version="2.0">
+	<plugin class="artofillusion.displaymodeicons.DisplayModeIconsPlugin"/>
+	<author>Francois Guillet</author>
+	<date>2015/29/04</date>
+    <description>
+This plugin replaces the display mode dropdown list with a set of icons.
+    </description>
+    <history>
+    	<log version="2.0" date="29 April 2015" author="All before and Petri Ihalainen">
+		- Icon for the 'rendered'-mode added. The plugin removes 'rendered'-mode from the menu.
+		- The menu items set the mode for all the views in a window.
+		- Now the menu has the same behaviour in all editing windows, not just the scene window.
+		</log>
+    	<log version="1.2" date="Jan 2009" author="Francois et Nik TJ">
+		- Changes for compatibility with AOI 2.7
+		- fixed a problem that could show up if other ViewerControls had been installed (by another plugin)	
+		</log>
+    	<log version="1.1" date="02 may 2008" author="Francois Guillet">
+        First release.
+        </log>
+        <log version="1.0" date="02 august 2007" author="Francois Guillet">
+        First release.
+        </log>
+    </history>
+    <comments>
+    </comments>
+	<resource type="UITheme" id="displaymodeicons" name="displaymodeicons/theme.xml"/>
+</extension>
