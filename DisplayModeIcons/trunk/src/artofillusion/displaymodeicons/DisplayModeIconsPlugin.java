@@ -82,7 +82,9 @@ public class DisplayModeIconsPlugin implements Plugin {
 			
 		  // removing the 'rendered' mode from the menu, because 
 		  // only one view at a time can be in rendered mode.
-		  menu.remove((Widget)menu.getChild(5));
+		  
+		  if (menu.getChildCount() > 5) // The boolean modelling window does not have 'rendered' option
+			menu.remove((Widget)menu.getChild(5));
 		}
 	  }
     }

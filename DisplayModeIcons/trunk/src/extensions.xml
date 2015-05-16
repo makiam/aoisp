@@ -8,6 +8,10 @@
 This plugin replaces the display mode dropdown list with a set of icons.
     </description>
     <history>
+    	<log version="2.1" date="14 May 2015" author="as before">
+		- Bug fix. Made compatible with boolean modelling window.
+		  (The 'rendered' option was not available in the menu. The attempt to remove it prevented opening the window.)
+		</log>
     	<log version="2.0" date="29 April 2015" author="All before and Petri Ihalainen">
 		- Icon for the 'rendered'-mode added. The plugin removes 'rendered'-mode from the menu.
 		- The menu items set the mode for all the views in a window.
